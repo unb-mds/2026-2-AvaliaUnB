@@ -229,5 +229,24 @@ class TestCriteriosAceiteRetencao(unittest.TestCase):
         self.assertEqual(len(cliente.tabelas['comentarios']), 1)
 
 
+class TestPoliticaPrivacidadeRetencao(unittest.TestCase):
+    def test_pagina_privacidade_documenta_retencao_de_90_dias(self):
+        from app import create_app
+        from tests.fake_supabase import ClienteFalso
+
+        app = create_app({
+            'TESTING': True,
+            'SECRET_KEY': 'chave-teste-local-com-mais-de-32-caracteres-1234',
+            'SUPABASE_CLIENT': ClienteFalso(),
+            'WTF_CSRF_ENABLED': False,
+        })
+        resp = app.test_client().get('/privacidade')
+        self.assertEqual(resp.status_code, 200)
+        html = resp.get_data(as_text=True).lower()
+        self.assertIn('90 dias', html)
+        self.assertIn('denúncia', html)
+        self.assertIn('moderação', html)
+
+
 if __name__ == '__main__':
     unittest.main()

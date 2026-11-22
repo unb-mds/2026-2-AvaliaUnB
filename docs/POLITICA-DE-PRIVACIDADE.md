@@ -12,6 +12,7 @@ Para o funcionamento do AvaliaAi, tratamos estritamente os seguintes dados:
 * **E-mail e Nome de Usuário / Nome Completo:** Coletados no momento do cadastro e autenticação para garantir a segurança do acesso, verificar a unicidade das avaliações e associar o histórico de contribuições ao perfil do estudante.
 * **Avaliações Pedagógicas:** Notas numéricas de 1 a 5 atribuídas a critérios objetivos (didática, clareza, organização, disponibilidade e dificuldade) e o vínculo com turmas, disciplinas e professores. Esses dados são agregados para calcular as médias estatísticas exibidas publicamente na plataforma.
 * **Comentários:** o texto que você escreve sobre um professor, a disciplina escolhida e a data de publicação (e de edição, se houver), ligados ao seu nome de usuário.
+* **Registros de Denúncia e Moderação (Retenção de 90 dias):** Quando um comentário é denunciado ou contestado, armazenamos apenas o registro mínimo da denúncia, da contestação e da decisão de moderação. Em conformidade com a LGPD, esses registros são descartados automaticamente após **90 dias** do encerramento do caso, sem apagar comentários publicados.
 * **Formulário de Feedback:** Dados eventualmente enviados pelos usuários por meio dos canais de contato ou moderação para melhoria contínua da ferramenta.
 
 ---
