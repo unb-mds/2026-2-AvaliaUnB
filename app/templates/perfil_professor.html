@@ -225,7 +225,7 @@
                     <textarea name="texto" id="texto_comentario" rows="5" maxlength="1000" required
                               aria-describedby="ajuda-texto-comentario{% if erros_comentario.texto %} erro-texto-comentario{% endif %}"
                               {% if erros_comentario.texto %}aria-invalid="true"{% endif %}>{{ texto_form }}</textarea>
-                    <p class="campo-ajuda" id="ajuda-texto-comentario">2 a 1.000 caracteres. Seu nome de usuário aparece junto do comentário.</p>
+                    <p class="campo-ajuda" id="ajuda-texto-comentario">2 a 1.000 caracteres. Sua identificação não aparece junto do comentário. Evite incluir dados pessoais no texto.</p>
                     {% if erros_comentario.texto %}
                     <p class="campo-erro" id="erro-texto-comentario" role="alert">{{ erros_comentario.texto }}</p>
                     {% endif %}
@@ -262,7 +262,6 @@
                 {% for c in comentarios %}
                 <li class="comentario"><article class="review">
                     <p class="comentario-cabecalho review-top">
-                        <strong>{{ c.username }}</strong>
                         <span class="comentario-disciplina">{{ c.disciplina_nome }}{% if c.disciplina_codigo %} — {{ c.disciplina_codigo }}{% endif %}</span>
                         {% if c.data %}<span class="comentario-data">{{ c.data }}</span>{% endif %}
                         {% if c.editado %}<span class="comentario-editado">(editado)</span>{% endif %}

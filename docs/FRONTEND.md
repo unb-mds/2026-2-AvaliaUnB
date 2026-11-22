@@ -65,6 +65,11 @@ deixa o "Cancelar" em destaque. Em telas de até 600 px, a seção usa coluna ú
 e botões em largura total. A confirmação de exclusão do comentário é uma página
 própria, sem JavaScript.
 
+Na listagem pública não há nome de usuário, avatar ou rótulo substituto acima
+do comentário. A disciplina, a data e o texto continuam visíveis. Os avisos de
+publicação e edição informam que a identificação da conta não aparece. Edição,
+exclusão e denúncia continuam exigindo as permissões da conta autenticada (#258).
+
 O catálogo mostra mensagens diferentes para ausência de dados e ausência de
 resultados dos filtros e exibe a média
 geral em cinco estrelas ou `N/A (Não avaliado)`. A busca é um campo único

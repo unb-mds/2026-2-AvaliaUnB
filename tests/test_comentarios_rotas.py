@@ -55,8 +55,8 @@ class TestListagem(BaseRotas):
         self.assertLess(html.index('terceiro texto'), html.index('segundo texto'))
         self.assertLess(html.index('segundo texto'), html.index('primeiro texto'))
         self.assertNotIn('de outro professor', html)
-        self.assertIn('<strong>ana</strong>', html)
-        self.assertIn('<strong>bia</strong>', html)
+        self.assertNotIn('<strong>ana</strong>', html)
+        self.assertNotIn('<strong>bia</strong>', html)
 
     def test_secao_separada_das_notas_com_titulo(self):
         html = self.html()
@@ -178,12 +178,26 @@ class TestSeguranca(BaseRotas):
         self.assertNotIn('<script>alert(1)', html)
         self.assertNotIn('<b>negrito', html)
 
-    def test_username_tambem_e_escapado(self):
+    def test_username_nao_e_enviado_nem_mesmo_como_texto_escapado(self):
         self.cliente.tabelas['perfis'][0]['username'] = '<i>ana</i>'
         self.semear('qualquer texto')
         html = self.html()
-        self.assertIn('&lt;i&gt;ana&lt;/i&gt;', html)
+        self.assertNotIn('&lt;i&gt;ana&lt;/i&gt;', html)
+        self.assertNotIn('<i>ana</i>', html)
         self.assertNotIn('<strong><i>', html)
+
+    def test_comentarios_nao_tem_nome_avatar_ou_rotulo_substituto(self):
+        import re
+        self.cliente.tabelas['perfis'][0]['username'] = 'identidade_publica_teste'
+        self.semear('Relato sem identificação')
+        for cabecalho in ({'Accept': 'text/html'}, {'Accept': 'application/json'}):
+            html = self.web.get('/professores/1', headers=cabecalho).get_data(as_text=True)
+            self.assertNotIn('identidade_publica_teste', html)
+            comentario = re.search(r'<li class="comentario">.*?</li>', html, re.S).group()
+            for rotulo in ('Anônimo', 'Anónimo', 'Anonimo', 'avatar', 'username', 'usuario_id'):
+                self.assertNotIn(rotulo, comentario)
+            self.assertIn('Relato sem identificação', comentario)
+            self.assertIn('CÁLCULO 1', comentario)
 
     def test_pagina_nunca_contem_email_nem_usuario_id(self):
         self.semear('texto da ana', usuario=ANA)

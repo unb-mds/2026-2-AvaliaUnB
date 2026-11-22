@@ -618,7 +618,8 @@ class ComentarioRepository:
 
     O backend usa a service key, que ignora RLS: toda regra de autoria e de vínculo
     entre professor e disciplina é conferida aqui. O e-mail e o id da conta do autor
-    nunca saem deste repositório; só o username público.
+    não são incluídos na listagem pública. A autoria permanece privada para as
+    verificações do backend e não depende da identificação mostrada na tela.
     """
 
     def __init__(self, cliente):
@@ -689,10 +690,6 @@ class ComentarioRepository:
         if not linhas:
             return [], False
 
-        ids_autores = sorted({l['usuario_id'] for l in linhas})
-        autores = {p['id']: p['username'] for p in
-                   self.cliente.table('perfis').select('id,username')
-                   .in_('id', ids_autores).execute().data}
         disciplinas = self._disciplinas_do_professor(professor_id)
         comentarios = []
         for l in linhas:
@@ -700,7 +697,6 @@ class ComentarioRepository:
             comentarios.append({
                 'id': l['id'],
                 'texto': l['texto'],
-                'username': autores.get(l['usuario_id'], ''),
                 'disciplina_nome': nome,
                 'disciplina_codigo': codigo,
                 'criado_em': l['criado_em'],

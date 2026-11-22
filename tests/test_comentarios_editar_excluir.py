@@ -338,9 +338,11 @@ class TestPrivacidadeEIndependencia(BaseEdicao):
             self.ver('/professores/1').get_data(as_text=True),
         ]
         for html in paginas:
-            # O username ("ana", "bia") é público; e-mail, nome completo e ids não.
+            # Os dados da conta não identificam o autor do comentário publicamente.
             for segredo in (EMAIL, EMAIL_BIA, self.id_logado, BIA, OUTRO_USUARIO, 'Bia Souza'):
                 self.assertNotIn(segredo, html)
+            self.assertNotIn('<strong>ana</strong>', html)
+            self.assertNotIn('<strong>bia</strong>', html)
 
     def test_sem_safe_nos_templates_novos(self):
         from pathlib import Path

@@ -508,7 +508,7 @@ def carregar_comentario_denunciavel(comentario_id, usuario):
     comentario = repositorios().comentarios.buscar_visivel(comentario_id)
     if comentario is None or comentario['usuario_id'] == usuario['id']:
         abort(404, description='Comentário não encontrado.')
-    return comentario
+    return {campo: valor for campo, valor in comentario.items() if campo != 'usuario_id'}
 
 
 def motivos_denuncia():
