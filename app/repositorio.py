@@ -709,6 +709,30 @@ class ComentarioRepository:
             })
         return comentarios, ha_mais
 
+    def listar_do_usuario(self, usuario_id):
+        """Relatos visíveis da própria conta, sem dados de identidade no resultado."""
+        linhas = (self.cliente.table('comentarios')
+                  .select('id,professor_id,disciplina_id,texto,criado_em,atualizado_em')
+                  .eq('usuario_id', usuario_id).is_('ocultado_em', 'null')
+                  .order('criado_em', desc=True).order('id', desc=True)
+                  .limit(LIMITE_COMENTARIOS + 1).execute().data)
+        ha_mais = len(linhas) > LIMITE_COMENTARIOS
+        linhas = linhas[:LIMITE_COMENTARIOS]
+        if not linhas:
+            return [], False
+        professores = {p['id']: p['nome'] for p in self.cliente.table('professores')
+                       .select('id,nome').in_('id', sorted({l['professor_id'] for l in linhas}))
+                       .execute().data}
+        disciplinas = {d['id']: d for d in self.cliente.table('disciplinas')
+                       .select('id,nome,codigo').in_('id', sorted({l['disciplina_id'] for l in linhas}))
+                       .execute().data}
+        return [{**{c: l[c] for c in ('id', 'professor_id', 'disciplina_id', 'texto', 'criado_em')},
+                 'professor_nome': professores.get(l['professor_id'], 'Professor'),
+                 'disciplina_nome': disciplinas.get(l['disciplina_id'], {}).get('nome', ''),
+                 'disciplina_codigo': disciplinas.get(l['disciplina_id'], {}).get('codigo', ''),
+                 'data': self.formatar_data(l['criado_em']), 'editado': self._foi_editado(l)}
+                for l in linhas], ha_mais
+
     def buscar_do_usuario(self, comentario_id, usuario_id):
         """Comentário se pertencer ao usuário, senão None (a rota responde 404)."""
         dados = (self.cliente.table('comentarios')

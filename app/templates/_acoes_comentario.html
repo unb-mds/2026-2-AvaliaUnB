@@ -1,0 +1,6 @@
+{% macro acoes_comentario(comentario_id, next_url, filtro=None, disciplina_medias=None, origem=None) -%}
+<p class="comentario-acoes">
+    <a class="btn ghost acao-editar" href="{{ url_for('professores.editar_comentario', comentario_id=comentario_id, next=next_url, comentarios_disciplina=filtro, disciplina_medias=disciplina_medias, origem=origem) }}">Editar</a>
+    <a class="btn ghost acao-excluir" href="{{ url_for('professores.excluir_comentario', comentario_id=comentario_id, next=next_url, comentarios_disciplina=filtro, disciplina_medias=disciplina_medias, origem=origem) }}">Excluir</a>
+</p>
+{%- endmacro %}

@@ -1,5 +1,24 @@
 # Funcionalidades e regras de consulta
 
+## Atalhos para gerenciar comentários (#260)
+
+No próprio comentário, **Editar** e **Excluir** ficam juntos, como botões
+em contorno com área de toque mínima de 44 px. Só o autor autenticado recebe
+essas ações. Editar abre o texto e a disciplina já preenchidos; salvar ou
+cancelar retorna aos comentários do professor, mantendo o filtro de comentários,
+a disciplina das médias e o destino de volta à busca. Excluir continua exigindo
+confirmação.
+
+O perfil pessoal (`/perfil`) também oferece **Meus comentários**, com os 50
+relatos publicados mais recentes da própria conta, professor, disciplina, data
+e os mesmos atalhos. Havendo mais, a seção avisa e orienta a gerenciar os demais
+no perfil de cada professor. Ações iniciadas no perfil pessoal retornam à sua
+seção de comentários. Uma falha dessa consulta mostra um aviso sem impedir
+as avaliações e os favoritos. Comentários ocultados não entram nessa listagem.
+
+Não há alteração no formato JSON de `/perfil`, nas regras de autoria ou no banco.
+A retirada da identificação pública segue separadamente na #258 / PR #259.
+
 Este guia detalha as funcionalidades já disponíveis na `main`. O resumo das
 entregas e do planejamento fica no
 [README](https://github.com/unb-mds/2026-2-AvaliaUnB#funcionalidades-e-releases).
