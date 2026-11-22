@@ -8,7 +8,9 @@
 </head>
 <body>
     {% include '_topo.html' %}
-    <main class="shell view" id="conteudo">
+    <main class="view" id="conteudo">
+        <div class="hero-stage">
+        <div class="shell">
         <section class="hero">
             <div class="hero-copy">
                 <div class="hero-watermark" aria-hidden="true">{{ simbolo_logo('art-logo standalone') }}</div>
@@ -23,6 +25,9 @@
                 <div class="hero-hint">Explore por nome, disciplina ou departamento.</div>
             </div>
         </section>
+        </div>
+        </div>
+        <div class="shell">
         <section class="section" aria-labelledby="explore-titulo">
             <div class="section-head"><div><div class="eyebrow">Seu espaço</div><h2 id="explore-titulo">Encontre o que importa.</h2></div><p class="section-sub">Um caminho mais simples para descobrir professores e comparar experiências acadêmicas.</p></div>
             <div class="feature-grid">
@@ -46,6 +51,7 @@
                 {% endfor %}
             </div>{% elif destaques is none %}<p class="empty">Os destaques estão temporariamente indisponíveis.</p>{% else %}<p class="empty">Os destaques aparecem quando houver professores com avaliações.</p>{% endif %}
         </section>
+        </div>
     </main>
     {% include '_rodape.html' %}
 </body>
