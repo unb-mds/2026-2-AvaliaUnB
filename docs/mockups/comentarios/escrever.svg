@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 680" width="400" height="680" role="img" aria-labelledby="title description" font-family="Arial, sans-serif">
   <title id="title">Escrever comentário</title>
-  <desc id="description">Formulário para escrever outro comentário em Cálculo 1, com contador e aviso de exibição do e-mail.</desc>
+  <desc id="description">Formulário para escrever outro comentário em Cálculo 1, com contador e aviso sobre identificação privada.</desc>
   <rect x="0" y="0" width="400" height="680" rx="0" fill="#F2F4F7" stroke="none"/>
   <rect x="0" y="0" width="400" height="58" rx="0" fill="#174B83" stroke="none"/>
   <text x="16" y="37" font-size="20" font-weight="700" fill="#FFFFFF" text-anchor="start">AvaliaUnB</text>
@@ -20,8 +20,8 @@
     <text x="368" y="399" font-size="14" font-weight="400" fill="#4F5357" text-anchor="end">0 / 1.000</text>
     <rect x="32" y="418" width="336" height="72" rx="8" fill="#F2F4F7"/>
     <text x="44" y="443" font-size="15" font-weight="700" fill="#202124">Dados visíveis no comentário</text>
-    <text x="44" y="466" font-size="14" fill="#4F5357">Seu nome de usuário será público. Qualquer</text>
-    <text x="44" y="483" font-size="14" fill="#4F5357">pessoa poderá clicar nele e ver seu e-mail.</text>
+    <text x="44" y="466" font-size="14" fill="#4F5357">Sua identificação não aparece no comentário.</text>
+    <text x="44" y="483" font-size="14" fill="#4F5357">Evite incluir dados pessoais no texto.</text>
     <rect x="32" y="566" width="160" height="44" rx="8" fill="#174B83"/>
     <text x="112" y="593" font-size="15" font-weight="700" fill="#FFFFFF" text-anchor="middle">Publicar</text>
     <rect x="208" y="566" width="160" height="44" rx="8" fill="#FFFFFF" stroke="#174B83"/>

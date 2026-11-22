@@ -2,50 +2,284 @@
 from flask import Blueprint, abort, jsonify, redirect, render_template, request, url_for
 
 from app.controllers import professor_controller as controller
-from app.controllers.session_controller import login_required, obter_usuario_atual
-from app.seguranca import limitar_avaliacao, is_safe_url
+from app.controllers.session_controller import (login_required, obter_usuario_atual,
+                                                sanitizar_destino)
+from app.seguranca import (is_safe_url, limitar_avaliacao, limitar_comentario,
+                           limitar_denuncia, limitar_favorito, limitar_sugestoes)
 
 professor_bp = Blueprint('professores', __name__)
 
-CAMPOS_FILTRO = ('nome', 'disciplina', 'departamento')
+CAMPOS_FILTRO = ('nome', 'disciplina', 'departamento', 'q')
 
 
 @professor_bp.get('/comparar')
 def comparar():
     contexto = controller.carregar_comparacao(request.args)
-    return render_template('comparacao.html', **contexto,
+    # Busca unificada sem JavaScript: o formulário envia ?busca= e a página lista os resultados.
+    busca = request.args.get('busca', '').strip()
+    resultados_busca = (controller.sugestoes(busca, controller.MAXIMO_SUGESTOES, 'comparacao')
+                        if busca else None)
+    return render_template('comparacao.html', **contexto, busca=busca,
+                           resultados_busca=resultados_busca,
                            usuario=obter_usuario_atual()), 400 if contexto['erros'] else 200
+
+
+@professor_bp.get('/busca/sugestoes')
+@limitar_sugestoes
+def sugestoes():
+    """Autocompletar da busca unificada (JSON): professores, disciplinas e departamentos."""
+    return jsonify({'sugestoes': controller.sugestoes(request.args.get('q', ''),
+                                                      request.args.get('limite'),
+                                                      request.args.get('contexto'))})
+
+
+@professor_bp.get('/busca/professores')
+@limitar_sugestoes
+def sugestoes_professores():
+    """Autocompletar dos campos de professor da comparação (JSON), por nome ou disciplina."""
+    return jsonify({'professores': controller.sugestoes_professores(
+        request.args.get('q', ''), request.args.get('limite'),
+        request.args.get('departamento', ''))})
+
+
 @professor_bp.get('/ranking')
 def ranking():
-    professores, minimo_avaliacoes = controller.carregar_ranking()
+    departamento = request.args.get('departamento', '').strip()
+    professores, minimo_avaliacoes, departamentos, departamento_ativo = controller.carregar_ranking(departamento)
     return render_template('ranking.html', ranking=professores,
                            minimo_avaliacoes=minimo_avaliacoes,
+                           departamentos=departamentos,
+                           departamento_selecionado=departamento_ativo,
                            usuario=obter_usuario_atual())
 
 
 @professor_bp.get('/professores')
 def listar():
     filtros = {campo: request.args.get(campo, '').strip() for campo in CAMPOS_FILTRO}
-    return render_template('lista_professores.html', catalogo=controller.catalogo(**filtros),
-                           filtros=filtros, departamentos=controller.departamentos(),
+    departamentos, filtros['departamento'] = controller.carregar_filtro_departamento(
+        filtros['departamento'])
+    catalogo = controller.catalogo(**filtros)
+    pagina = request.args.get('pagina')
+    paginacao = controller.paginar_catalogo(catalogo, pagina)
+    dificuldades = controller.dificuldades_da_pagina(catalogo, pagina)
+    return render_template('lista_professores.html', catalogo=catalogo,
+                           paginacao=paginacao, dificuldades=dificuldades,
+                           disciplinas_cartao=controller.organizar_disciplinas(
+                               paginacao['itens'], dificuldades),
+                           filtros=filtros, departamentos=departamentos,
                            usuario=obter_usuario_atual())
+
+
+def _next_seguro(valor):
+    """Destino do "Voltar": o informado se for seguro, senão a consulta."""
+    return valor if is_safe_url(valor) else url_for('professores.listar')
+
+
+def _url_perfil(professor_id, next_url, disciplina, filtro):
+    """URL do perfil (com #comentarios) preservando next, a disciplina das médias e o filtro."""
+    return url_for('professores.perfil', professor_id=professor_id, next=next_url,
+                   disciplina_id=disciplina['id'] if disciplina else None,
+                   comentarios_disciplina=filtro, _anchor='comentarios')
+
+
+def _renderizar_perfil(professor, disciplinas, disciplina, next_url, filtro_bruto,
+                       status=200, **extra):
+    """Monta a página do perfil. `extra` traz o estado do formulário de comentário em caso de erro."""
+    professor_id = professor['id']
+    usuario = obter_usuario_atual()
+    comentarios = controller.carregar_comentarios(professor_id, disciplinas, filtro_bruto, usuario)
+    login_url = None
+    if usuario is None:
+        destino = sanitizar_destino(_url_perfil(professor_id, next_url, disciplina,
+                                                comentarios['filtro_comentarios']))
+        login_url = url_for('auth.login', next=destino) if destino else url_for('auth.login')
+    contexto = dict(erros_comentario={}, texto_form='', disciplina_form=None)
+    contexto.update(extra)
+    # Filtro de semestre das médias (issue #252); o topo do perfil segue com todos.
+    semestres_medias, semestre_medias = controller.semestre_das_medias(
+        professor_id, disciplina, request.args.get('semestre'))
+    pagina = render_template(
+        'perfil_professor.html', professor=professor, disciplinas=disciplinas,
+        disciplina=disciplina,
+        indicadores=(controller.indicadores(professor_id, disciplina['id'], semestre_medias)
+                     if disciplina else None),
+        semestres_medias=semestres_medias,
+        semestre_medias=(controller.rotulo_semestre(semestre_medias) if semestre_medias else None),
+        semestre_medias_valor=(controller.valor_semestre(semestre_medias)
+                               if semestre_medias else None),
+        criterios=controller.criterios(), next_url=next_url,
+        geral=controller.indicadores(professor_id, None),
+        evolucao=controller.evolucao_por_semestre(professor_id,
+                                                  request.args.get('evolucao_criterio')),
+        criterios_evolucao=controller.criterios_evolucao(),
+        favorito=controller.eh_favorito(usuario, professor_id),
+        usuario=usuario, login_url=login_url, **comentarios, **contexto)
+    return pagina, status
 
 
 @professor_bp.get('/professores/<int:professor_id>')
 def perfil(professor_id):
     professor, disciplinas, disciplina = controller.carregar_perfil(professor_id)
-    indicadores = controller.indicadores(professor_id, disciplina['id']) if disciplina else None
-    
-    # Validação do parâmetro de retorno
-    next_url = request.args.get('next')
-    if not is_safe_url(next_url):
-        next_url = url_for('professores.listar')
+    return _renderizar_perfil(professor, disciplinas, disciplina,
+                              _next_seguro(request.args.get('next')),
+                              request.args.get('comentarios_disciplina'))
 
-    return render_template('perfil_professor.html', professor=professor, disciplinas=disciplinas,
-                           disciplina=disciplina, indicadores=indicadores,
-                           criterios=controller.criterios(), next_url=next_url,
-                           geral=controller.indicadores(professor_id, None),
-                           usuario=obter_usuario_atual())
+
+@professor_bp.post('/professores/<int:professor_id>/favorito')
+@login_required
+@limitar_favorito
+def favoritar(professor_id):
+    """Favorita (acao=adicionar) ou desfavorita (acao=remover) o professor (issue #223)."""
+    acao = request.form.get('acao')
+    if acao not in ('adicionar', 'remover'):
+        abort(400, description='Ação inválida.')
+    # O dono da lista vem só da sessão; um usuario_id enviado no formulário é ignorado.
+    favorito = controller.alterar_favorito(obter_usuario_atual(), professor_id,
+                                           acao == 'adicionar')
+    if request.accept_mimetypes.best == 'application/json':
+        return jsonify({'professor_id': professor_id, 'favorito': favorito})
+    destino = request.form.get('destino')
+    if not is_safe_url(destino):
+        destino = url_for('professores.perfil', professor_id=professor_id)
+    return redirect(destino, code=303)
+
+
+@professor_bp.post('/professores/<int:professor_id>/comentarios')
+@login_required
+@limitar_comentario
+def comentar(professor_id):
+    # Sem carregar_perfil: ele lê request.form['disciplina_id'] (aqui é a disciplina do
+    # comentário, não a das médias) e aborta com 400 se faltar.
+    usuario = obter_usuario_atual()
+    professor = controller.carregar_professor(professor_id)
+    disciplinas = controller.listar_disciplinas(professor_id)
+    texto = request.form.get('texto', '')
+    disciplina_id, erros = controller.validar_novo_comentario(
+        disciplinas, request.form.get('disciplina_id'), texto)
+    if not erros:
+        try:
+            # O autor vem só da sessão; um usuario_id enviado no formulário é ignorado.
+            controller.publicar_comentario(usuario, professor_id, disciplina_id, texto)
+        except ValueError as erro:
+            erros['texto'] = str(erro)
+
+    next_url = _next_seguro(request.form.get('next'))
+    disciplina_medias = controller.disciplina_das_medias(
+        disciplinas, request.form.get('disciplina_medias'))
+    filtro_bruto = request.form.get('comentarios_disciplina')
+    if not erros:
+        filtro = controller.filtro_de_comentarios(filtro_bruto, disciplinas)
+        return redirect(_url_perfil(professor_id, next_url, disciplina_medias, filtro), code=303)
+    return _renderizar_perfil(professor, disciplinas, disciplina_medias, next_url, filtro_bruto,
+                              status=400, erros_comentario=erros, texto_form=texto,
+                              disciplina_form=disciplina_id)
+
+
+def _contexto_do_comentario(comentario_id, usuario, origem):
+    """(comentario, professor, disciplinas, next_url, filtro, url_voltar) de um comentário do
+    usuário logado. 404 se não for dele. `origem` é request.args (GET) ou request.form (POST)."""
+    comentario = controller.carregar_comentario_do_usuario(comentario_id, usuario)
+    professor = controller.carregar_professor(comentario['professor_id'])
+    disciplinas = controller.listar_disciplinas(professor['id'])
+    next_url = _next_seguro(origem.get('next'))
+    filtro = controller.filtro_de_comentarios(origem.get('comentarios_disciplina'), disciplinas)
+    disciplina_medias = controller.disciplina_das_medias(disciplinas, origem.get('disciplina_medias'))
+    url_voltar = (url_for('auth.perfil', _anchor='meus-comentarios')
+                  if origem.get('origem') == 'perfil' else
+                  _url_perfil(professor['id'], next_url, disciplina_medias, filtro))
+    return (comentario, professor, disciplinas, next_url, filtro,
+            url_voltar)
+
+
+@professor_bp.route('/comentarios/<int:comentario_id>/editar', methods=['GET', 'POST'])
+@login_required
+def editar_comentario(comentario_id):
+    usuario = obter_usuario_atual()
+    origem = request.form if request.method == 'POST' else request.args
+    comentario, professor, disciplinas, next_url, filtro, url_voltar = _contexto_do_comentario(
+        comentario_id, usuario, origem)
+    texto, disciplina_form, erros, status = comentario['texto'], comentario['disciplina_id'], {}, 200
+    if request.method == 'POST':
+        # Só texto e disciplina mudam; professor_id e usuario_id do formulário são ignorados.
+        texto = request.form.get('texto', '')
+        disciplina_form, erros = controller.validar_novo_comentario(
+            disciplinas, request.form.get('disciplina_id'), texto)
+        if not erros:
+            try:
+                controller.editar_comentario(comentario_id, usuario, disciplina_form, texto)
+            except ValueError as erro:
+                erros['texto'] = str(erro)
+            else:
+                return redirect(url_voltar, code=303)
+        status = 400
+    return render_template('editar_comentario.html', professor=professor, disciplinas=disciplinas,
+                           comentario=comentario, texto_form=texto, disciplina_form=disciplina_form,
+                           erros_comentario=erros, next_url=next_url, filtro_comentarios=filtro,
+                           url_voltar=url_voltar, usuario=usuario,
+                           origem_perfil=origem.get('origem') == 'perfil',
+                           disciplina_medias=origem.get('disciplina_medias', '')), status
+
+
+@professor_bp.route('/comentarios/<int:comentario_id>/excluir', methods=['GET', 'POST'])
+@login_required
+def excluir_comentario(comentario_id):
+    usuario = obter_usuario_atual()
+    origem = request.form if request.method == 'POST' else request.args
+    comentario, professor, _, next_url, filtro, url_voltar = _contexto_do_comentario(
+        comentario_id, usuario, origem)
+    if request.method == 'POST':
+        controller.excluir_comentario(comentario_id, usuario)
+        if request.accept_mimetypes.best == 'application/json':
+            return jsonify({'mensagem': 'Comentário excluído com sucesso.'}), 200
+        return redirect(url_voltar, code=303)
+    return render_template('excluir_comentario.html', professor=professor, comentario=comentario,
+                           next_url=next_url, filtro_comentarios=filtro, url_voltar=url_voltar,
+                           usuario=usuario, origem_perfil=origem.get('origem') == 'perfil',
+                           disciplina_medias=origem.get('disciplina_medias', ''))
+
+
+@professor_bp.route('/comentarios/<int:comentario_id>/denunciar', methods=['GET', 'POST'])
+@login_required
+@limitar_denuncia
+def denunciar_comentario(comentario_id):
+    """Denúncia privada de um comentário (issue #215). O autor e os visitantes nunca
+    veem quem denunciou; depois de enviada, a página só confirma o recebimento."""
+    usuario = obter_usuario_atual()
+    origem = request.form if request.method == 'POST' else request.args
+    comentario = controller.carregar_comentario_denunciavel(comentario_id, usuario)
+    professor = controller.carregar_professor(comentario['professor_id'])
+    disciplinas = controller.listar_disciplinas(professor['id'])
+    next_url = _next_seguro(origem.get('next'))
+    filtro = controller.filtro_de_comentarios(origem.get('comentarios_disciplina'), disciplinas)
+    url_voltar = _url_perfil(professor['id'], next_url, None, filtro)
+    quer_json = request.accept_mimetypes.best == 'application/json'
+
+    erros, status, dados = {}, 200, {}
+    ja_denunciou = controller.ja_denunciou(comentario_id, usuario)
+    if request.method == 'POST' and not ja_denunciou:
+        dados = request.form
+        motivo, explicacao, erros = controller.validar_dados_denuncia(request.form)
+        if erros:
+            status = 400
+        elif controller.denunciar_comentario(comentario_id, usuario, motivo, explicacao):
+            if quer_json:
+                return jsonify({'mensagem': 'Denúncia recebida.'}), 201
+            return redirect(url_for('professores.denunciar_comentario', comentario_id=comentario_id,
+                                    next=next_url, comentarios_disciplina=filtro), code=303)
+        else:
+            ja_denunciou = True
+    if request.method == 'POST' and ja_denunciou:
+        status = 409
+    if quer_json and request.method == 'POST':
+        if status == 409:
+            return jsonify({'erros': {'denuncia': 'Você já denunciou este comentário.'}}), 409
+        return jsonify({'erros': erros}), status
+    return render_template('denunciar_comentario.html', professor=professor, comentario=comentario,
+                           motivos=controller.motivos_denuncia(), ja_denunciou=ja_denunciou,
+                           erros=erros, dados=dados, next_url=next_url,
+                           filtro_comentarios=filtro, url_voltar=url_voltar,
+                           usuario=usuario), status
+
 
 @professor_bp.route('/avaliar/<int:professor_id>', methods=['GET', 'POST'])
 @login_required
@@ -59,24 +293,51 @@ def avaliar(professor_id):
     if not is_safe_url(next_url):
         next_url = url_for('professores.perfil', professor_id=professor_id)
 
+    usuario = obter_usuario_atual()
+    origem = request.form if request.method == 'POST' else request.args
+    # Turma cursada (issue #252): um semestre em que o professor deu a disciplina.
+    semestres, escolhida = controller.semestres_para_avaliar(
+        usuario, professor_id, disciplina['id'], origem.get('semestre'))
     erros, status = {}, 200
     if request.method == 'POST':
         notas, erros = controller.validar_notas(request.form)
-        if erros:
-            status = 400
-        elif not controller.registrar_avaliacao(obter_usuario_atual(), professor_id,
-                                                disciplina['id'], notas):
-            erros = {'avaliacao': 'Você já avaliou este professor nesta disciplina.'}
+        bruto = request.form.get('semestre')
+        pedido = controller.ler_semestre(bruto)
+        if bruto is None and semestres:
+            # Sem o campo (clientes antigos da API): a turma mais recente, como antes.
+            pedido = semestres[0]['semestre']
+        opcao = next((o for o in semestres if o['semestre'] == pedido), None)
+        if bruto is not None and opcao is None:
+            erros['semestre'] = 'Escolha uma turma (semestre) em que o professor deu esta disciplina.'
+        elif opcao is not None and opcao['avaliado']:
+            erros['semestre'] = (f"Você já avaliou este professor nesta disciplina em "
+                                 f"{opcao['rotulo']}. Edite a avaliação pelo seu perfil.")
             status = 409
+        semestre = pedido
+        if erros:
+            status = status if status == 409 else 400
         else:
-            return redirect(url_for('professores.perfil', professor_id=professor_id,
-                                    disciplina_id=disciplina['id'], next=next_url), code=303)
+            try:
+                salvou = controller.registrar_avaliacao(usuario, professor_id, disciplina['id'],
+                                                        notas, semestre)
+            except ValueError as erro:
+                erros, status, salvou = {'semestre': str(erro)}, 400, None
+            if salvou is False:
+                erros = {'semestre': 'Você já avaliou este professor nesta disciplina neste semestre.'}
+                status = 409
+            elif salvou:
+                return redirect(url_for('professores.perfil', professor_id=professor_id,
+                                        disciplina_id=disciplina['id'], next=next_url), code=303)
         if request.accept_mimetypes.best == 'application/json':
             return jsonify({'erros': erros}), status
-            
-    return render_template('avaliacao.html', professor=professor, disciplina=disciplina, 
-                           criterios=controller.criterios(), erros=erros, dados=request.form, 
-                           next_url=next_url, usuario=obter_usuario_atual()), status
+        if pedido is not None:
+            escolhida = next((o for o in semestres if o['semestre'] == pedido
+                              and not o['avaliado']), escolhida)
+
+    return render_template('avaliacao.html', professor=professor, disciplina=disciplina,
+                           criterios=controller.criterios(), erros=erros, dados=request.form,
+                           semestres=semestres, semestre_escolhido=escolhida,
+                           next_url=next_url, usuario=usuario), status
 
 
 @professor_bp.route('/avaliacoes/<int:avaliacao_id>/editar', methods=['GET', 'POST'])
@@ -93,6 +354,8 @@ def editar_avaliacao(avaliacao_id):
     }
     erros, status = {}, 200
     dados = {c: str(avaliacao[c]) for c in controller.criterios()}
+    semestre_rotulo = (controller.rotulo_semestre((avaliacao['ano'], avaliacao['periodo']))
+                       if avaliacao.get('ano') and avaliacao.get('periodo') else None)
     if request.method == 'POST':
         dados = request.form
         notas, erros = controller.validar_notas(request.form)
@@ -111,6 +374,7 @@ def editar_avaliacao(avaliacao_id):
         erros=erros,
         dados=dados,
         modo_edicao=True,
+        semestre_rotulo=semestre_rotulo,
         acao_form=url_for('professores.editar_avaliacao', avaliacao_id=avaliacao_id),
         usuario=usuario,
     ), status

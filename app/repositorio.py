@@ -1,13 +1,14 @@
 """Repositórios sobre o Supabase: usuários (Auth + perfis), professores e avaliações.
 
 Tabelas usadas: auth.users (via Supabase Auth), perfis, professores, disciplinas,
-turmas, avaliacoes e a view vw_professor_disciplina. `repositorios()` entrega as
+turmas, avaliacoes, comentarios, denuncias_comentarios, favoritos e a view vw_professor_disciplina. `repositorios()` entrega as
 instâncias configuradas em create_app.
 """
 import re
 import secrets
 import time
 from collections import Counter
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 
 from flask import current_app
@@ -17,8 +18,9 @@ from supabase_auth.helpers import generate_pkce_challenge, generate_pkce_verifie
 
 from app.supabase_db import get_supabase, novo_cliente
 from app.utils import normalizar_busca
-from app.validacoes import CRITERIOS
+from app.validacoes import CRITERIOS, validar_comentario, validar_denuncia
 
+LIMITE_COMENTARIOS = 50        # comentários por listagem; o "ver mais" fica para depois
 COLUNAS_AVALIACAO = ','.join(('id', 'usuario_id', 'professor_id', 'disciplina_id',
                                   'ano', 'periodo', *CRITERIOS))
 MAXIMO_NOME_PERFIL = 100      # perfis.nome_completo é VARCHAR(100)
@@ -27,6 +29,32 @@ TAMANHO_PAGINA = 1000          # limite padrão de linhas por requisição do Po
 VALIDADE_CATALOGO = 300        # segundos de cache da listagem completa
 MINIMO_AVALIACOES_RANKING = 5
 CRITERIOS_RANKING = tuple(c for c in CRITERIOS if c != 'dificuldade')
+LIMITE_SUGESTOES = 8           # sugestões da busca unificada por padrão
+MAXIMO_SUGESTOES = 20          # teto aceito no parâmetro `limite`
+TAMANHO_MINIMO_SUGESTAO = 2    # caracteres (já normalizados) para começar a sugerir
+TIPOS_SUGESTAO = ('professor', 'disciplina', 'departamento')
+
+
+def arredondar_nota(valor):
+    """Nota com uma casa decimal, arredondando meio para cima (igual à macro `nota`)."""
+    return int(valor * 10 + 0.5) / 10
+
+
+def _posicao_do_termo(termo_n, texto):
+    """Quão bem `texto` casa com o termo já normalizado: 0 = começa com ele,
+    1 = alguma palavra começa com ele, 2 = contém no meio, None = não casa."""
+    texto_n = normalizar_busca(texto)
+    if not termo_n or termo_n not in texto_n:
+        return None
+    if texto_n.startswith(termo_n):
+        return 0
+    palavras = re.split(r'[\s\-/()]+', str(texto or ''))
+    return 1 if any(normalizar_busca(p).startswith(termo_n) for p in palavras) else 2
+
+
+def _alguma_disciplina_casa(termo_n, disciplinas):
+    return any(termo_n in normalizar_busca(d['nome']) or termo_n in normalizar_busca(d['codigo'])
+               for d in disciplinas)
 
 
 def _paginar(montar_consulta):
@@ -230,7 +258,7 @@ class ProfessorRepository:
         return self._catalogo
 
     def listar_departamentos(self):
-        """Departamentos distintos (opções do filtro), em ordem alfabética sem acento."""
+        """Departamentos distintos (opções do filtro do ranking), em ordem alfabética sem acento."""
         unicos = {}
         for professor, _ in self._carregar_catalogo():
             departamento = (professor.get('departamento') or '').strip()
@@ -238,25 +266,113 @@ class ProfessorRepository:
                 unicos.setdefault(normalizar_busca(departamento), departamento)
         return [unicos[chave] for chave in sorted(unicos)]
 
-    def catalogo(self, nome='', disciplina='', departamento=''):
+    def catalogo(self, nome='', disciplina='', departamento='', termo=''):
         """[(professor, disciplinas)] filtrado sem distinguir acento/caixa/espaços,
-        ordenado do mais avaliado para o menos avaliado (desempate: nome)."""
+        ordenado do mais avaliado para o menos avaliado (desempate: nome).
+        `termo` é a busca unificada: casa com o nome do professor, o departamento
+        ou o nome/código de alguma disciplina."""
         nome_n, disciplina_n = normalizar_busca(nome), normalizar_busca(disciplina)
-        departamento_n = normalizar_busca(departamento)
+        departamento_n, termo_n = normalizar_busca(departamento), normalizar_busca(termo)
         resultado = []
         for professor, disciplinas in self._carregar_catalogo():
             if departamento_n and normalizar_busca(professor.get('departamento')) != departamento_n:
                 continue
             if nome_n not in normalizar_busca(professor['nome']):
                 continue
-            if disciplina_n and not any(
-                    disciplina_n in normalizar_busca(d['nome'])
-                    or disciplina_n in normalizar_busca(d['codigo']) for d in disciplinas):
+            if disciplina_n and not _alguma_disciplina_casa(disciplina_n, disciplinas):
+                continue
+            if termo_n and not (termo_n in normalizar_busca(professor['nome'])
+                                or termo_n in normalizar_busca(professor.get('departamento'))
+                                or _alguma_disciplina_casa(termo_n, disciplinas)):
                 continue
             resultado.append((professor, disciplinas))
         return sorted(resultado, key=lambda i: (-i[0]['total_avaliacoes'], i[0]['nome'] or '', i[0]['id']))
 
-    def ranking(self):
+    def sugerir(self, termo, limite=LIMITE_SUGESTOES, tipos=TIPOS_SUGESTAO):
+        """Sugestões da busca unificada: [{tipo, id, texto, detalhe}].
+
+        Ignora acentos, caixa e espaços. Quem começa com o termo vem antes de quem só o
+        contém no meio; entre professores, o mais avaliado primeiro. Termos com menos de
+        TAMANHO_MINIMO_SUGESTAO caracteres não geram sugestões."""
+        termo_n = normalizar_busca(termo)
+        if len(termo_n) < TAMANHO_MINIMO_SUGESTAO or limite < 1:
+            return []
+        candidatos = []  # (chave de ordenação, sugestão)
+        disciplinas, departamentos = {}, {}
+        for professor, vinculos in self._carregar_catalogo():
+            if 'professor' in tipos:
+                posicao = _posicao_do_termo(termo_n, professor['nome'])
+                if posicao is not None:
+                    candidatos.append(((posicao, 0, -professor['total_avaliacoes'],
+                                        normalizar_busca(professor['nome']), professor['id']),
+                                       {'tipo': 'professor', 'id': professor['id'],
+                                        'texto': professor['nome'],
+                                        'detalhe': professor.get('departamento') or ''}))
+            for d in vinculos:
+                disciplinas.setdefault(d['id'], d)
+            departamento = (professor.get('departamento') or '').strip()
+            if departamento:
+                chave = normalizar_busca(departamento)
+                departamentos.setdefault(chave, [departamento, 0])[1] += 1
+        if 'disciplina' in tipos:
+            for d in disciplinas.values():
+                posicoes = [p for p in (_posicao_do_termo(termo_n, d['codigo']),
+                                        _posicao_do_termo(termo_n, d['nome'])) if p is not None]
+                if posicoes:
+                    candidatos.append(((min(posicoes), 1, 0, normalizar_busca(d['nome']), d['id']),
+                                       {'tipo': 'disciplina', 'id': d['id'], 'texto': d['nome'],
+                                        'detalhe': d['codigo'] or ''}))
+        if 'departamento' in tipos:
+            for chave, (departamento, total) in departamentos.items():
+                posicao = _posicao_do_termo(termo_n, departamento)
+                if posicao is not None:
+                    candidatos.append(((posicao, 2, -total, chave, 0),
+                                       {'tipo': 'departamento', 'id': departamento,
+                                        'texto': departamento,
+                                        'detalhe': f"{total} {'professor' if total == 1 else 'professores'}"}))
+        candidatos.sort(key=lambda c: c[0])
+        return [sugestao for _, sugestao in candidatos[:limite]]
+
+    def sugerir_professores(self, termo, limite=LIMITE_SUGESTOES, departamento=''):
+        """Professores para os campos de seleção da comparação (#239):
+        [{id, nome, departamento, disciplinas, casou_disciplina}].
+
+        Casa pelo nome do professor ou pelo nome/código de uma disciplina que ele
+        ministra (ignorando acento, caixa e espaços). Quem casa pelo nome vem antes;
+        depois vale a posição do termo, o mais avaliado e o nome. Com `departamento`,
+        só entram professores daquele departamento. As disciplinas que casaram com o
+        termo vêm primeiro na lista do professor."""
+        termo_n = normalizar_busca(termo)
+        if len(termo_n) < TAMANHO_MINIMO_SUGESTAO or limite < 1:
+            return []
+        departamento_n = normalizar_busca(departamento)
+        candidatos = []
+        for professor, vinculos in self._carregar_catalogo():
+            if departamento_n and normalizar_busca(professor.get('departamento')) != departamento_n:
+                continue
+            posicoes_disciplina = {}
+            for d in vinculos:
+                encontradas = [p for p in (_posicao_do_termo(termo_n, d['codigo']),
+                                           _posicao_do_termo(termo_n, d['nome'])) if p is not None]
+                if encontradas:
+                    posicoes_disciplina[d['id']] = min(encontradas)
+            posicao_nome = _posicao_do_termo(termo_n, professor['nome'])
+            if posicao_nome is None and not posicoes_disciplina:
+                continue
+            grupo, posicao = ((0, posicao_nome) if posicao_nome is not None
+                              else (1, min(posicoes_disciplina.values())))
+            disciplinas = sorted(vinculos, key=lambda d: (d['id'] not in posicoes_disciplina,
+                                                          normalizar_busca(d['nome']), d['id']))
+            candidatos.append(((grupo, posicao, -professor['total_avaliacoes'],
+                                normalizar_busca(professor['nome']), professor['id']),
+                               {'id': professor['id'], 'nome': professor['nome'],
+                                'departamento': professor.get('departamento') or '',
+                                'disciplinas': disciplinas,
+                                'casou_disciplina': grupo == 1}))
+        candidatos.sort(key=lambda c: c[0])
+        return [professor for _, professor in candidatos[:limite]]
+
+    def ranking(self, departamento=''):
         colunas = ','.join(('professor_id', *CRITERIOS))
         avaliacoes = _paginar(lambda: self.cliente.table('avaliacoes')
                              .select(colunas).order('id'))
@@ -274,8 +390,11 @@ class ProfessorRepository:
             return []
         professores = _paginar(lambda: self.cliente.table('professores')
                                .select('id,nome,departamento').order('id'))
+        departamento_n = normalizar_busca(departamento)
         resultado = []
         for professor in professores:
+            if departamento_n and normalizar_busca(professor.get('departamento')) != departamento_n:
+                continue
             total = elegiveis.get(professor['id'])
             if total:
                 resultado.append({**professor, 'quantidade': total['quantidade'],
@@ -285,20 +404,40 @@ class ProfessorRepository:
         return [{**professor, 'posicao': posicao}
                 for posicao, professor in enumerate(resultado, start=1)]
 
-
 class AvaliacaoRepository:
     def __init__(self, cliente):
         self.cliente = cliente
 
-    def calcular_medias(self, professor_id, disciplina_id=None):
+    def calcular_medias(self, professor_id, disciplina_id=None, semestre=None):
+        """Médias do professor; `semestre` = (ano, periodo) restringe a um semestre."""
         colunas = ','.join(CRITERIOS)
         def consulta():
             consulta = self.cliente.table('avaliacoes').select(colunas).eq('professor_id', professor_id)
             if disciplina_id is not None:
                 consulta = consulta.eq('disciplina_id', disciplina_id)
+            if semestre is not None:
+                consulta = consulta.eq('ano', semestre[0]).eq('periodo', semestre[1])
             return consulta.order('id')
         linhas = _paginar(consulta)
         return self._resumir_notas(linhas)
+
+    def medias_por_semestre(self, professor_id):
+        """Médias do professor por semestre (todas as disciplinas), do mais antigo ao mais
+        recente: [{'ano', 'periodo', 'quantidade', 'medias'}]. Mesma regra de
+        _resumir_notas; semestres sem nenhuma avaliação válida não aparecem."""
+        colunas = ','.join(('ano', 'periodo', *CRITERIOS))
+        linhas = _paginar(lambda: self.cliente.table('avaliacoes').select(colunas)
+                          .eq('professor_id', professor_id).order('id'))
+        grupos = {}
+        for linha in linhas:
+            if type(linha.get('ano')) is int and type(linha.get('periodo')) is int:
+                grupos.setdefault((linha['ano'], linha['periodo']), []).append(linha)
+        semestres = []
+        for (ano, periodo) in sorted(grupos):
+            resumo = self._resumir_notas(grupos[(ano, periodo)])
+            if resumo['quantidade']:
+                semestres.append({'ano': ano, 'periodo': periodo, **resumo})
+        return semestres
 
     def calcular_medias_por_disciplina(self, disciplina_id, professor_ids):
         colunas = ','.join(('professor_id', *CRITERIOS))
@@ -311,6 +450,31 @@ class AvaliacaoRepository:
         return {professor_id: self._resumir_notas(notas)
                 for professor_id, notas in por_professor.items()}
 
+    def dificuldade_por_professor_disciplina(self, professor_ids):
+        """{professor_id: {disciplina_id: {'media', 'quantidade'}}} numa única consulta agrupada.
+
+        Mesma regra da página do professor (_resumir_notas): só avaliações válidas entram,
+        `quantidade` conta essas avaliações e `media` (arredondada a uma casa, como a macro
+        `nota`) é None quando a disciplina não tem nenhuma. Professores/disciplinas sem
+        avaliações não aparecem no resultado."""
+        ids = sorted(set(professor_ids))
+        if not ids:
+            return {}
+        colunas = ','.join(('professor_id', 'disciplina_id', *CRITERIOS))
+        linhas = _paginar(lambda: self.cliente.table('avaliacoes').select(colunas)
+                          .in_('professor_id', ids).order('id'))
+        grupos = {}
+        for linha in linhas:
+            grupos.setdefault((linha['professor_id'], linha['disciplina_id']), []).append(linha)
+        resultado = {}
+        for (professor_id, disciplina_id), notas in grupos.items():
+            resumo = self._resumir_notas(notas)
+            media = resumo['medias']['dificuldade']
+            resultado.setdefault(professor_id, {})[disciplina_id] = {
+                'media': None if media is None else arredondar_nota(media),
+                'quantidade': resumo['quantidade']}
+        return resultado
+
     @staticmethod
     def _resumir_notas(linhas):
         validas = [l for l in linhas
@@ -319,26 +483,52 @@ class AvaliacaoRepository:
                   for c in CRITERIOS}
         return {'quantidade': len(validas), 'medias': medias}
 
-    def salvar(self, usuario_id, professor_id, disciplina_id, notas):
-        """Grava a avaliação. Retorna False se o usuário já avaliou o par professor/disciplina."""
-        if any(type(notas.get(c)) is not int or not 1 <= notas[c] <= 5 for c in CRITERIOS):
-            raise ValueError('Todos os critérios devem ter notas inteiras de 1 a 5.')
+    def semestres_da_disciplina(self, professor_id, disciplina_id):
+        """Semestres (ano, periodo) em que o professor teve turma da disciplina, do mais
+        recente ao mais antigo. Cada um é uma turma: `turmas` é única por professor,
+        disciplina, ano e período."""
         turmas = (self.cliente.table('vw_professor_disciplina').select('ano,periodo')
                   .eq('professor_id', professor_id).eq('disciplina_id', disciplina_id)
                   .execute().data)
-        if not turmas:
+        return sorted({(t['ano'], t['periodo']) for t in turmas
+                       if type(t.get('ano')) is int and type(t.get('periodo')) is int},
+                      reverse=True)
+
+    def semestres_avaliados(self, usuario_id, professor_id, disciplina_id):
+        """Semestres em que o usuário já avaliou o professor nesta disciplina."""
+        linhas = (self.cliente.table('avaliacoes').select('ano,periodo')
+                  .eq('usuario_id', usuario_id).eq('professor_id', professor_id)
+                  .eq('disciplina_id', disciplina_id).execute().data)
+        return {(l['ano'], l['periodo']) for l in linhas}
+
+    def salvar(self, usuario_id, professor_id, disciplina_id, notas, semestre=None):
+        """Grava a avaliação do semestre cursado (ano, periodo), uma por semestre.
+
+        Sem `semestre`, usa a turma mais recente. ValueError se as notas forem inválidas
+        ou se o professor não teve turma da disciplina no semestre. False se o usuário
+        já avaliou este professor nesta disciplina neste semestre."""
+        if any(type(notas.get(c)) is not int or not 1 <= notas[c] <= 5 for c in CRITERIOS):
+            raise ValueError('Todos os critérios devem ter notas inteiras de 1 a 5.')
+        semestres = self.semestres_da_disciplina(professor_id, disciplina_id)
+        if not semestres:
             raise ValueError('Disciplina não vinculada ao professor.')
-        existente = (self.cliente.table('avaliacoes').select('id').eq('usuario_id', usuario_id)
-                     .eq('professor_id', professor_id).eq('disciplina_id', disciplina_id)
-                     .limit(1).execute().data)
-        if existente:
+        if semestre is None:
+            semestre = semestres[0]
+        elif semestre not in semestres:
+            raise ValueError('O professor não teve turma desta disciplina neste semestre.')
+        if semestre in self.semestres_avaliados(usuario_id, professor_id, disciplina_id):
             return False
-        recente = max(turmas, key=lambda t: (t['ano'] or 0, t['periodo'] or 0))
-        self.cliente.table('avaliacoes').insert({
-            'usuario_id': usuario_id, 'professor_id': professor_id,
-            'disciplina_id': disciplina_id, 'ano': recente['ano'],
-            'periodo': recente['periodo'], **{c: notas[c] for c in CRITERIOS},
-        }).execute()
+        try:
+            self.cliente.table('avaliacoes').insert({
+                'usuario_id': usuario_id, 'professor_id': professor_id,
+                'disciplina_id': disciplina_id, 'ano': semestre[0],
+                'periodo': semestre[1], **{c: notas[c] for c in CRITERIOS},
+            }).execute()
+        except Exception as erro:
+            # Requisições simultâneas (ou banco sem a migração 007): a restrição única recusa.
+            if '23505' in str(erro) or 'duplicate key' in str(erro):
+                return False
+            raise
         return True
 
     def _enriquecer_avaliacoes(self, avaliacoes):
@@ -423,11 +613,283 @@ class AvaliacaoRepository:
         )
         return True
 
+class ComentarioRepository:
+    """Comentários no perfil do professor (tabela comentarios).
+
+    O backend usa a service key, que ignora RLS: toda regra de autoria e de vínculo
+    entre professor e disciplina é conferida aqui. O e-mail e o id da conta do autor
+    não são incluídos na listagem pública. A autoria permanece privada para as
+    verificações do backend e não depende da identificação mostrada na tela.
+    """
+
+    def __init__(self, cliente):
+        self.cliente = cliente
+
+    def _disciplinas_do_professor(self, professor_id):
+        """{disciplina_id: (nome, codigo)} das disciplinas ministradas pelo professor."""
+        linhas = (self.cliente.table('vw_professor_disciplina')
+                  .select('disciplina_id,codigo_disciplina,disciplina')
+                  .eq('professor_id', professor_id).execute().data)
+        return {l['disciplina_id']: (l['disciplina'], l['codigo_disciplina']) for l in linhas}
+
+    @staticmethod
+    def _ler_data(valor):
+        """datetime de uma data ISO 8601 do PostgREST, ou None se não der para ler.
+
+        Aceita 1 a 6 casas decimais nos segundos e o sufixo Z (o PostgREST corta zeros
+        à direita das frações, e o fromisoformat de versões antigas exige 3 ou 6 casas).
+        """
+        if not isinstance(valor, str):
+            return None
+        texto = valor.strip()
+        if texto[-1:] in ('Z', 'z'):
+            texto = texto[:-1] + '+00:00'
+        texto = re.sub(r'(\.\d{1,6})\d*', lambda m: m.group(1).ljust(7, '0'), texto, count=1)
+        try:
+            return datetime.fromisoformat(texto)
+        except ValueError:
+            return None
+
+    @classmethod
+    def formatar_data(cls, valor):
+        """dd/mm/aaaa no horário de Brasília (UTC-3, sem horário de verão); '' se ilegível."""
+        data = cls._ler_data(valor)
+        if data is None:
+            return ''
+        if data.tzinfo is None:
+            data = data.replace(tzinfo=timezone.utc)
+        return data.astimezone(timezone(timedelta(hours=-3))).strftime('%d/%m/%Y')
+
+    @classmethod
+    def _foi_editado(cls, linha):
+        """True se atualizado_em for depois de criado_em. Data ilegível: False, sem exceção."""
+        criado = cls._ler_data(linha.get('criado_em'))
+        atualizado = cls._ler_data(linha.get('atualizado_em'))
+        if criado is None or atualizado is None:
+            return False
+        try:
+            return atualizado > criado
+        except TypeError:      # uma com fuso e outra sem
+            return False
+
+    def listar_por_professor(self, professor_id, disciplina_id=None, usuario_atual_id=None):
+        """(comentarios, ha_mais): os LIMITE_COMENTARIOS mais recentes não ocultados.
+
+        disciplina_id=None lista todas as disciplinas. `ha_mais` é True quando existem
+        comentários além do limite (busca-se um a mais só para saber isso).
+        """
+        consulta = (self.cliente.table('comentarios')
+                    .select('id,usuario_id,disciplina_id,texto,criado_em,atualizado_em')
+                    .eq('professor_id', professor_id).is_('ocultado_em', 'null'))
+        if disciplina_id is not None:
+            consulta = consulta.eq('disciplina_id', disciplina_id)
+        linhas = (consulta.order('criado_em', desc=True).order('id', desc=True)
+                  .limit(LIMITE_COMENTARIOS + 1).execute().data)
+        ha_mais = len(linhas) > LIMITE_COMENTARIOS
+        linhas = linhas[:LIMITE_COMENTARIOS]
+        if not linhas:
+            return [], False
+
+        disciplinas = self._disciplinas_do_professor(professor_id)
+        comentarios = []
+        for l in linhas:
+            nome, codigo = disciplinas.get(l['disciplina_id'], ('', ''))
+            comentarios.append({
+                'id': l['id'],
+                'texto': l['texto'],
+                'disciplina_nome': nome,
+                'disciplina_codigo': codigo,
+                'criado_em': l['criado_em'],
+                'editado': self._foi_editado(l),
+                'e_meu': usuario_atual_id is not None and l['usuario_id'] == usuario_atual_id,
+            })
+        return comentarios, ha_mais
+
+    def listar_do_usuario(self, usuario_id):
+        """Relatos visíveis da própria conta, sem dados de identidade no resultado."""
+        linhas = (self.cliente.table('comentarios')
+                  .select('id,professor_id,disciplina_id,texto,criado_em,atualizado_em')
+                  .eq('usuario_id', usuario_id).is_('ocultado_em', 'null')
+                  .order('criado_em', desc=True).order('id', desc=True)
+                  .limit(LIMITE_COMENTARIOS + 1).execute().data)
+        ha_mais = len(linhas) > LIMITE_COMENTARIOS
+        linhas = linhas[:LIMITE_COMENTARIOS]
+        if not linhas:
+            return [], False
+        professores = {p['id']: p['nome'] for p in self.cliente.table('professores')
+                       .select('id,nome').in_('id', sorted({l['professor_id'] for l in linhas}))
+                       .execute().data}
+        disciplinas = {d['id']: d for d in self.cliente.table('disciplinas')
+                       .select('id,nome,codigo').in_('id', sorted({l['disciplina_id'] for l in linhas}))
+                       .execute().data}
+        return [{**{c: l[c] for c in ('id', 'professor_id', 'disciplina_id', 'texto', 'criado_em')},
+                 'professor_nome': professores.get(l['professor_id'], 'Professor'),
+                 'disciplina_nome': disciplinas.get(l['disciplina_id'], {}).get('nome', ''),
+                 'disciplina_codigo': disciplinas.get(l['disciplina_id'], {}).get('codigo', ''),
+                 'data': self.formatar_data(l['criado_em']), 'editado': self._foi_editado(l)}
+                for l in linhas], ha_mais
+
+    def buscar_do_usuario(self, comentario_id, usuario_id):
+        """Comentário se pertencer ao usuário, senão None (a rota responde 404)."""
+        dados = (self.cliente.table('comentarios')
+                 .select('id,professor_id,disciplina_id,texto')
+                 .eq('id', comentario_id).eq('usuario_id', usuario_id).limit(1).execute().data)
+        if not dados:
+            return None
+        linha = dados[0]
+        nome, codigo = self._disciplinas_do_professor(linha['professor_id']).get(
+            linha['disciplina_id'], ('', ''))
+        return {'id': linha['id'], 'professor_id': linha['professor_id'],
+                'disciplina_id': linha['disciplina_id'], 'texto': linha['texto'],
+                'disciplina_nome': nome, 'disciplina_codigo': codigo}
+
+    def buscar_visivel(self, comentario_id):
+        """Comentário publicado (não ocultado) de qualquer autor, ou None.
+
+        `usuario_id` volta só para o servidor conferir a autoria; não vai para a tela.
+        """
+        dados = (self.cliente.table('comentarios')
+                 .select('id,usuario_id,professor_id,disciplina_id,texto')
+                 .eq('id', comentario_id).is_('ocultado_em', 'null').limit(1).execute().data)
+        if not dados:
+            return None
+        linha = dados[0]
+        nome, codigo = self._disciplinas_do_professor(linha['professor_id']).get(
+            linha['disciplina_id'], ('', ''))
+        return {**{c: linha[c] for c in ('id', 'usuario_id', 'professor_id',
+                                         'disciplina_id', 'texto')},
+                'disciplina_nome': nome, 'disciplina_codigo': codigo}
+
+    def criar(self, usuario_id, professor_id, disciplina_id, texto):
+        """Grava o comentário do usuário e devolve o id novo.
+
+        ValueError se o texto for inválido ou a disciplina não for do professor.
+        """
+        texto, erro = validar_comentario(texto)
+        if erro:
+            raise ValueError(erro)
+        if disciplina_id not in self._disciplinas_do_professor(professor_id):
+            raise ValueError('Disciplina não vinculada ao professor.')
+        criado = self.cliente.table('comentarios').insert({
+            'usuario_id': usuario_id, 'professor_id': professor_id,
+            'disciplina_id': disciplina_id, 'texto': texto,
+        }).execute().data
+        return criado[0]['id']
+
+    def atualizar(self, comentario_id, usuario_id, disciplina_id, texto):
+        """Muda só texto e disciplina. False se o comentário não é do usuário.
+
+        ValueError se o texto for inválido ou a disciplina não for do professor
+        do comentário (o professor nunca muda).
+        """
+        texto, erro = validar_comentario(texto)
+        if erro:
+            raise ValueError(erro)
+        existente = self.buscar_do_usuario(comentario_id, usuario_id)
+        if not existente:
+            return False
+        if disciplina_id not in self._disciplinas_do_professor(existente['professor_id']):
+            raise ValueError('Disciplina não vinculada ao professor.')
+        atualizadas = (self.cliente.table('comentarios')
+                       .update({'texto': texto, 'disciplina_id': disciplina_id})
+                       .eq('id', comentario_id).eq('usuario_id', usuario_id).execute().data)
+        return bool(atualizadas)
+
+    def excluir(self, comentario_id, usuario_id):
+        """Apaga o comentário se for do usuário. False se nada foi afetado."""
+        apagadas = (self.cliente.table('comentarios').delete()
+                    .eq('id', comentario_id).eq('usuario_id', usuario_id).execute().data)
+        return bool(apagadas)
+
+
+class DenunciaRepository:
+    """Denúncias de comentários (tabela denuncias_comentarios, issue #215).
+
+    A tabela é privada: o RLS não libera nada para anon/authenticated e só o backend
+    (service_role) grava. Nenhum método devolve quem denunciou para a tela.
+    """
+
+    def __init__(self, cliente):
+        self.cliente = cliente
+
+    def tem_denuncia_ativa(self, comentario_id, usuario_id):
+        """True se o usuário já tem uma denúncia em aberto para o comentário."""
+        return bool(self.cliente.table('denuncias_comentarios').select('id')
+                    .eq('comentario_id', comentario_id).eq('usuario_id', usuario_id)
+                    .is_('resolvida_em', 'null').limit(1).execute().data)
+
+    def criar(self, comentario_id, usuario_id, motivo, explicacao=None):
+        """Registra a denúncia. False se já houver uma ativa do mesmo usuário.
+
+        ValueError se motivo ou explicação forem inválidos.
+        """
+        motivo, explicacao, erros = validar_denuncia(motivo, explicacao)
+        if erros:
+            raise ValueError(next(iter(erros.values())))
+        if self.tem_denuncia_ativa(comentario_id, usuario_id):
+            return False
+        try:
+            self.cliente.table('denuncias_comentarios').insert({
+                'comentario_id': comentario_id, 'usuario_id': usuario_id,
+                'motivo': motivo, 'explicacao': explicacao,
+            }).execute()
+        except Exception as erro:
+            # Duas requisições simultâneas: o índice único parcial recusa a segunda.
+            if '23505' in str(erro) or 'duplicate key' in str(erro):
+                return False
+            raise
+        return True
+
+
+class FavoritoRepository:
+    """Professores favoritos de cada usuário (tabela favoritos, issue #223).
+
+    A lista é pessoal: todo método recebe o usuario_id da sessão e filtra por ele.
+    """
+
+    def __init__(self, cliente):
+        self.cliente = cliente
+
+    def eh_favorito(self, usuario_id, professor_id):
+        return bool(self.cliente.table('favoritos').select('professor_id')
+                    .eq('usuario_id', usuario_id).eq('professor_id', professor_id)
+                    .limit(1).execute().data)
+
+    def adicionar(self, usuario_id, professor_id):
+        """Favorita o professor. Repetir não duplica (ON CONFLICT DO NOTHING)."""
+        self.cliente.table('favoritos').upsert(
+            [{'usuario_id': usuario_id, 'professor_id': professor_id}],
+            on_conflict='usuario_id,professor_id', ignore_duplicates=True).execute()
+
+    def remover(self, usuario_id, professor_id):
+        """Desfavorita o professor. True se ele estava na lista."""
+        return bool(self.cliente.table('favoritos').delete()
+                    .eq('usuario_id', usuario_id).eq('professor_id', professor_id)
+                    .execute().data)
+
+    def listar_por_usuario(self, usuario_id):
+        """Professores favoritos (id, nome, departamento), mais recentes primeiro."""
+        linhas = (self.cliente.table('favoritos').select('professor_id,criado_em')
+                  .eq('usuario_id', usuario_id).order('criado_em', desc=True)
+                  .execute().data)
+        ids = [l['professor_id'] for l in linhas]
+        if not ids:
+            return []
+        professores = {p['id']: p for p in (self.cliente.table('professores')
+                                            .select('id,nome,departamento')
+                                            .in_('id', ids).execute().data)}
+        return [professores[i] for i in ids if i in professores]
+
+
 class Repositorios:
-    def __init__(self, usuarios, professores, avaliacoes):
+    def __init__(self, usuarios, professores, avaliacoes, comentarios=None, denuncias=None,
+                 favoritos=None):
         self.usuarios = usuarios
         self.professores = professores
         self.avaliacoes = avaliacoes
+        self.comentarios = comentarios
+        self.denuncias = denuncias
+        self.favoritos = favoritos
 
 
 def configurar_repositorios(app):
@@ -436,7 +898,9 @@ def configurar_repositorios(app):
     cliente = injetado or get_supabase()
     fabrica = (lambda: injetado) if injetado else novo_cliente
     app.extensions['repositorios'] = Repositorios(
-        UsuarioRepository(cliente, fabrica), ProfessorRepository(cliente), AvaliacaoRepository(cliente))
+        UsuarioRepository(cliente, fabrica), ProfessorRepository(cliente),
+        AvaliacaoRepository(cliente), ComentarioRepository(cliente),
+        DenunciaRepository(cliente), FavoritoRepository(cliente))
 
 
 def repositorios() -> Repositorios:

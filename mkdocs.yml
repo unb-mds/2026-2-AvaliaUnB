@@ -1,7 +1,7 @@
 site_name: AvaliaUnb
 site_description: Documentação do AvaliaUnb
-repo_url: https://github.com/unb-mds/2026-2-AvaliaAiUnB
-repo_name: unb-mds/2026-2-AvaliaAiUnB
+repo_url: https://github.com/unb-mds/2026-2-AvaliaUnB
+repo_name: unb-mds/2026-2-AvaliaUnB
 theme:
   name: material
   language: pt-BR
@@ -51,6 +51,7 @@ nav:
   - Guia da documentação: GUIA_DOCUMENTACAO.md
   - Projeto:
     - Funcionalidades: FUNCIONALIDADES.md
+    - Implementado e planejado: ESTADO_DA_INTERFACE.md
     - Comentários avaliativos: COMENTARIOS.md
     - Design system: DESIGN_SYSTEM.md
     - Telas de comentários: TELAS_COMENTARIOS.md

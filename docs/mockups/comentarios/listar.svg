@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 844" width="400" height="844" role="img" aria-labelledby="title description" font-family="Arial, sans-serif">
   <title id="title">Comentários no perfil do professor</title>
-  <desc id="description">Lista com datas e ícones de reação sempre visíveis. @estudante tem três curtidas. @colega tem oito curtidas, uma descurtida e e-mail expandido.</desc>
+  <desc id="description">Lista sem identificação dos autores, com datas e ícones de reação. O primeiro comentário tem três curtidas; o segundo tem oito curtidas e uma descurtida.</desc>
   <defs>
     <g id="polegar" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
       <path d="M6 8h3l3-5c.6-1 2-.5 2 .7V8h3a2 2 0 0 1 2 2.4l-1.1 5.9a2 2 0 0 1-2 1.7H6z"/>
@@ -18,7 +18,6 @@
   <path d="M16 204h368" stroke="#D4D9DF"/>
   <path d="M80 204h92" stroke="#174B83" stroke-width="3"/>
   <text x="16" y="242" font-size="24" font-weight="700" fill="#202124">Comentários</text>
-  <text x="16" y="266" font-size="14" fill="#4F5357">Clique no nome de usuário para ver o e-mail.</text>
   <rect x="16" y="282" width="184" height="44" rx="8" fill="#174B83"/>
   <text x="108" y="310" font-size="15" font-weight="700" fill="#FFFFFF" text-anchor="middle">Escrever comentário</text>
   <text x="16" y="354" font-size="15" font-weight="700" fill="#202124">Ordenar por</text>
@@ -27,8 +26,6 @@
   <path d="m352 384 5 5 5-5" fill="none" stroke="#4F5357" stroke-width="2"/>
   <g transform="translate(0 138)">
     <rect x="16" y="288" width="368" height="140" rx="12" fill="#FFFFFF"/>
-    <text x="32" y="316" font-size="15" font-weight="700" fill="#174B83" text-decoration="underline">@estudante</text>
-    <text x="126" y="316" font-size="14" fill="#4F5357">Você</text>
     <text x="368" y="316" font-size="14" fill="#4F5357" text-anchor="end">09/11/2026</text>
     <text x="32" y="340" font-size="14" fill="#4F5357">Cálculo 1</text>
     <text x="32" y="366" font-size="15" fill="#202124">Os exemplos ajudaram a entender o conteúdo.</text>
@@ -39,12 +36,8 @@
     <text x="280" y="407" font-size="14" fill="#4F5357">3</text>
     <use href="#polegar" transform="translate(333 411) rotate(180)" color="#4F5357"/>
     <rect x="16" y="444" width="368" height="238" rx="12" fill="#FFFFFF"/>
-    <text x="32" y="472" font-size="15" font-weight="700" fill="#174B83" text-decoration="underline">@colega</text>
-    <path d="m101 470 4-4 4 4" fill="none" stroke="#174B83" stroke-width="2"/>
     <text x="368" y="472" font-size="14" fill="#4F5357" text-anchor="end">08/11/2026</text>
-    <rect x="32" y="484" width="336" height="42" rx="8" fill="#F2F4F7"/>
-    <text x="44" y="510" font-size="14" fill="#202124">E-mail · colega@example.com</text>
-    <g transform="translate(0 48)">
+    <g>
       <text x="32" y="496" font-size="14" fill="#4F5357">Cálculo 2</text>
       <text x="32" y="525" font-size="15" fill="#202124">Os exercícios foram bem organizados.</text>
       <path d="M32 540h336" stroke="#D4D9DF"/>

@@ -1,11 +1,11 @@
 # Modelo de dados do AvaliaUnB (Supabase / PostgreSQL)
 
 > Issue #109. Depende da #90 (esquema versionado em `docs/migrations/`).
-> O esquema e as políticas estão versionados em SQL; sua aplicação em cada ambiente deve ser conferida. A tabela de comentários é **apenas proposta**, sem migração aplicada.
+> O esquema e as políticas estão versionados em SQL; sua aplicação em cada ambiente deve ser conferida. A tabela `comentarios` está versionada em `docs/migrations/002_comentarios.sql`, existe no banco e é usada pelo perfil do professor; as denúncias estão em `docs/migrations/005_denuncias_comentarios.sql` (seção 7) e os favoritos em `docs/migrations/006_favoritos.sql` (seção 8); as reações continuam **apenas proposta**, sem migração.
 
 ## 1. Visão geral
 
-O banco tem cinco tabelas e uma view. Três são alimentadas pelo scraper do SIGAA (`professores`, `disciplinas`, `turmas`) e duas pelos usuários autenticados (`perfis`, `avaliacoes`).
+O banco tem cinco tabelas e uma view. Três são alimentadas pelo scraper do SIGAA (`professores`, `disciplinas`, `turmas`) e duas pelos usuários autenticados (`perfis`, `avaliacoes`). As tabelas `comentarios` (seção 6), `denuncias_comentarios` (seção 7) e `favoritos` (seção 8) foram acrescentadas depois e não aparecem no diagrama.
 
 ```mermaid
 erDiagram
@@ -71,7 +71,7 @@ Alimentada pelo scraper do SIGAA.
 | `departamento` | `VARCHAR(255)` | `NOT NULL`, default `''` |
 | `criado_em` | `TIMESTAMPTZ` | default `NOW()` |
 
-- **Unicidade:** `uq_professores_nome_departamento` em `(nome, departamento)`.
+- **Unicidade:** `uq_professores_nome` em `(nome)`, criada por [`004_professores_unicos.sql`](migrations/004_professores_unicos.sql) no lugar da antiga `uq_professores_nome_departamento` em `(nome, departamento)` (issue #235).
 
 ### 2.2 `disciplinas`
 
@@ -133,7 +133,9 @@ Avaliação por critérios objetivos, com notas inteiras de 1 a 5.
 | `dificuldade` | `INTEGER` | `NOT NULL`, `CHECK (1..5)` |
 | `criado_em` | `TIMESTAMPTZ` | default `NOW()` |
 
-- **Unicidade:** `uq_avaliacoes_usuario_prof_disc` em `(usuario_id, professor_id, disciplina_id)`. Cada usuário avalia uma vez cada combinação professor + disciplina. Como `ano` e `periodo` não entram na chave, não é possível reavaliar a mesma combinação em outro semestre.
+- **Unicidade:** `uq_avaliacoes_usuario_prof_disc_semestre` em `(usuario_id, professor_id, disciplina_id, ano, periodo)`, desde a migração [`007_avaliacao_por_semestre.sql`](migrations/007_avaliacao_por_semestre.sql) (issue #252). Cada usuário avalia uma vez cada **turma cursada** (professor + disciplina + semestre). Antes dela, a chave era `uq_avaliacoes_usuario_prof_disc` em `(usuario_id, professor_id, disciplina_id)`, sem o semestre.
+- **Semestre:** `ano`/`periodo` é a turma escolhida no formulário. O backend confere que existe uma linha em `turmas` para o professor, a disciplina e o semestre (não há FK composta). Avaliações anteriores à #252 têm o semestre da turma mais recente do par na época.
+- **Índice:** `idx_avaliacoes_professor_semestre (professor_id, ano, periodo)` atende o filtro de semestre das médias e o gráfico de evolução.
 
 ### 2.6 View `vw_professor_disciplina`
 
@@ -178,21 +180,39 @@ SELECT t.id AS turma_id,
 | `perfis` | `avaliacoes` do usuário |
 | `professores` | `turmas` e `avaliacoes` do professor |
 | `disciplinas` | `turmas` e `avaliacoes` da disciplina |
+| `comentarios` | `denuncias_comentarios` do comentário |
+| `perfis` ou `professores` | `favoritos` do usuário ou do professor |
 
 Consequência prática: o scraper não deve apagar professores ou disciplinas para "refazer" a carga, pois isso destrói as avaliações associadas. Deve usar upsert pelas chaves únicas acima.
 
 ## 4. Chave de unicidade do professor e efeito nas buscas
 
-O professor é identificado por **(nome, departamento)**, não só pelo nome.
+O professor é identificado só pelo **nome** (`UNIQUE (nome)`), desde a migração
+[`004_professores_unicos.sql`](migrations/004_professores_unicos.sql) (issue #235).
 
-O **departamento** guardado em `professores` é a **unidade que oferece a disciplina** no SIGAA, e não necessariamente o departamento de lotação do docente. Por isso:
+Antes a chave era **(nome, departamento)**. Como o **departamento** gravado é a
+**unidade que oferece a disciplina** no SIGAA, e não a lotação do docente, quem dava
+aula em mais de uma unidade virava vários registros, cada um com seu `id`, suas
+avaliações e médias separadas. Em 18/11/2026 o banco tinha 142 docentes nessa
+situação (288 registros). A migração 004 juntou cada grupo num registro só.
 
-- Um mesmo docente que leciona disciplinas ofertadas por departamentos diferentes pode aparecer como **mais de um registro** em `professores`, cada um com seu `id` e suas próprias avaliações.
-- Dois docentes homônimos em departamentos diferentes são tratados como pessoas distintas, o que pode estar certo ou errado.
-- Uma busca apenas por `nome` pode retornar vários registros para a mesma pessoa. A interface deve exibir o departamento ao lado do nome, e a busca não deve assumir que o nome é único.
-- Médias de avaliação são calculadas **por registro**, então um docente dividido em dois registros terá notas separadas.
+Consequências da chave atual:
 
-Limitação conhecida: não existe hoje uma identificação única do docente (como matrícula). Unificar registros duplicados seria uma decisão futura.
+- Cada docente tem um único `id`, um único perfil e uma única média.
+- `departamento` guarda **uma** unidade: a do registro mantido na mesclagem (uma
+  unidade acadêmica é preferida a um decanato como o DPG) ou, para professores
+  novos, a primeira unidade em que o scraper o encontrou. O scraper não sobrescreve o
+  departamento de quem já existe. As disciplinas de todas as unidades continuam
+  ligadas ao docente pelas `turmas`.
+- O filtro por departamento usa só essa unidade, então um docente pode não aparecer
+  no filtro de outra unidade em que também leciona.
+- Dois docentes homônimos seriam tratados como a mesma pessoa. Não existe uma
+  identificação única do docente (como a matrícula) no SIGAA público, e homônimos
+  exatos são raros, então esse risco foi aceito.
+
+Para conferir se voltaram a aparecer duplicatas, use
+`python scraper/manutencao_banco.py duplicatas` (veja o
+[guia do scraper](COMO_USAR_SCRAPER.md#4-manutencao-do-banco)).
 
 ## 5. Políticas de RLS
 
@@ -213,9 +233,9 @@ que as políticas já foram aplicadas em cada ambiente Supabase.
 A aplicação Flask em `main` ainda cria clientes com `SUPABASE_SERVICE_KEY`.
 O papel `service_role` ignora o RLS, portanto as permissões no código Flask
 continuam essenciais. A adoção da chave pública e de um token de usuário é
-acompanhada nas issues [#124](https://github.com/unb-mds/2026-2-AvaliaAiUnB/issues/124),
-[#129](https://github.com/unb-mds/2026-2-AvaliaAiUnB/issues/129) e
-[#130](https://github.com/unb-mds/2026-2-AvaliaAiUnB/issues/130).
+acompanhada nas issues [#124](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/124),
+[#129](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/129) e
+[#130](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/130).
 
 As políticas atuais da migração são a **base versionada**, não uma comprovação
 de isolamento suficiente: antes de migrar perfis, definir exatamente quais
@@ -261,13 +281,18 @@ do conteúdo atual da migração.
 
 ## 6. Proposta: tabela `comentarios`
 
-> **Status: proposta para revisão do grupo. SQL não aplicado.**
+> **Status: a tabela `comentarios` está implementada** pela migração
+> [`002_comentarios.sql`](migrations/002_comentarios.sql), que é a fonte de
+> verdade da tabela (inclui RLS e permissões por coluna, além do que o bloco
+> abaixo mostra) e é usada pelo perfil do professor. O restante desta seção,
+> em especial as reações (`comentarios_reacoes`), continua **proposta para
+> revisão do grupo, sem migração**.
 
 ### 6.1 Decisões de projeto
 
 | Tema | Proposta | Motivo |
 |---|---|---|
-| Ligação privada com usuário | `usuario_id` → `perfis(id)` | Garante autoria e permissões. A listagem exibe o nome de usuário sem expor o identificador da conta. |
+| Ligação privada com usuário | `usuario_id` → `perfis(id)` | Garante autoria e permissões no backend. A listagem não expõe identificação do autor. |
 | Ligação com professor | `professor_id` → `professores(id)`, `NOT NULL` | O comentário é sempre sobre um professor. |
 | Ligação com disciplina | `disciplina_id` → `disciplinas(id)`, `NOT NULL` | Todo relato se refere a uma disciplina ministrada pelo professor. |
 | Quantidade por usuário | Vários relatos para o mesmo professor e disciplina | Cada comentário é identificado pelo seu próprio ID. |
@@ -338,23 +363,23 @@ REVOKE ALL ON comentarios_reacoes FROM PUBLIC, anon, authenticated;
 2. **Registros independentes.** Comentários e avaliações por estrelas são
    gravados em tabelas separadas. Cada operação verifica suas próprias
    permissões e campos, independentemente de haver registro na outra tabela.
-   A tabela `avaliacoes` admite um registro por conta, professor e
-   disciplina, conforme a seção 2.5.
-3. **Leitura pública com autoria.** O backend lista comentários visíveis com
-   ID do comentário, texto, disciplina, datas, contagens e `perfis.username`.
-   A ordenação usa a data da primeira publicação (`criado_em`), a contagem
-   de curtidas ou a soma de curtidas e descurtidas, conforme a
-   [especificação](COMENTARIOS.md).
-   Uma consulta separada, por ID do comentário visível, retorna apenas o
-   e-mail atual do autor quando sua titularidade estiver verificada no perfil.
-   Qualquer visitante pode fazer essa consulta ao clicar no nome de usuário.
-   O backend mantém o endereço fora da listagem e restringe a consulta a
-   comentários públicos, conforme o
-   [fluxo de privacidade](COMENTARIOS.md).
-4. **Moderação.** A tabela `comentarios` guarda o texto já aprovado. Textos
-   que precisam de revisão ficam em uma fila privada separada, inclusive
-   revisões de comentários publicados. O modelo de fila, denúncias e decisões
-   será detalhado na implementação do [fluxo de moderação](COMENTARIOS.md).
+   A tabela `avaliacoes` admite um registro por conta, professor, disciplina,
+   ano e período, conforme a seção 2.5 e a migração 007 (#252).
+3. **Leitura pública sem identificação.** O backend lista comentários visíveis com
+   ID do comentário, texto, disciplina e datas. A ordenação atual usa a data
+   da primeira publicação (`criado_em`). Contagens, reações e ordenação por
+   curtidas são planejadas nas #212 e #213, conforme a [especificação](COMENTARIOS.md).
+   O perfil do autor não é consultado. A resposta não inclui `usuario_id` nem
+   `username`, conforme o [fluxo de privacidade](COMENTARIOS.md). A migração
+   [`20261122155752_anonimato_comentarios.sql`](migrations/20261122155752_anonimato_comentarios.sql)
+   revoga a leitura da tabela inteira e concede às roles públicas somente
+   as colunas públicas. Consultas diretas devem especificar essas colunas;
+   `SELECT *`, filtros e junções por `usuario_id` são bloqueados. O vínculo
+   privado, a escrita por autor, o RLS e o acesso do backend permanecem.
+4. **Moderação planejada (#216).** Comentários são publicados após as
+   validações atuais; denúncias já ficam em tabela privada (#215). A área
+   restrita, as decisões de ocultar/restaurar e as contestações estão em revisão
+   no PR #255; não há fila de pré-aprovação implementada na `main`.
 
 ### 6.4 Onde cada regra é aplicada
 
@@ -364,19 +389,84 @@ REVOKE ALL ON comentarios_reacoes FROM PUBLIC, anon, authenticated;
 | Texto de 2 a 1.000 caracteres | O banco verifica o tamanho após retirar os espaços em branco das extremidades. O backend valida antes para devolver mensagem amigável. |
 | Só o autor edita ou apaga | O backend compara a sessão com o autor. A `service_role` ignora o RLS. |
 | Identidade do autor e de quem reage | O servidor usa a sessão verificada e não aceita `usuario_id` enviado pelo cliente. |
-| Uma reação por conta e comentário | A chave primária garante a unicidade. O backend valida comentário visível e autor diferente de quem reage. |
-| Filtro antes de publicar ou editar | O backend só grava texto público depois da aprovação automática ou manual. |
+| Uma denúncia ativa por conta e comentário | O índice único parcial garante a unicidade. O backend confere antes, recusa o próprio comentário e não expõe o denunciante (seção 7). |
+| Uma reação por conta e comentário (planejado, #212) | A proposta usa chave primária e validação de comentário visível e autor diferente; ainda não há entrega desse fluxo. |
+| Filtro antes de publicar ou editar (planejado, #214) | O filtro deve bloquear violações claras antes de gravar. Casos incertos seguem a C10; não há fila de pré-aprovação na main. |
 
-## 7. Como recriar o banco
+## 7. Denúncias de comentários (`denuncias_comentarios`)
+
+> Issue #215 (RF10, decisão C06). Versionada em
+> [`005_denuncias_comentarios.sql`](migrations/005_denuncias_comentarios.sql).
+> O painel do moderador fica para a #216.
+
+| Coluna | Tipo | Regra |
+|---|---|---|
+| `id` | `BIGINT` identity | Chave primária |
+| `comentario_id` | `BIGINT` → `comentarios(id)` | `NOT NULL`, `ON DELETE CASCADE` |
+| `usuario_id` | `UUID` → `perfis(id)` | Quem denunciou. `NOT NULL`, `ON DELETE CASCADE`. Nunca sai do backend |
+| `motivo` | `TEXT` | `CHECK` em `ofensa`, `dados_pessoais`, `discriminacao`, `ameaca`, `spam`, `fora_do_tema` |
+| `explicacao` | `TEXT` | Opcional, até 500 caracteres |
+| `criado_em` | `TIMESTAMPTZ` | `DEFAULT NOW()` |
+| `resolvida_em` | `TIMESTAMPTZ` | Nula enquanto a denúncia está ativa; preenchida pela moderação (#216) |
+
+- **Unicidade:** índice único parcial `(comentario_id, usuario_id) WHERE resolvida_em IS NULL`.
+  Cada pessoa tem no máximo uma denúncia ativa por comentário; depois de resolvida,
+  pode denunciar de novo. O backend confere antes de gravar e trata a violação do
+  índice (requisições simultâneas) como denúncia repetida.
+- **Privacidade:** RLS habilitado e nenhum privilégio para `anon` ou `authenticated`;
+  só `service_role` lê e grava. O autor do comentário e os visitantes não veem quem
+  denunciou nem a explicação. O comentário continua visível: o número de denúncias
+  não oculta o texto.
+- **Regras no backend** (`DenunciaRepository`, rota `/comentarios/<id>/denunciar`):
+  exige login e CSRF, limita a 10 envios por hora por usuário, recusa com 404 o
+  comentário oculto, inexistente ou do próprio usuário, e usa o denunciante da
+  sessão (um `usuario_id` enviado no formulário é ignorado).
+- **Retenção:** a proposta da C08 é apagar o registro até 90 dias após encerrar o
+  caso; a rotina de descarte fica para a moderação (#216).
+
+## 8. Professores favoritos (`favoritos`)
+
+> Issue #223 (RF11). Versionada em [`006_favoritos.sql`](migrations/006_favoritos.sql).
+> Notificações quando um favorito recebe avaliação ficam fora do escopo.
+
+| Coluna | Tipo | Regra |
+|---|---|---|
+| `usuario_id` | `UUID` → `perfis(id)` | Dono da lista. `NOT NULL`, `ON DELETE CASCADE` |
+| `professor_id` | `BIGINT` → `professores(id)` | `NOT NULL`, `ON DELETE CASCADE` |
+| `criado_em` | `TIMESTAMPTZ` | `DEFAULT NOW()`; ordena a lista (mais recentes primeiro) |
+
+- **Unicidade:** chave primária `(usuario_id, professor_id)`. O backend grava com
+  upsert `ON CONFLICT DO NOTHING`, então favoritar de novo não duplica.
+- **Privacidade:** RLS habilitado; `anon` não tem acesso e `authenticated` só lê,
+  insere e apaga linhas com `usuario_id = auth.uid()`. A lista aparece só no
+  `/perfil` do próprio dono.
+- **Regras no backend** (`FavoritoRepository`, rota `POST /professores/<id>/favorito`
+  com `acao=adicionar|remover`): exige login e CSRF, limita a 60 envios por hora por
+  usuário, responde 404 para professor inexistente e usa o dono da sessão (um
+  `usuario_id` enviado no formulário é ignorado). O redirecionamento só aceita
+  `destino` interno (`is_safe_url`).
+
+## 9. Como recriar o banco
 
 1. Criar um projeto Supabase vazio.
-2. No **SQL Editor**, executar o script versionado em `docs/migrations/001_initial_schema.sql` e verificar tabelas e políticas. Não executar blocos de proposta de comentários.
+2. No **SQL Editor**, executar o script versionado em `docs/migrations/001_initial_schema.sql` e verificar tabelas e políticas. Não executar os blocos de proposta da seção 6: a tabela `comentarios` vem do passo 5.
 3. Copiar `.env.example` para `.env` e preencher:
    - `SECRET_KEY`: gerar com `python -c "import secrets; print(secrets.token_hex(32))"`.
    - `SUPABASE_URL`: URL do projeto (o código remove sufixos como `/rest/v1`).
    - `SUPABASE_SERVICE_KEY`: chave `service_role` em *Project Settings → API*. É secreta: não commitar e não expor em templates.
    - `FLASK_DEBUG`: `0`, ou `1` somente em desenvolvimento local.
 4. Executar o scraper do SIGAA para popular `professores`, `disciplinas` e `turmas`.
-5. A tabela `comentarios` só entra depois da aprovação da proposta da seção 6.
+5. Executar `docs/migrations/002_comentarios.sql`, que depende do esquema inicial, para criar a tabela `comentarios`. Reações e moderação ainda não têm migração (seção 6).
+6. Executar `docs/migrations/003_emails_verificados.sql` e `docs/migrations/004_professores_unicos.sql`. A 004 troca a chave do professor para `UNIQUE (nome)`; num banco vazio ela só faz essa troca.
+7. Executar `docs/migrations/005_denuncias_comentarios.sql` para criar a tabela privada de denúncias (seção 7).
+8. Executar `docs/migrations/006_favoritos.sql` para criar a tabela de favoritos (seção 8).
+9. Executar `docs/migrations/007_avaliacao_por_semestre.sql` para permitir uma avaliação por turma cursada (seção 2.5).
 
 Veja também: [guia do backend](BACKEND.md), [guia do scraper](COMO_USAR_SCRAPER.md) e [mapa da documentação](GUIA_DOCUMENTACAO.md).
+
+
+A proteção de autoria na leitura direta também exige a migração
+[`20261122155752_anonimato_comentarios.sql`](migrations/20261122155752_anonimato_comentarios.sql),
+versionada na #258. Sua aplicação no ambiente deve ser conferida. As migrações
+de moderação e retenção dos PRs #255/#256 ainda estão em revisão; não fazem
+parte do esquema entregue na base desta documentação.

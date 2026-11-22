@@ -14,7 +14,7 @@ Plataforma de consulta, comparação e avaliação de professores e disciplinas 
 
 [Acessar o site :material-open-in-new:](https://avaliaunb.com.br/){ .md-button .md-button--primary }
 
-[Código no GitHub :fontawesome-brands-github:](https://github.com/unb-mds/2026-2-AvaliaAiUnB){ .md-button .md-button--primary }
+[Código no GitHub :fontawesome-brands-github:](https://github.com/unb-mds/2026-2-AvaliaUnB){ .md-button .md-button--primary }
 
 [Documento de visão :material-file-document-outline:](DOCUMENTO_DE_VISAO.md){ .md-button .md-button--primary }
 
@@ -54,15 +54,18 @@ Plataforma de consulta, comparação e avaliação de professores e disciplinas 
 
     ---
 
-    Escolha uma disciplina e compare dois ou mais professores lado a lado antes de montar a grade.
+    Compare dois ou mais professores da mesma disciplina ou em seleção livre antes de montar a grade.
 
 - :material-account-circle-outline: **Perfil do estudante**
 
     ---
 
-    Cada pessoa vê, edita e apaga as próprias avaliações.
+    Cada pessoa gerencia suas avaliações, comentários e professores favoritos.
 
 </div>
+
+Consulte o [estado da interface e das issues](ESTADO_DA_INTERFACE.md) para
+distinguir funcionalidades implementadas de evoluções planejadas, como like/dislike.
 
 ## Por que ele existe
 

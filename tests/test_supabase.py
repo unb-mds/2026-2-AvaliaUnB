@@ -251,7 +251,11 @@ class TestFluxoWeb(unittest.TestCase):
                             resposta = self.postar(rota, headers={'Accept': accept})
                         self.assertEqual(resposta.status_code, esperado)
                         if esperado == 302:
-                            self.assertTrue(resposta.headers['Location'].endswith('/login'))
+                            from urllib.parse import parse_qs, urlsplit
+                            destino = urlsplit(resposta.headers['Location'])
+                            self.assertEqual(destino.path, '/login')
+                            if metodo == 'get':
+                                self.assertEqual(parse_qs(destino.query).get('next'), [rota])
                         else:
                             self.assertEqual(resposta.get_json()['erro'], 'Não autenticado')
         self.assertEqual(self.cliente.tabelas['avaliacoes'], [])
@@ -263,7 +267,7 @@ class TestFluxoWeb(unittest.TestCase):
         dados = {**{c: '5' for c in CRITERIOS}, 'disciplina_id': '20'}
         self.assertEqual(self.postar('/avaliar/2', data={**dados, 'clareza': '9'}).status_code, 400)
         html = self.postar('/avaliar/2', data=dados, follow_redirects=True).get_data(as_text=True)
-        self.assertIn('1 avaliações', html)
+        self.assertIn('1 avaliação', html)
         gravada, = self.cliente.tabelas['avaliacoes']
         self.assertEqual(gravada['usuario_id'], next(iter(self.cliente.auth.usuarios)))
         self.assertEqual(self.postar('/avaliar/2', data=dados).status_code, 409)
@@ -345,6 +349,13 @@ class TestFluxoWeb(unittest.TestCase):
         self.assertIn('MARIA LIMA', html_perfil_bruno)
         self.assertIn('FÍSICA 1', html_perfil_bruno)
         self.assertNotIn('JOSÉ ÁVILA', html_perfil_bruno)
+        # O nome do professor leva ao perfil dele, na disciplina avaliada, com volta para /perfil
+        self.assertIn('<h3><a href="/professores/2?disciplina_id=20&amp;next=/perfil">MARIA LIMA</a></h3>',
+                      html_perfil_bruno)
+        perfil_professor = self.web.get('/professores/2?disciplina_id=20&next=/perfil',
+                                        headers={'Accept': 'text/html'})
+        self.assertEqual(perfil_professor.status_code, 200)
+        self.assertIn('href="/perfil"', perfil_professor.get_data(as_text=True))
 
         # Bruno tenta editar ou excluir a avaliação da Ana -> recebe 404/proibido e não altera nada
         self.assertEqual(
@@ -413,8 +424,11 @@ class TestEsquemaBanco(unittest.TestCase):
         self.assertNotIn('create table if not exists departamentos', sql)
 
         # 2. Constraints únicas exigidas pelo upsert do scraper
-        self.assertRegex(sql, r'unique\s*\(\s*nome\s*,\s*departamento\s*\)')
-        self.assertEqual(CONFLITO_PROFESSORES, 'nome,departamento')
+        # Professores: a 004 (issue #235) troca UNIQUE (nome, departamento) por UNIQUE (nome)
+        sql_004 = Path('docs/migrations/004_professores_unicos.sql').read_text(encoding='utf-8').lower()
+        self.assertIn('drop constraint if exists uq_professores_nome_departamento', sql_004)
+        self.assertRegex(sql_004, r'uq_professores_nome\s+unique\s*\(\s*nome\s*\)')
+        self.assertEqual(CONFLITO_PROFESSORES, 'nome')
         self.assertEqual(CONFLITO_DISCIPLINAS, 'codigo')
         self.assertRegex(
             sql,

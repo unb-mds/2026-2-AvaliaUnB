@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 360" role="img" aria-labelledby="titulo descricao">
   <title id="titulo">Tech Stack do AvaliaUnB</title>
-  <desc id="descricao">Interface com HTML, CSS, JavaScript e Jinja2. Aplicação Python e Flask com deploy configurado na Vercel. Dados em PostgreSQL no Supabase e contas no Supabase Auth. Coleta do SIGAA com Python e Selenium.</desc>
+  <desc id="descricao">Interface com HTML, CSS, JavaScript e Jinja2. Aplicação Python e Flask com deploy na Vercel. Dados em PostgreSQL no Supabase e contas no Supabase Auth. Coleta do SIGAA com Python e Selenium.</desc>
   <style>
     text { font-family: system-ui, sans-serif; fill: #172b4d }
     .titulo { font-size: 28px; font-weight: 700 }
@@ -20,7 +20,7 @@
   <text x="54" y="170" class="detalhe">Templates Jinja2</text>
   <text x="434" y="116" class="rotulo">Aplicação</text>
   <text x="434" y="145" class="detalhe">Python e Flask</text>
-  <text x="434" y="170" class="detalhe">Deploy configurado na Vercel</text>
+  <text x="434" y="170" class="detalhe">Deploy na Vercel</text>
   <text x="54" y="250" class="rotulo">Dados e autenticação</text>
   <text x="54" y="279" class="detalhe">PostgreSQL no Supabase</text>
   <text x="54" y="304" class="detalhe">Supabase Auth</text>

@@ -7,9 +7,9 @@ escolher disciplinas e docentes durante a matrícula. É um projeto da disciplin
 **Métodos de Desenvolvimento de Software (MDS/UnB), semestre 2026/2**.
 
 **Comece por aqui:** [site](https://avaliaunb.com.br/) ·
-[documentação oficial](https://unb-mds.github.io/2026-2-AvaliaAiUnB/) ·
+[documentação oficial](https://unb-mds.github.io/2026-2-AvaliaUnB/) ·
 [documento de visão](docs/DOCUMENTO_DE_VISAO.md) ·
-[issues do projeto](https://github.com/unb-mds/2026-2-AvaliaAiUnB/issues)
+[issues do projeto](https://github.com/unb-mds/2026-2-AvaliaUnB/issues)
 
 ## Sumário
 
@@ -41,11 +41,14 @@ anteriores podem conter apenas parte delas.
 
 | Etapa | Funcionalidades | Estado |
 |---|---|---|
-| R1 — fluxo essencial | Cadastro, login, busca de professores e disciplinas, perfil do professor, avaliação por cinco critérios e consulta de médias | Implementado |
-| R2 — consulta e gestão de avaliações | Ranking, comparação de vários professores por disciplina, filtro por departamento, busca que ignora acentos e espaços extras e perfil do usuário com edição e exclusão das próprias avaliações | Implementado |
-| Evolução dos filtros | Faixa de nota e volume de avaliações | Pendente |
-| Comentários e moderação | Comentários com nome de usuário, reações, filtro e denúncias | [Proposta para revisão](docs/COMENTARIOS.md) |
-| Outras funcionalidades planejadas | Favoritos e gráficos de desempenho | Pendente |
+| Acesso e consulta | Login com Google, busca por professor/disciplina/departamento, catálogo e perfil do professor | Implementado |
+| Notas e análise | Avaliações por turma cursada, médias por disciplina e semestre, ranking por departamento e comparação de vários professores nos dois modos | Implementado |
+| Conta pessoal | Edição/exclusão das próprias avaliações e comentários; professores favoritos | Implementado |
+| Histórico | Gráfico de evolução por semestre e alternativa em tabela | Implementado |
+| Comentários e denúncia | Publicar, filtrar por disciplina, editar/excluir, sem identificação pública; denúncia privada | Implementado no código; proteção da Data API depende da migração de privacidade |
+| Reações e ordenação | Like/dislike (#212) e escolha da ordem (#213) | Planejado |
+| Filtro e moderação | Filtro automático (#214), área de moderação (#216) e retenção (#217) | Planejado / PRs em revisão |
+| Filtros avançados | Faixa de nota e quantidade de avaliações (#221) | Planejado |
 
 A consulta principal fica em `/professores`; ranking e comparação ficam em
 `/ranking` e `/comparar`. A lista é ordenada pela quantidade de avaliações.
@@ -59,7 +62,7 @@ Veja as [regras de busca, notas, comparação e ranking](docs/FUNCIONALIDADES.md
 | Perfil | Acesso | O que pode fazer |
 |---|---|---|
 | Visitante | Sem login | Consultar professores, disciplinas, médias, ranking e comparação |
-| Usuário cadastrado | Conta Google | Consultar e registrar avaliações; listar, editar e excluir as próprias avaliações em `/perfil` |
+| Usuário cadastrado | Conta Google | Consultar e registrar avaliações; listar, editar e excluir as próprias avaliações em `/perfil`; comentar, editar/excluir os próprios comentários, denunciar comentários de outras pessoas e gerenciar favoritos |
 
 O público principal são os estudantes da UnB. Docentes também podem consultar
 os indicadores públicos. A entrada é feita somente com a conta Google; a conta
@@ -77,7 +80,7 @@ no AvaliaUnb é criada automaticamente no primeiro acesso.
 | Execução em contêiner | Docker Compose e Gunicorn |
 | Documentação | MkDocs Material e GitHub Pages |
 | Testes e qualidade | unittest, pip-audit e Bandit |
-| Deploy | Configuração para Vercel adicionada no [PR #131](https://github.com/unb-mds/2026-2-AvaliaAiUnB/pull/131) |
+| Deploy | Configuração para Vercel adicionada no [PR #131](https://github.com/unb-mds/2026-2-AvaliaUnB/pull/131) |
 
 ![Diagrama de contexto do AvaliaUnB](docs/diagrama-contexto.svg)
 
@@ -92,8 +95,8 @@ os repositórios e a integração com o [scraper](docs/COMO_USAR_SCRAPER.md).
 
 ### Dados
 
-O banco contém `professores`, `disciplinas`, `turmas`, `perfis` e
-`avaliacoes`, além da view `vw_professor_disciplina`. A chave de professor
+O banco contém `professores`, `disciplinas`, `turmas`, `perfis`,
+`avaliacoes` e `comentarios`, além da view `vw_professor_disciplina`. A chave de professor
 é nome e departamento; o departamento corresponde à unidade que oferece a
 disciplina no SIGAA. Consulte o
 [modelo de dados e a proposta de comentários](docs/Modelo%20de%20Dados.md).
@@ -103,8 +106,8 @@ disciplina no SIGAA. Consulte o
 As páginas são renderizadas no servidor a partir de `app/templates/`, com
 recursos em `app/static/`. O design system e a aplicação do visual final estão
 acompanhados nas issues
-[#112](https://github.com/unb-mds/2026-2-AvaliaAiUnB/issues/112) e
-[#114](https://github.com/unb-mds/2026-2-AvaliaAiUnB/issues/114).
+[#112](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/112) e
+[#114](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/114).
 
 O [guia do frontend](docs/FRONTEND.md) inventaria as telas, os estilos e os
 estados existentes e explica como contribuir. As definições finais de cores,
@@ -117,8 +120,8 @@ tipografia e componentes serão incorporadas quando a #112 for consolidada.
 Use Python 3.11 ou superior e execute:
 
 ```bash
-git clone https://github.com/unb-mds/2026-2-AvaliaAiUnB.git
-cd 2026-2-AvaliaAiUnB
+git clone https://github.com/unb-mds/2026-2-AvaliaUnB.git
+cd 2026-2-AvaliaUnB
 python -m venv .venv
 ```
 
@@ -149,7 +152,7 @@ python run.py
 
 Acesse `http://127.0.0.1:5000`. O [guia do scraper](docs/COMO_USAR_SCRAPER.md)
 cobre o preparo do banco e a coleta. O esquema inicial passou a incluir RLS
-e políticas de acesso na [#123](https://github.com/unb-mds/2026-2-AvaliaAiUnB/issues/123).
+e políticas de acesso na [#123](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/123).
 
 ### Docker
 
@@ -160,7 +163,8 @@ docker compose up --build
 ```
 
 A aplicação será servida pelo Gunicorn em `http://localhost:8000`.
-O scraper é executado separadamente.
+O scraper é executado separadamente. A cada semestre, ele roda pelo workflow manual
+*Atualizar dados do SIGAA* no GitHub Actions; veja o [guia do scraper](docs/COMO_USAR_SCRAPER.md).
 
 ### Hospedagem
 
@@ -173,6 +177,8 @@ Preview, produção e a validação dos fluxos no ambiente publicado.
 
 ## Segurança e correções em andamento
 
+- página pública de **Política de Privacidade e Termos de Uso** (`/privacidade`), acessível pelo rodapé, detalhando em linguagem simples os dados coletados (cadastro, avaliações e formulário de feedback), as regras contra ofensas e avaliações falsas e o canal de contato para solicitação de exclusão de dados (LGPD).
+
 A versão da `main` inclui autenticação com Supabase Auth, proteção CSRF,
 cookies de autenticação com `HttpOnly`, `SameSite=Lax` e `Secure` fora do debug,
 headers de segurança e limites de requisições. A autorização de edição e
@@ -181,26 +187,30 @@ exclusão confere o autor da avaliação no backend.
 A [auditoria de 02/11/2026](docs/AUDITORIA_SEGURANCA.md)
 foi concluída na #111. O relatório registra um achado de prioridade alta,
 três de prioridade média e oito de prioridade baixa, sem achados críticos.
-O [PR #139](https://github.com/unb-mds/2026-2-AvaliaAiUnB/pull/139)
+O [PR #139](https://github.com/unb-mds/2026-2-AvaliaUnB/pull/139)
 versionou RLS e políticas no esquema inicial. A aplicação ainda usa a chave
 de serviço. As mudanças seguintes estão nas issues
-[#124](https://github.com/unb-mds/2026-2-AvaliaAiUnB/issues/124),
-[#125](https://github.com/unb-mds/2026-2-AvaliaAiUnB/issues/125),
-[#126](https://github.com/unb-mds/2026-2-AvaliaAiUnB/issues/126),
-[#127](https://github.com/unb-mds/2026-2-AvaliaAiUnB/issues/127),
-[#129](https://github.com/unb-mds/2026-2-AvaliaAiUnB/issues/129) e
-[#130](https://github.com/unb-mds/2026-2-AvaliaAiUnB/issues/130).
+[#124](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/124),
+[#125](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/125),
+[#126](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/126),
+[#127](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/127),
+[#129](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/129) e
+[#130](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/130).
 A conclusão da auditoria não significa que essas correções já foram aplicadas.
 O [resumo de cibersegurança](docs/CIBERSEGURANCA.md) relaciona os mecanismos do
 código, a situação do RLS e os resultados da auditoria com cada correção.
 
-Comentários e moderação têm uma [especificação proposta](docs/COMENTARIOS.md),
-baseada na #109, para revisão do grupo na
-[#116](https://github.com/unb-mds/2026-2-AvaliaAiUnB/issues/116).
-Ela propõe participação com login pelo Google e confirmação de titularidade
-pelo perfil. Os comentários mostram o nome de usuário, com o e-mail verificado
-acessível pelo nome. Reações, filtro antes da publicação e denúncias também
-fazem parte da proposta. A interface está em desenvolvimento na #167.
+O [estado da interface](docs/ESTADO_DA_INTERFACE.md) relaciona cada fluxo
+implementado e cada evolução planejada à sua issue. Os comentários públicos
+não mostram nome, e-mail, avatar nem rótulo substituto. Basta estar logado
+com Google para publicar; a autoria fica privada para edição, exclusão e
+controles do backend. Denúncias já existem (#215). Like/dislike (#212),
+ordenação escolhida pela pessoa (#213), filtro automático (#214), moderação
+(#216) e retenção (#217) continuam separados como evoluções planejadas.
+
+A presença de uma migração no repositório não comprova que ela foi aplicada ao
+banco publicado. A [especificação de comentários](docs/COMENTARIOS.md) detalha
+as decisões e as dependências de publicação.
 
 ## Documentação
 
@@ -208,18 +218,18 @@ fazem parte da proposta. A interface está em desenvolvimento na #167.
 |---|---|
 | Início e instruções de execução | [Documentação do projeto](docs/index.md) · [Mapa e índice por assunto](docs/GUIA_DOCUMENTACAO.md) |
 | Produto e requisitos | [Documento de visão](docs/DOCUMENTO_DE_VISAO.md) |
-| Funcionalidades | [Busca, notas, comparação e ranking](docs/FUNCIONALIDADES.md) |
+| Funcionalidades | [Regras detalhadas](docs/FUNCIONALIDADES.md) · [Implementado e planejado](docs/ESTADO_DA_INTERFACE.md) |
 | Backend | [Estrutura, rotas, sessões e repositórios](docs/BACKEND.md) |
 | Frontend | [Templates, estilos, estados e contribuição](docs/FRONTEND.md) |
 | Dados | [Modelo de dados](docs/Modelo%20de%20Dados.md) |
 | Arquitetura | [Diagramas do sistema](docs/ARQUITETURA.md) |
 | Coleta | [Guia do scraper](docs/COMO_USAR_SCRAPER.md) |
 | Cibersegurança | [Mecanismos e correções](docs/CIBERSEGURANCA.md) · [Relatório da auditoria](docs/AUDITORIA_SEGURANCA.md) |
-| Comentários | [Especificação para revisão do grupo](docs/COMENTARIOS.md) |
+| Comentários | [Regras e estado dos comentários](docs/COMENTARIOS.md) |
 | Automação e checks | [Pipeline do GitHub Actions](docs/pipeline.md) · [DoR e DoD](docs/PROCESSO_CONTRIBUICAO.md) |
 | Hospedagem | [Configuração de Preview, produção e lançamento](docs/HOSPEDAGEM.md) |
 | Design | [Board do Figma](https://www.figma.com/board/PgqkPopVXOiSqm9gD5RRNv/AvaliaAi---Template-MDS?node-id=0-1) |
-| Histórico | [Release 1](RELEASE-v1.0.0.md) · [Release 2](RELEASE-v2.0.0.md) |
+| Histórico | [Release 1](RELEASE-v1.0.0.md) · [v1.0.1](RELEASE-v1.0.1.md) |
 
 Para abrir o site localmente, instale `mkdocs-material` no ambiente virtual e
 execute `mkdocs serve` na raiz. Valide com `mkdocs build --strict`.
@@ -228,7 +238,7 @@ Na `main`, o workflow de documentação publica as mudanças em `docs/` ou
 
 ## Como contribuir
 
-1. Escolha uma [issue](https://github.com/unb-mds/2026-2-AvaliaAiUnB/issues)
+1. Escolha uma [issue](https://github.com/unb-mds/2026-2-AvaliaUnB/issues)
    e alinhe o escopo com os responsáveis.
 2. Crie uma branch a partir da `main` atualizada para a mudança.
 3. Use mensagens de commit que indiquem a alteração, como
@@ -253,4 +263,4 @@ Projeto desenvolvido no contexto da disciplina **Métodos de Desenvolvimento
 de Software da Universidade de Brasília**, no semestre **2026/2**.
 
 Os integrantes e suas contribuições podem ser consultados no
-[histórico de contribuições](https://github.com/unb-mds/2026-2-AvaliaAiUnB/graphs/contributors).
+[histórico de contribuições](https://github.com/unb-mds/2026-2-AvaliaUnB/graphs/contributors).
