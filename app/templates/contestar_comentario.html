@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contestar Moderação - AvaliaUnB</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='indicadores.css') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <script src="{{ url_for('static', filename='tema.js') }}"></script>
+</head>
+<body>
+    {% include '_topo.html' %}
+
+    <main class="conteudo">
+        <header class="cabecalho-pagina">
+            <h1>Pedido de Revisão de Comentário</h1>
+            <p class="subtitulo">Área privada visível apenas para você e para a equipe de moderação.</p>
+        </header>
+
+        <section class="card">
+            <h2>{{ professor.nome if professor else 'Professor' }} — {{ comentario.disciplina_nome }}</h2>
+            <p class="ajuda">Status atual: <strong>Ocultado pela moderação</strong></p>
+
+            <h3>Seu comentário</h3>
+            <blockquote>{{ comentario.texto }}</blockquote>
+
+            {% if justificativa_moderacao %}
+            <h3>Justificativa da moderação</h3>
+            <p>{{ justificativa_moderacao }}</p>
+            {% endif %}
+
+            {% if erros %}
+            <ul class="erros" role="alert">
+                {% for erro in erros.values() %}
+                <li>{{ erro }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            {% if contestacao_ativa %}
+            <section role="status">
+                <h3>Contestação em análise</h3>
+                <p>Seu pedido de revisão foi recebido e será analisado pela equipe de moderação.</p>
+                <blockquote>{{ contestacao_ativa.justificativa }}</blockquote>
+            </section>
+            {% else %}
+            <form method="POST" action="{{ url_for('moderacao.contestar_comentario', comentario_id=comentario.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <label for="justificativa">Explique por que solicita a revisão</label>
+                <textarea id="justificativa" name="justificativa" rows="4" minlength="2" maxlength="1000" required>{{ texto_form }}</textarea>
+
+                <button type="submit" class="botao botao-primario">Enviar contestação</button>
+            </form>
+            {% endif %}
+        </section>
+    </main>
+
+    {% include '_rodape.html' %}
+</body>
+</html>

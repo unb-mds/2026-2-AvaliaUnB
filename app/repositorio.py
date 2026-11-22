@@ -18,7 +18,7 @@ from supabase_auth.helpers import generate_pkce_challenge, generate_pkce_verifie
 
 from app.supabase_db import get_supabase, novo_cliente
 from app.utils import normalizar_busca
-from app.validacoes import CRITERIOS, validar_comentario, validar_denuncia, validar_decisao_moderacao
+from app.validacoes import CRITERIOS, validar_comentario, validar_denuncia, validar_decisao_moderacao, validar_contestacao
 
 LIMITE_COMENTARIOS = 50        # comentários por listagem; o "ver mais" fica para depois
 COLUNAS_AVALIACAO = ','.join(('id', 'usuario_id', 'professor_id', 'disciplina_id',
@@ -1082,6 +1082,59 @@ class ModeracaoRepository:
                 'contestacao_ativa': contestacao_ativa.get(l['id']),
             })
         return resultado
+
+    def buscar_contestacao_ativa(self, comentario_id):
+        """Retorna a contestação em aberto do comentário, ou None."""
+        dados = (
+            self.cliente.table('contestacoes_comentarios')
+            .select('id,comentario_id,usuario_id,justificativa,criado_em')
+            .eq('comentario_id', comentario_id)
+            .is_('resolvida_em', 'null')
+            .limit(1)
+            .execute()
+            .data
+        )
+        return dados[0] if dados else None
+
+    def ultima_justificativa_ocultacao(self, comentario_id):
+        """Retorna a justificativa da última decisão de ocultação do comentário."""
+        decisoes = (
+            self.cliente.table('moderacoes_comentarios')
+            .select('acao,justificativa,criado_em')
+            .eq('comentario_id', comentario_id)
+            .order('criado_em', desc=True)
+            .execute()
+            .data
+        )
+        for dec in decisoes:
+            if dec.get('acao') == 'ocultar':
+                return dec.get('justificativa', '')
+        return ''
+
+    def criar_contestacao(self, comentario_id, usuario_id, justificativa):
+        """Registra pedido privado de revisão pelo autor.
+
+        False se já houver uma contestação aberta; ValueError se justificativa for inválida.
+        """
+        limpa, erros = validar_contestacao(justificativa)
+        if erros:
+            raise ValueError(next(iter(erros.values())))
+        if self.buscar_contestacao_ativa(comentario_id):
+            return False
+        agora = datetime.now(timezone.utc).isoformat()
+        try:
+            self.cliente.table('contestacoes_comentarios').insert({
+                'comentario_id': comentario_id,
+                'usuario_id': usuario_id,
+                'justificativa': limpa,
+                'criado_em': agora,
+                'resolvida_em': None,
+            }).execute()
+        except Exception as erro:
+            if '23505' in str(erro) or 'duplicate key' in str(erro):
+                return False
+            raise
+        return True
 
     
 class FavoritoRepository:

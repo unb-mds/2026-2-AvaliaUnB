@@ -364,5 +364,101 @@ class TestRotasModeracao(unittest.TestCase):
         linha = self.cliente.table('comentarios').select('*').eq('id', c_denunciado).execute().data[0]
         self.assertIsNotNone(linha.get('ocultado_em'))
 
+
+class TestContestacaoAutor(unittest.TestCase):
+    def setUp(self):
+        self.cliente = ClienteFalso()
+        self.app = create_app({
+            'TESTING': True,
+            'SECRET_KEY': 'chave-teste-local',
+            'SUPABASE_CLIENT': self.cliente,
+            'WTF_CSRF_ENABLED': False,
+        })
+        self.web = self.app.test_client()
+
+    def _logar(self, email, username, moderador=False):
+        codigo = f'cod-{username}'
+        verificador = f'ver-{username}'
+        self.cliente.auth.preparar_retorno_google(
+            codigo, email, {'nome': username.title(), 'username': username}, verificador
+        )
+        resp = self.cliente.auth.exchange_code_for_session({
+            'auth_code': codigo, 'code_verifier': verificador,
+        })
+        uid = str(resp.user.id)
+        if not self.cliente.table('perfis').select('id').eq('id', uid).execute().data:
+            self.cliente.table('perfis').insert({
+                'id': uid, 'username': username, 'nome_completo': username.title(),
+            }).execute()
+        if moderador and not self.cliente.table('moderadores').select('usuario_id').eq('usuario_id', uid).execute().data:
+            self.cliente.table('moderadores').insert({'usuario_id': uid}).execute()
+        self.web.set_cookie(COOKIE_ACESSO, resp.session.access_token)
+        return uid
+
+    def _preparar_comentario_ocultado(self):
+        from app.repositorio import ComentarioRepository, DenunciaRepository, ModeracaoRepository
+        autor_id = self._logar('autor@gmail.com', 'autor', moderador=False)
+        outro_id = self._logar('outro@gmail.com', 'outro', moderador=False)
+        mod_id = self._logar('mod@gmail.com', 'moderadora', moderador=True)
+
+        comentarios = ComentarioRepository(self.cliente)
+        denuncias = DenunciaRepository(self.cliente)
+        moderacao = ModeracaoRepository(self.cliente)
+
+        cid = comentarios.criar(autor_id, 1, 10, 'Comentário crítico sobre a didática.')
+        denuncias.criar(cid, outro_id, 'ofensa', 'Denúncia inicial.')
+        moderacao.registrar_decisao(cid, mod_id, 'ocultar', 'Linguagem considerada inadequada.')
+        return cid
+
+    def test_terceiro_nao_acessa_nem_envia_contestacao_de_outro_autor(self):
+        cid = self._preparar_comentario_ocultado()
+        self._logar('outro@gmail.com', 'outro', moderador=False)
+
+        self.assertEqual(self.web.get(f'/comentarios/{cid}/contestar').status_code, 404)
+        self.assertEqual(
+            self.web.post(
+                f'/comentarios/{cid}/contestar',
+                data={'justificativa': 'Tentativa de terceiro.'},
+            ).status_code,
+            404,
+        )
+
+    def test_autor_contesta_decisao_e_pedido_aparece_na_fila_da_moderacao(self):
+        cid = self._preparar_comentario_ocultado()
+        self._logar('autor@gmail.com', 'autor', moderador=False)
+
+        # GET exibe o comentário e a justificativa da moderação
+        resp_get = self.web.get(f'/comentarios/{cid}/contestar')
+        self.assertEqual(resp_get.status_code, 200)
+        html = resp_get.get_data(as_text=True)
+        self.assertIn('Linguagem considerada inadequada.', html)
+        self.assertNotIn('style=', html)
+
+        # POST inválido retorna 400
+        resp_invalido = self.web.post(
+            f'/comentarios/{cid}/contestar', data={'justificativa': ' '}
+        )
+        self.assertEqual(resp_invalido.status_code, 400)
+
+        # POST válido registra contestação e redireciona (303)
+        resp_ok = self.web.post(
+            f'/comentarios/{cid}/contestar',
+            data={'justificativa': 'Não houve ofensa, apenas relato pedagógico.'},
+        )
+        self.assertEqual(resp_ok.status_code, 303)
+
+        # Segunda contestação enquanto a primeira está aberta retorna 409
+        resp_dup = self.web.post(
+            f'/comentarios/{cid}/contestar',
+            data={'justificativa': 'Tentando enviar de novo.'},
+        )
+        self.assertEqual(resp_dup.status_code, 409)
+
+        # Moderador visualiza a contestação na fila
+        self._logar('mod@gmail.com', 'moderadora', moderador=True)
+        html_fila = self.web.get('/moderacao').get_data(as_text=True)
+        self.assertIn('Não houve ofensa, apenas relato pedagógico.', html_fila)
+
+
 if __name__ == '__main__':
     unittest.main()
