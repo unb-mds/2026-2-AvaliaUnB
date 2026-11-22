@@ -61,6 +61,11 @@ class Consulta:
         self.filtros.append((coluna, _Predicado(lambda v: v is None)))
         return self
 
+    def lt(self, coluna, valor):
+        """Como o PostgREST: lt(col, valor) filtra col < valor (ignora None)."""
+        self.filtros.append((coluna, _Predicado(lambda v: v is not None and v < valor)))
+        return self
+
     def order(self, coluna, desc=False):
         self.ordem.append(coluna)
         if desc:
@@ -259,7 +264,6 @@ class ClienteFalso:
             'comentarios': [],
             'denuncias_comentarios': [],
             'favoritos': [],
-            'favoritos': [],
             'moderadores': [],
             'moderacoes_comentarios': [],
             'contestacoes_comentarios': [],
@@ -268,6 +272,31 @@ class ClienteFalso:
     def table(self, nome):
         return Consulta(self.tabelas, nome, self.upserts)
 
+    def rpc(self, nome_funcao, params=None):
+        if nome_funcao != 'descartar_registros_moderacao_expirados':
+            raise NotImplementedError(f'RPC não suportada no fake: {nome_funcao}')
+        params = params or {}
+        dias = params.get('dias_retencao', 90)
+        if not isinstance(dias, int) or dias < 1:
+            raise ValueError('dias_retencao deve ser um inteiro positivo')
+        limite = (datetime.now(timezone.utc) - timedelta(days=dias)).isoformat()
+        denuncias = self.table('denuncias_comentarios').delete().lt('resolvida_em', limite).execute().data
+        moderacoes = self.table('moderacoes_comentarios').delete().lt('criado_em', limite).execute().data
+        contestacoes = self.table('contestacoes_comentarios').delete().lt('resolvida_em', limite).execute().data
+
+        class _ChamadaRpc:
+            def __init__(self, dados):
+                self._dados = dados
+
+            def execute(self):
+                return Resposta(self._dados)
+
+        return _ChamadaRpc({
+            'denuncias_removidas': len(denuncias),
+            'moderacoes_removidas': len(moderacoes),
+            'contestacoes_removidas': len(contestacoes),
+            'limite_utc': limite,
+        })
 
 VERIFICADOR_TESTE = 'verificador-de-teste'
 
