@@ -186,6 +186,40 @@ def extrair_docentes(texto) -> list[str]:
     return docentes
 
 
+def docentes_em_grafia_comum(texto) -> list[str]:
+    """Docentes da célula já em grafia comum, sem repetidos (issue #236).
+
+    A conversão vem depois de `extrair_docentes`, que ainda enxerga 'A DEFINIR DOCENTE'
+    em caixa alta e o descarta. O resultado é o único texto de nome usado no fluxo.
+    """
+    nomes = []
+    for nome in extrair_docentes(texto):
+        convertido = grafia_comum(nome, "professor")
+        if convertido not in nomes:
+            nomes.append(convertido)
+    return nomes
+
+
+def departamento_da_unidade(texto) -> str:
+    """Departamento a gravar: o texto da unidade validado, em grafia comum.
+
+    A seleção da opção no formulário continua usando o texto cru do SIGAA.
+    """
+    return grafia_comum(validar_unidade(texto), "departamento")
+
+
+def disciplina_do_titulo(texto):
+    """{'codigo', 'nome'} do título 'CÓDIGO - NOME', com o nome em grafia comum.
+
+    O código não muda. Devolve None se o título não tiver o separador ' - '.
+    """
+    texto = (texto or "").strip()
+    if " - " not in texto:
+        return None
+    codigo, nome = texto.split(" - ", 1)
+    return {"codigo": codigo.strip(), "nome": grafia_comum(nome.strip(), "disciplina")}
+
+
 def contar_a_definir(texto) -> int:
     """Quantas vezes 'A DEFINIR DOCENTE' aparece na célula."""
     return sum(1 for nome in _nomes_da_celula(texto) if eh_a_definir(nome))
