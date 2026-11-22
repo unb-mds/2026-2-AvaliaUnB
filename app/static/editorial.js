@@ -56,7 +56,7 @@
     reduzirMovimento.addEventListener("change", agendar);
     agendar();
 
-    for (const alvo of document.querySelectorAll(".hero, .feature, .teacher, .compare-card")) {
+    for (const alvo of document.querySelectorAll(".hero-stage, .feature, .teacher, .compare-card")) {
         alvo.addEventListener("pointermove", (evento) => {
             if (reduzirMovimento.matches || !apontador.matches) return;
             const retangulo = alvo.getBoundingClientRect();
