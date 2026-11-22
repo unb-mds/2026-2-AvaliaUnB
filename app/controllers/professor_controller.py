@@ -529,6 +529,18 @@ def denunciar_comentario(comentario_id, usuario, motivo, explicacao):
     return repositorios().denuncias.criar(comentario_id, usuario['id'], motivo, explicacao)
 
 
+def carregar_comentarios_usuario(usuario):
+    """A falha da seção de comentários não impede o restante do perfil pessoal."""
+    try:
+        comentarios, ha_mais = repositorios().comentarios.listar_do_usuario(usuario['id'])
+    except Exception:
+        current_app.logger.exception('Falha ao listar comentários da própria conta.')
+        return dict(comentarios_usuario=[], ha_mais_comentarios=False,
+                    erro_comentarios_usuario=True)
+    return dict(comentarios_usuario=comentarios, ha_mais_comentarios=ha_mais,
+                erro_comentarios_usuario=False)
+
+
 def carregar_comentarios(professor_id, disciplinas, filtro_bruto, usuario):
     """Contexto da seção de comentários do perfil. Nunca levanta: se a consulta falhar,
     registra o erro e devolve erro_comentarios=True para o resto do perfil continuar."""

@@ -103,6 +103,7 @@ def perfil():
     avaliacoes = professor_controller.listar_avaliacoes_usuario(usuario_logado)
     favoritos = professor_controller.listar_favoritos_usuario(usuario_logado)
     if request.accept_mimetypes.accept_html:
+        comentarios = professor_controller.carregar_comentarios_usuario(usuario_logado)
         return render_template(
             "perfil.html",
             usuario=usuario_logado,
@@ -111,6 +112,7 @@ def perfil():
             criterios=professor_controller.criterios(),
             verificacao_disponivel=verificacao_email.disponivel(),
             email_verificado=verificacao_email.email_verificado(usuario_logado),
+            **comentarios,
         )
     return jsonify({
         **{k: usuario_logado[k] for k in ("id", "nome", "email", "username")},

@@ -28,6 +28,8 @@
         <form method="post" action="{{ url_for('professores.excluir_comentario', comentario_id=comentario.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="next" value="{{ next_url }}">
+            {% if origem_perfil %}<input type="hidden" name="origem" value="perfil">{% endif %}
+            {% if disciplina_medias %}<input type="hidden" name="disciplina_medias" value="{{ disciplina_medias }}">{% endif %}
             {% if filtro_comentarios %}<input type="hidden" name="comentarios_disciplina" value="{{ filtro_comentarios }}">{% endif %}
 
             <div class="acoes">

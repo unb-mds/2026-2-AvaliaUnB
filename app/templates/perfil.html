@@ -1,4 +1,5 @@
 {% from '_macros.html' import barra_dificuldade %}
+{% from '_acoes_comentario.html' import acoes_comentario %}
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -62,6 +63,27 @@
         {% else %}
             <p class="mensagem" role="status">Você ainda não favoritou nenhum professor. Use o botão “Favoritar” no perfil de um professor.</p>
         {% endif %}
+
+        <section class="meus-comentarios" id="meus-comentarios" aria-labelledby="titulo-meus-comentarios">
+            <h2 id="titulo-meus-comentarios">Meus comentários</h2>
+            {% if erro_comentarios_usuario %}
+            <p class="mensagem mensagem-erro" role="alert">Não foi possível carregar seus comentários. Tente novamente mais tarde.</p>
+            {% elif comentarios_usuario %}
+            {% if ha_mais_comentarios %}<p class="ajuda">Mostrando os 50 comentários mais recentes. Você também pode gerenciar os demais no perfil de cada professor.</p>{% endif %}
+            <ul class="lista-meus-comentarios">
+                {% for c in comentarios_usuario %}
+                <li class="card"><article class="review">
+                    <h3><a href="{{ url_for('professores.perfil', professor_id=c.professor_id, next=url_for('auth.perfil'), comentarios_disciplina=c.disciplina_id, _anchor='comentarios') }}">{{ c.professor_nome }}</a></h3>
+                    <p class="comentario-cabecalho review-top"><span>{{ c.disciplina_nome }}{% if c.disciplina_codigo %} — {{ c.disciplina_codigo }}{% endif %}</span><span>{{ c.data }}{% if c.editado %} (editado){% endif %}</span></p>
+                    <p class="comentario-texto">{% for linha in c.texto.splitlines() %}{{ linha }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>
+                    {{ acoes_comentario(c.id, url_for('auth.perfil'), origem='perfil') }}
+                </article></li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="mensagem" role="status">Você ainda não tem comentários publicados.</p>
+            {% endif %}
+        </section>
 
         <h2>Minhas Avaliações{% if avaliacoes %} <span class="contador">{{ avaliacoes|length }}</span>{% endif %}</h2>
         {% if avaliacoes %}

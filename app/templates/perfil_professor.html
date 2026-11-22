@@ -1,4 +1,5 @@
 {% from '_macros.html' import icone_seta, nota, barra_dificuldade %}
+{% from '_acoes_comentario.html' import acoes_comentario %}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{ professor.nome }} - AvaliaUnb</title><link rel="stylesheet" href="{{ url_for('static', filename='indicadores.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='evolucao.css') }}">{% include '_tema.html' %}</head>
@@ -268,10 +269,7 @@
                     </p>
                     <p class="comentario-texto">{% for linha in c.texto.splitlines() %}{{ linha }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>
                     {% if c.e_meu %}
-                    <p class="comentario-acoes">
-                        <a href="{{ url_for('professores.editar_comentario', comentario_id=c.id, next=next_url, comentarios_disciplina=filtro_comentarios) }}">Editar</a>
-                        <a class="acao-excluir" href="{{ url_for('professores.excluir_comentario', comentario_id=c.id, next=next_url, comentarios_disciplina=filtro_comentarios) }}">Excluir</a>
-                    </p>
+                    {{ acoes_comentario(c.id, next_url, filtro_comentarios, disciplina.id if disciplina else None) }}
                     {% elif usuario %}
                     <p class="comentario-acoes">
                         <a class="acao-denunciar" href="{{ url_for('professores.denunciar_comentario', comentario_id=c.id, next=next_url, comentarios_disciplina=filtro_comentarios) }}">Denunciar</a>

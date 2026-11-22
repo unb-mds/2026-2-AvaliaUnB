@@ -132,7 +132,15 @@ summary { cursor: pointer; }
 .review .comentario-cabecalho strong { font-size: 13px; color: var(--text); }
 .review .comentario-cabecalho span { font-size: 11px; color: var(--muted); }
 .review .comentario-texto { margin-top: 12px; color: var(--muted); overflow-wrap: anywhere; white-space: normal; }
-.review .comentario-acoes { display: flex; gap: 18px; font-size: 12px; }
+.review .comentario-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 16px; }
+.review .comentario-acoes .btn { min-height: 44px; min-width: 88px; padding: 10px 16px; font-size: 13px; }
+.review .comentario-acoes .acao-editar { border-color: var(--text); }
+.review .comentario-acoes .acao-excluir:hover { color: var(--cor-erro); border-color: currentColor; }
+.review .comentario-acoes .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.meus-comentarios { margin-block: 32px; scroll-margin-top: 100px; }
+.lista-meus-comentarios { display: grid; gap: 16px; list-style: none; margin: 0; padding: 0; }
+.lista-meus-comentarios .review { padding: 0; border: 0; }
+.lista-meus-comentarios h3 { margin: 0 0 12px; overflow-wrap: anywhere; }
 .review-composer { margin-bottom: 26px; }
 .review-composer > summary { width: fit-content; list-style: none; }
 .review-composer[open] > summary { margin-bottom: 20px; }
