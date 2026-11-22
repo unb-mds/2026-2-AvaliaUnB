@@ -202,7 +202,7 @@ def _carregar_comparacao_legada(dados):
     repos = repositorios()
     catalogo_completo = repos.professores.catalogo()
     professores = sorted((p for p, _ in catalogo_completo),
-                         key=lambda p: (p['nome'] or '', p['id']))
+                         key=lambda p: (normalizar_busca(p['nome']), p['id']))
     por_id = {p['id']: p for p in professores}
     disciplinas_por_id = {p['id']: vinculos for p, vinculos in catalogo_completo}
     selecionados, erros = {}, {}
@@ -245,7 +245,7 @@ def carregar_comparacao(dados):
     catalogo_completo = repos.professores.catalogo()
     todos_professores_lista = sorted(
         (p for p, _ in catalogo_completo),
-        key=lambda p: (p['nome'] or '', p['id']),
+        key=lambda p: (normalizar_busca(p['nome']), p['id']),
     )
     todos_professores = {str(p['id']): p for p in todos_professores_lista}
     disciplinas_por_professor = {str(p['id']): vinculos for p, vinculos in catalogo_completo}
@@ -266,7 +266,7 @@ def carregar_comparacao(dados):
 
     if modo != 'livre' and not disciplina_id and professor_previo:
         _, vinculos_previos = professor_previo
-        for d in sorted(vinculos_previos, key=lambda item: (item['nome'] or '', item['id'])):
+        for d in sorted(vinculos_previos, key=lambda item: (normalizar_busca(item['nome']), item['id'])):
             d_id = str(d['id'])
             total_na_disciplina = sum(
                 1 for _, v in catalogo_completo if any(str(vinc['id']) == d_id for vinc in v)
@@ -325,7 +325,7 @@ def carregar_comparacao(dados):
                       for p in campos if p in todos_professores}
 
         return dict(
-            disciplinas=sorted(disciplinas.values(), key=lambda d: (d['nome'] or '', d['id'])),
+            disciplinas=sorted(disciplinas.values(), key=lambda d: (normalizar_busca(d['nome']), d['id'])),
             disciplina=None,
             professores=opcoes,
             escolhidos=escolhidos,
@@ -379,9 +379,9 @@ def carregar_comparacao(dados):
                     for p in ids
                 ])
 
-    return dict(disciplinas=sorted(disciplinas.values(), key=lambda d: (d['nome'] or '', d['id'])),
+    return dict(disciplinas=sorted(disciplinas.values(), key=lambda d: (normalizar_busca(d['nome']), d['id'])),
                 disciplina=disciplina, professores=sorted(professores.values(),
-                    key=lambda p: (p['nome'] or '', p['id'])),
+                    key=lambda p: (normalizar_busca(p['nome']), p['id'])),
                 selecao_previa=selecao_previa, campos=(selecionados + ['', ''])[:max(2, len(selecionados))],
                 erros=erros, comparacao=comparacao, criterios=CRITERIOS,
                 disciplinas_diferentes=False, modo_livre=False, modo_legado=False,

@@ -223,7 +223,7 @@ class ProfessorRepository:
         # A view traz uma linha por turma (ano/período); o perfil usa uma por disciplina.
         unicas = {l['disciplina_id']: {'id': l['disciplina_id'], 'nome': l['disciplina'],
                                        'codigo': l['codigo_disciplina']} for l in linhas}
-        return sorted(unicas.values(), key=lambda d: (d['nome'] or '', d['id']))
+        return sorted(unicas.values(), key=lambda d: (normalizar_busca(d['nome']), d['id']))
 
     def invalidar_cache(self):
         self._catalogo = None
@@ -286,7 +286,8 @@ class ProfessorRepository:
                                 or _alguma_disciplina_casa(termo_n, disciplinas)):
                 continue
             resultado.append((professor, disciplinas))
-        return sorted(resultado, key=lambda i: (-i[0]['total_avaliacoes'], i[0]['nome'] or '', i[0]['id']))
+        return sorted(resultado, key=lambda i: (-i[0]['total_avaliacoes'], normalizar_busca(i[0]['nome']),
+                                                i[0]['id']))
 
     def sugerir(self, termo, limite=LIMITE_SUGESTOES, tipos=TIPOS_SUGESTAO):
         """Sugestões da busca unificada: [{tipo, id, texto, detalhe}].

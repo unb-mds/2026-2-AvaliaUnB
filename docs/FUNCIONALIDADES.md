@@ -35,6 +35,9 @@ depois da normalização.
 A normalização ignora acentos, maiúsculas e espaços extras. A lista é ordenada
 pela quantidade de avaliações, com desempate por nome e identificador.
 Essa ordenação é diferente do ranking, que usa a média das notas.
+Os nomes de professores, disciplinas e departamentos são armazenados em grafia
+comum (por exemplo, "Ana de Souza"); a ordenação por nome também ignora caixa e
+acento.
 
 O seletor **Departamento** é preenchido com os departamentos distintos do
 catálogo completo, em ordem alfabética. Substitui os atalhos fixos de áreas.
@@ -116,7 +119,7 @@ professor e disciplina, com notas inteiras de um a cinco para os cinco critério
 - Em **Médias Consolidadas**, o padrão **Todos** é a média de todas as avaliações
   da disciplina escolhida. Os botões de semestre (parâmetro `semestre=2026-2`)
   mostram só as avaliações daquela turma; o resumo indica o recorte
-  ("CÁLCULO 1 · 2025/2 · 3 avaliações"). Semestre inválido volta para Todos. Os
+  ("Cálculo 1 · 2025/2 · 3 avaliações"). Semestre inválido volta para Todos. Os
   botões só aparecem quando a disciplina tem mais de uma turma.
 - O botão **Avaliar este Professor** leva o semestre filtrado para o formulário.
 
