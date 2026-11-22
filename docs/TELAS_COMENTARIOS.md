@@ -3,8 +3,10 @@
 **Protótipos da #112. As telas de listar, escrever, editar e apagar já existem
 no perfil do professor (issue #167), com as diferenças indicadas abaixo.**
 Reações, seletor de ordenação, denúncia e ocultação continuam sendo
-protótipos, assim como o filtro automático e os estados **Verificando** e
-**Em revisão** dos desenhos de escrever e editar.
+protótipos, assim como os estados **Verificando** e **Em revisão** dos
+desenhos de escrever e editar. O filtro automático já existe (issue #214): na
+implementação, ele responde com um aviso de erro junto ao campo e o texto
+preservado, ou publica direto.
 
 Protótipos da #112 para revisar a experiência em uma tela estreita. Os fluxos
 seguem a [especificação da #116](COMENTARIOS.md) e os componentes do
@@ -64,6 +66,10 @@ verificação ao clicar em **Publicar**. O campo mostra o limite de 2 a
 explica o que precisa ser revisto e preserva o que foi digitado. Se a análise
 precisar de moderação, a confirmação informa **Em revisão** e o texto fica
 privado até a decisão.
+
+Na implementação da #214, não há **Verificando** nem **Em revisão**: o filtro
+responde na hora com o aviso de bloqueio junto ao campo (HTTP 400, texto
+preservado) ou publica o comentário.
 
 ## Editar
 
