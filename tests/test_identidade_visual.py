@@ -53,7 +53,7 @@ class TestLogo(unittest.TestCase):
     def test_favicon_em_todas_as_telas_e_servido(self):
         for caminho in ('/', '/login', '/professores', '/ranking', '/sobre'):
             with self.subTest(tela=caminho):
-                self.assertIn('rel="icon" type="image/svg+xml" href="/static/favicon.svg"',
+                self.assertIn('rel="icon" type="image/svg+xml" href="/static/favicon.svg?v=2"',
                               self.web.get(caminho).get_data(as_text=True))
         resposta = self.web.get('/static/favicon.svg')
         self.assertEqual(resposta.status_code, 200)
