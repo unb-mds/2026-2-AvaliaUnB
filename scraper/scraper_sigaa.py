@@ -20,9 +20,9 @@ from selenium.common.exceptions import (
 
 from cli_sigaa import montar_parser, opcoes_chrome
 from persistencia_sigaa import (
-    salvar_disciplinas,
-    salvar_professores,
-    salvar_turmas,
+    CODIGO_SAIDA_CONVERSAO_PENDENTE,
+    ConversaoPendenteError,
+    gravar_catalogo,
 )
 from resumo_sigaa import Resumo
 from texto_sigaa import (
@@ -558,9 +558,13 @@ def main(
         if dry_run:
             imprimir_dry_run(professores, disciplinas, turmas, resumo.a_definir_ignorados)
         elif professores and disciplinas:
-            mapa_prof = salvar_professores(professores)
-            mapa_disc = salvar_disciplinas(disciplinas)
-            salvar_turmas(turmas, mapa_prof, mapa_disc)
+            try:
+                # Confere a trava de conversão antes da primeira escrita no banco.
+                gravar_catalogo(professores, disciplinas, turmas)
+            except ConversaoPendenteError as erro:
+                print(f"\n[!] {erro}")
+                resumo.imprimir()
+                return CODIGO_SAIDA_CONVERSAO_PENDENTE
         else:
             print("[!] Nada para subir (lista vazia).")
 
