@@ -319,20 +319,22 @@ acompanham estas regras.
   curtidas, e Mais antigos inverte a ordem por data. A edição preserva
   a posição nas duas ordens por data.
 - O filtro barra uma ofensa inequívoca e a exposição de um telefone, deixa
-  passar uma crítica respeitosa e encaminha um caso ambíguo sem publicar.
+  passar uma crítica respeitosa e não decide automaticamente um caso ambíguo:
+  ele pode ser publicado e denunciado, conforme a C10.
 - O filtro também cobre edições. Falhas deixam o texto disponível para tentar
   de novo, e edições bloqueadas preservam a última versão aprovada.
 - Uma conta autorizada a usar as duas ações consegue enviar só estrelas,
   publicar só um comentário ou fazer os dois em qualquer ordem.
 - A mesma conta pode avaliar com estrelas Cálculo 1 e Cálculo 2 com o mesmo
-  professor. Uma segunda avaliação por estrelas em Cálculo 1 é recusada.
+  professor. Uma segunda avaliação de Cálculo 1 na mesma turma cursada é
+  recusada; outra turma de semestre diferente pode ser avaliada (#252).
 - As notas e os resultados de ranking e comparação não mudam por um comentário.
 - A identidade do denunciante e os dados privados não aparecem na listagem pública.
 - As telas cobrem vazio, envio, erro, edição, confirmação de exclusão e ocultação.
 - As permissões de backend e banco seguem o modelo aprovado, com testes de
   autorização. A tabela `comentarios` vem da migração `002_comentarios.sql`;
-  as demais tabelas propostas (reações, denúncias e moderação) ainda não têm
-  migração.
+  a tabela privada de denúncias vem da migração 005. Reações (#212) e
+  moderação (#216) permanecem propostas ou PRs em revisão na base conferida.
 
 Documentos relacionados: [modelo de dados](Modelo%20de%20Dados.md),
 [protótipos](TELAS_COMENTARIOS.md), [frontend](FRONTEND.md) e
