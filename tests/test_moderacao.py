@@ -215,5 +215,67 @@ class TestModeracaoRepository(unittest.TestCase):
         )
 
 
+class TestOcultacaoERepublicacao(unittest.TestCase):
+    def setUp(self):
+        self.cliente = ClienteFalso()
+        from app.repositorio import ComentarioRepository, DenunciaRepository, ModeracaoRepository
+        self.comentarios = ComentarioRepository(self.cliente)
+        self.denuncias = DenunciaRepository(self.cliente)
+        self.moderacao = ModeracaoRepository(self.cliente)
+
+        self.autor_id = '11111111-1111-1111-1111-111111111111'
+        self.denunciante_id = '22222222-2222-2222-2222-222222222222'
+        self.moderador_id = '33333333-3333-3333-3333-333333333333'
+        for uid, user in (
+            (self.autor_id, 'autor'),
+            (self.denunciante_id, 'denunciante'),
+            (self.moderador_id, 'moderador'),
+        ):
+            self.cliente.table('perfis').insert({
+                'id': uid, 'username': user, 'nome_completo': user.title(),
+            }).execute()
+        self.cliente.table('moderadores').insert({'usuario_id': self.moderador_id}).execute()
+
+    def test_comentario_ocultado_sai_da_listagem_publica_e_nao_volta_por_edicao(self):
+        cid = self.comentarios.criar(self.autor_id, 1, 10, 'Texto ofensivo inicial.')
+        self.denuncias.criar(cid, self.denunciante_id, 'ofensa', 'Ataque pessoal.')
+        self.moderacao.registrar_decisao(cid, self.moderador_id, 'ocultar', 'Contém ofensa pessoal.')
+
+        # Sai da listagem pública e de buscar_visivel
+        publicos, _ = self.comentarios.listar_por_professor(1)
+        self.assertEqual([c['id'] for c in publicos], [])
+        self.assertIsNone(self.comentarios.buscar_visivel(cid))
+
+        # O autor ainda vê que o comentário está ocultado
+        meu = self.comentarios.buscar_do_usuario(cid, self.autor_id)
+        self.assertIsNotNone(meu)
+        self.assertTrue(meu['ocultado'])
+
+        # Autor edita o comentário: texto muda, mas continua ocultado (não republica)
+        self.assertTrue(self.comentarios.atualizar(cid, self.autor_id, 10, 'Texto reescrito sem ofensa.'))
+        publicos_apos_edicao, _ = self.comentarios.listar_por_professor(1)
+        self.assertEqual([c['id'] for c in publicos_apos_edicao], [])
+        self.assertTrue(self.comentarios.buscar_do_usuario(cid, self.autor_id)['ocultado'])
+
+        # Só volta à listagem pública quando um moderador restaurar com justificativa
+        self.moderacao.registrar_decisao(cid, self.moderador_id, 'restaurar', 'Texto adequado após revisão.')
+        publicos_restaurados, _ = self.comentarios.listar_por_professor(1)
+        self.assertEqual([c['id'] for c in publicos_restaurados], [cid])
+        self.assertEqual(publicos_restaurados[0]['texto'], 'Texto reescrito sem ofensa.')
+
+    def test_autor_consulta_seus_comentarios_ocultados_com_justificativa(self):
+        cid = self.comentarios.criar(self.autor_id, 1, 10, 'Texto ocultado.')
+        self.denuncias.criar(cid, self.denunciante_id, 'ofensa', None)
+        self.moderacao.registrar_decisao(cid, self.moderador_id, 'ocultar', 'Linguagem inadequada.')
+
+        ocultados = self.moderacao.listar_ocultados_do_usuario(self.autor_id)
+        self.assertEqual(len(ocultados), 1)
+        self.assertEqual(ocultados[0]['id'], cid)
+        self.assertEqual(ocultados[0]['justificativa_moderacao'], 'Linguagem inadequada.')
+
+        # Outro usuário não vê os comentários ocultados do autor
+        self.assertEqual(self.moderacao.listar_ocultados_do_usuario(self.denunciante_id), [])
+        
+
 if __name__ == '__main__':
     unittest.main()

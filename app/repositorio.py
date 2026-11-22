@@ -712,7 +712,7 @@ class ComentarioRepository:
     def buscar_do_usuario(self, comentario_id, usuario_id):
         """Comentário se pertencer ao usuário, senão None (a rota responde 404)."""
         dados = (self.cliente.table('comentarios')
-                 .select('id,professor_id,disciplina_id,texto')
+                 .select('id,professor_id,disciplina_id,texto,ocultado_em')
                  .eq('id', comentario_id).eq('usuario_id', usuario_id).limit(1).execute().data)
         if not dados:
             return None
@@ -721,7 +721,9 @@ class ComentarioRepository:
             linha['disciplina_id'], ('', ''))
         return {'id': linha['id'], 'professor_id': linha['professor_id'],
                 'disciplina_id': linha['disciplina_id'], 'texto': linha['texto'],
-                'disciplina_nome': nome, 'disciplina_codigo': codigo}
+                'disciplina_nome': nome, 'disciplina_codigo': codigo,
+                'ocultado': linha.get('ocultado_em') is not None,
+                'ocultado_em': linha.get('ocultado_em')}
 
     def buscar_visivel(self, comentario_id):
         """Comentário publicado (não ocultado) de qualquer autor, ou None.
@@ -1003,6 +1005,83 @@ class ModeracaoRepository:
             'comentario_id', comentario_id
         ).is_('resolvida_em', 'null').execute()
         return True
+
+    def listar_ocultados_do_usuario(self, usuario_id):
+        """Lista os comentários ocultados do próprio autor com a última justificativa."""
+        linhas = (
+            self.cliente.table('comentarios')
+            .select('id,professor_id,disciplina_id,texto,criado_em,ocultado_em')
+            .eq('usuario_id', usuario_id)
+            .order('ocultado_em', desc=True)
+            .execute()
+            .data
+        )
+        ocultados = [l for l in linhas if l.get('ocultado_em') is not None]
+        if not ocultados:
+            return []
+
+        ids = [l['id'] for l in ocultados]
+        prof_ids = sorted({l['professor_id'] for l in ocultados})
+        professores = {
+            p['id']: p['nome']
+            for p in self.cliente.table('professores')
+            .select('id,nome')
+            .in_('id', prof_ids)
+            .execute()
+            .data
+        }
+        vinculos = (
+            self.cliente.table('vw_professor_disciplina')
+            .select('professor_id,disciplina_id,codigo_disciplina,disciplina')
+            .in_('professor_id', prof_ids)
+            .execute()
+            .data
+        )
+        disciplinas = {
+            (v['professor_id'], v['disciplina_id']): (v.get('disciplina', ''), v.get('codigo_disciplina', ''))
+            for v in vinculos
+        }
+        decisoes = (
+            self.cliente.table('moderacoes_comentarios')
+            .select('comentario_id,acao,justificativa,criado_em')
+            .in_('comentario_id', ids)
+            .order('criado_em', desc=True)
+            .execute()
+            .data
+        )
+        ultima_justificativa = {}
+        for d in decisoes:
+            if d['comentario_id'] not in ultima_justificativa and d.get('acao') == 'ocultar':
+                ultima_justificativa[d['comentario_id']] = d.get('justificativa', '')
+
+        contestacoes = (
+            self.cliente.table('contestacoes_comentarios')
+            .select('comentario_id,justificativa,criado_em,resolvida_em')
+            .in_('comentario_id', ids)
+            .order('criado_em', desc=True)
+            .execute()
+            .data
+        )
+        contestacao_ativa = {}
+        for cont in contestacoes:
+            if cont.get('resolvida_em') is None and cont['comentario_id'] not in contestacao_ativa:
+                contestacao_ativa[cont['comentario_id']] = cont
+
+        resultado = []
+        for l in ocultados:
+            disc_nome, disc_codigo = disciplinas.get((l['professor_id'], l['disciplina_id']), ('', ''))
+            resultado.append({
+                'id': l['id'],
+                'professor_id': l['professor_id'],
+                'professor_nome': professores.get(l['professor_id'], ''),
+                'disciplina_nome': disc_nome,
+                'disciplina_codigo': disc_codigo,
+                'texto': l['texto'],
+                'ocultado_em': l.get('ocultado_em'),
+                'justificativa_moderacao': ultima_justificativa.get(l['id'], ''),
+                'contestacao_ativa': contestacao_ativa.get(l['id']),
+            })
+        return resultado
 
     
 class FavoritoRepository:
