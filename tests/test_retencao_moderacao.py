@@ -137,5 +137,34 @@ class TestRepositorioRetencaoModeracao(unittest.TestCase):
         self.assertEqual([c['id'] for c in cliente.tabelas['comentarios']], [1, 2])
 
 
+class TestRotinaAgendadaRetencao(unittest.TestCase):
+    WORKFLOW = Path('.github/workflows/retencao_moderacao.yml')
+
+    def test_script_executa_descarte_e_retorna_resumo(self):
+        from datetime import datetime, timedelta, timezone
+        from scripts.descartar_moderacao_90_dias import executar_descarte
+        from tests.fake_supabase import ClienteFalso
+
+        cliente = ClienteFalso()
+        agora = datetime.now(timezone.utc)
+        expirado = (agora - timedelta(days=95)).isoformat()
+        cliente.tabelas['denuncias_comentarios'].append({
+            'id': 1, 'comentario_id': 10, 'usuario_id': 'u1', 'motivo': 'spam',
+            'criado_em': expirado, 'resolvida_em': expirado,
+        })
+
+        resumo = executar_descarte(cliente=cliente, dias_retencao=90, agora=agora)
+        self.assertEqual(resumo['denuncias_removidas'], 1)
+        self.assertEqual(cliente.tabelas['denuncias_comentarios'], [])
+
+    def test_workflow_github_actions_agendado_diariamente(self):
+        self.assertTrue(self.WORKFLOW.exists(), f'Workflow {self.WORKFLOW} deve existir.')
+        conteudo = self.WORKFLOW.read_text(encoding='utf-8')
+        self.assertIn('schedule:', conteudo)
+        self.assertIn('cron:', conteudo)
+        self.assertIn('workflow_dispatch:', conteudo)
+        self.assertIn('scripts/descartar_moderacao_90_dias.py', conteudo)
+
+
 if __name__ == '__main__':
     unittest.main()
