@@ -78,5 +78,64 @@ class TestClienteFalsoRetencao(unittest.TestCase):
         self.assertEqual([d['id'] for d in antigas], [1])
 
 
+class TestRepositorioRetencaoModeracao(unittest.TestCase):
+    def test_descarta_apenas_registros_encerrados_ha_mais_de_90_dias_sem_apagar_comentarios(self):
+        from datetime import datetime, timedelta, timezone
+        from app.repositorio import ModeracaoRepository
+        from tests.fake_supabase import ClienteFalso
+
+        cliente = ClienteFalso()
+        agora = datetime.now(timezone.utc)
+        ha_95_dias = (agora - timedelta(days=95)).isoformat()
+        ha_91_dias = (agora - timedelta(days=91)).isoformat()
+        ha_45_dias = (agora - timedelta(days=45)).isoformat()
+
+        # Comentários publicados (incluindo antigos) NÃO devem ser apagados
+        cliente.tabelas['comentarios'].extend([
+            {'id': 1, 'usuario_id': 'u1', 'professor_id': 1, 'disciplina_id': 10,
+             'texto': 'Comentário antigo publicado', 'criado_em': ha_95_dias, 'ocultado_em': None},
+            {'id': 2, 'usuario_id': 'u2', 'professor_id': 1, 'disciplina_id': 10,
+             'texto': 'Comentário recente publicado', 'criado_em': ha_45_dias, 'ocultado_em': None},
+        ])
+
+        # Denúncias: 1 encerrada >90d (apaga), 1 encerrada <90d (mantém), 1 aberta >90d (mantém)
+        cliente.tabelas['denuncias_comentarios'].extend([
+            {'id': 10, 'comentario_id': 1, 'usuario_id': 'u2', 'motivo': 'spam',
+             'criado_em': ha_95_dias, 'resolvida_em': ha_91_dias},
+            {'id': 11, 'comentario_id': 2, 'usuario_id': 'u1', 'motivo': 'spam',
+             'criado_em': ha_45_dias, 'resolvida_em': ha_45_dias},
+            {'id': 12, 'comentario_id': 1, 'usuario_id': 'u3', 'motivo': 'ofensa',
+             'criado_em': ha_95_dias, 'resolvida_em': None},
+        ])
+
+        # Decisões de moderação: 1 >90d (apaga), 1 <90d (mantém)
+        cliente.tabelas['moderacoes_comentarios'].extend([
+            {'id': 20, 'comentario_id': 1, 'moderador_id': 'mod1', 'acao': 'manter',
+             'justificativa': 'Improcedente', 'criado_em': ha_91_dias},
+            {'id': 21, 'comentario_id': 2, 'moderador_id': 'mod1', 'acao': 'manter',
+             'justificativa': 'Recente', 'criado_em': ha_45_dias},
+        ])
+
+        # Contestações: 1 encerrada >90d (apaga), 1 aberta >90d (mantém)
+        cliente.tabelas['contestacoes_comentarios'].extend([
+            {'id': 30, 'comentario_id': 1, 'usuario_id': 'u1', 'justificativa': 'Revisão antiga',
+             'criado_em': ha_95_dias, 'resolvida_em': ha_91_dias},
+            {'id': 31, 'comentario_id': 2, 'usuario_id': 'u2', 'justificativa': 'Revisão aberta',
+             'criado_em': ha_95_dias, 'resolvida_em': None},
+        ])
+
+        repo = ModeracaoRepository(cliente)
+        resumo = repo.descartar_registros_expirados(dias_retencao=90, agora=agora)
+
+        self.assertEqual(resumo['denuncias_removidas'], 1)
+        self.assertEqual(resumo['moderacoes_removidas'], 1)
+        self.assertEqual(resumo['contestacoes_removidas'], 1)
+        self.assertEqual([d['id'] for d in cliente.tabelas['denuncias_comentarios']], [11, 12])
+        self.assertEqual([m['id'] for m in cliente.tabelas['moderacoes_comentarios']], [21])
+        self.assertEqual([c['id'] for c in cliente.tabelas['contestacoes_comentarios']], [31])
+        # Comentários publicados continuam todos intactos
+        self.assertEqual([c['id'] for c in cliente.tabelas['comentarios']], [1, 2])
+
+
 if __name__ == '__main__':
     unittest.main()

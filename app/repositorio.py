@@ -1136,6 +1136,46 @@ class ModeracaoRepository:
             raise
         return True
 
+    def descartar_registros_expirados(self, dias_retencao=90, agora=None):
+        """Descarta registros de denúncia, decisão e contestação encerrados há mais de `dias_retencao` dias.
+
+        Cumpre a política de retenção da LGPD (issue #217). Nunca apaga comentários publicados.
+        """
+        if not isinstance(dias_retencao, int) or isinstance(dias_retencao, bool) or dias_retencao < 1:
+            raise ValueError('dias_retencao deve ser um inteiro positivo.')
+
+        referencia = agora or datetime.now(timezone.utc)
+        limite = (referencia - timedelta(days=dias_retencao)).isoformat()
+
+        denuncias = (
+            self.cliente.table('denuncias_comentarios')
+            .delete()
+            .lt('resolvida_em', limite)
+            .execute()
+            .data
+        )
+        moderacoes = (
+            self.cliente.table('moderacoes_comentarios')
+            .delete()
+            .lt('criado_em', limite)
+            .execute()
+            .data
+        )
+        contestacoes = (
+            self.cliente.table('contestacoes_comentarios')
+            .delete()
+            .lt('resolvida_em', limite)
+            .execute()
+            .data
+        )
+        return {
+            'dias_retencao': dias_retencao,
+            'limite_utc': limite,
+            'denuncias_removidas': len(denuncias),
+            'moderacoes_removidas': len(moderacoes),
+            'contestacoes_removidas': len(contestacoes),
+        }
+    
     
 class FavoritoRepository:
     """Professores favoritos de cada usuário (tabela favoritos, issue #223).
