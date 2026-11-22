@@ -420,6 +420,18 @@ REVOKE ALL ON comentarios_reacoes FROM PUBLIC, anon, authenticated;
 - **Retenção:** a proposta da C08 é apagar o registro até 90 dias após encerrar o
   caso; a rotina de descarte fica para a moderação (#216).
 
+## Área de moderação e contestações (Issue #216)
+
+- **Migração:** `docs/migrations/008_moderacao_comentarios.sql`
+- **Tabelas privadas (RLS sem políticas para `anon`/`authenticated`; acesso exclusivo via `service_role`):**
+  - `moderadores`: lista explícita de `usuario_id` com permissão de moderação (nenhum usuário tem acesso por padrão).
+  - `moderacoes_comentarios`: histórico de decisões (`manter`, `ocultar`, `restaurar`), sempre com `moderador_id` e `justificativa` obrigatória (2 a 1.000 caracteres).
+  - `contestacoes_comentarios`: pedidos privados de revisão enviados pelo autor de um comentário ocultado (uma contestação ativa por comentário).
+- **Rotas e permissões:**
+  - `GET /moderacao` e `POST /moderacao/comentarios/<id>/decidir`: protegidas por `@moderador_required` (visitante recebe 302/401; usuário comum recebe 403).
+  - `GET/POST /comentarios/<id>/contestar`: protegida por `@login_required` e restrita ao próprio autor de um comentário ocultado (terceiros recebem 404).
+
+  
 ## 8. Professores favoritos (`favoritos`)
 
 > Issue #223 (RF11). Versionada em [`006_favoritos.sql`](migrations/006_favoritos.sql).
