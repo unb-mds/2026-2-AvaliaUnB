@@ -54,6 +54,7 @@ class TestMigracaoModeracao(unittest.TestCase):
                 f'A tabela {tabela} deve ser privada (sem policies para anon/authenticated).',
             )
 
+
 class TestValidacoesModeracao(unittest.TestCase):
     def test_decisao_valida_normaliza_espacos(self):
         acao, justificativa, erros = validar_decisao_moderacao(' ocultar ', '  Ofensa pessoal clara.  ')
@@ -134,6 +135,84 @@ class TestAutorizacaoModerador(unittest.TestCase):
         resp = self.web.get('/_teste/moderacao', headers={'Accept': 'application/json'})
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.get_json(), {'ok': True})
+
+
+class TestModeracaoRepository(unittest.TestCase):
+    def setUp(self):
+        self.cliente = ClienteFalso()
+        from app.repositorio import ComentarioRepository, DenunciaRepository, ModeracaoRepository
+        self.comentarios = ComentarioRepository(self.cliente)
+        self.denuncias = DenunciaRepository(self.cliente)
+        self.moderacao = ModeracaoRepository(self.cliente)
+
+        self.autor_id = '11111111-1111-1111-1111-111111111111'
+        self.denunciante_id = '22222222-2222-2222-2222-222222222222'
+        self.moderador_id = '33333333-3333-3333-3333-333333333333'
+        for uid, user in (
+            (self.autor_id, 'autor'),
+            (self.denunciante_id, 'denunciante'),
+            (self.moderador_id, 'moderador'),
+        ):
+            self.cliente.table('perfis').insert({
+                'id': uid, 'username': user, 'nome_completo': user.title(),
+            }).execute()
+        self.cliente.table('moderadores').insert({'usuario_id': self.moderador_id}).execute()
+
+    def test_fila_mostra_somente_comentarios_denunciados(self):
+        c1 = self.comentarios.criar(self.autor_id, 1, 10, 'Comentário normal sem denúncia.')
+        c2 = self.comentarios.criar(self.autor_id, 1, 10, 'Comentário denunciado por ofensa.')
+        self.denuncias.criar(c2, self.denunciante_id, 'ofensa', 'Ataque pessoal direto.')
+
+        fila = self.moderacao.listar_fila()
+        ids_na_fila = [item['comentario_id'] for item in fila]
+        self.assertEqual(ids_na_fila, [c2])
+        self.assertNotIn(c1, ids_na_fila)
+        self.assertEqual(fila[0]['total_denuncias'], 1)
+        self.assertEqual(fila[0]['denuncias'][0]['motivo'], 'ofensa')
+
+    def test_decisao_ocultar_e_restaurar_registra_autor_justificativa_e_atualiza_comentario(self):
+        cid = self.comentarios.criar(self.autor_id, 1, 10, 'Texto denunciado.')
+        self.denuncias.criar(cid, self.denunciante_id, 'ofensa', 'Ofensa clara.')
+
+        # Ocultar
+        ok = self.moderacao.registrar_decisao(cid, self.moderador_id, 'ocultar', 'Violou regras.')
+        self.assertTrue(ok)
+        linha = self.cliente.table('comentarios').select('*').eq('id', cid).execute().data[0]
+        self.assertIsNotNone(linha.get('ocultado_em'))
+        # Denúncia aberta foi marcada como resolvida
+        denuncia = self.cliente.table('denuncias_comentarios').select('*').eq('comentario_id', cid).execute().data[0]
+        self.assertIsNotNone(denuncia.get('resolvida_em'))
+
+        # Histórico registra moderador e justificativa
+        decisoes = self.cliente.table('moderacoes_comentarios').select('*').eq('comentario_id', cid).execute().data
+        self.assertEqual(len(decisoes), 1)
+        self.assertEqual(decisoes[0]['moderador_id'], self.moderador_id)
+        self.assertEqual(decisoes[0]['acao'], 'ocultar')
+        self.assertEqual(decisoes[0]['justificativa'], 'Violou regras.')
+
+        # Restaurar
+        ok_rest = self.moderacao.registrar_decisao(cid, self.moderador_id, 'restaurar', 'Revisado após contestação.')
+        self.assertTrue(ok_rest)
+        linha_rest = self.cliente.table('comentarios').select('*').eq('id', cid).execute().data[0]
+        self.assertIsNone(linha_rest.get('ocultado_em'))
+
+    def test_decisao_manter_resolve_denuncias_sem_ocultar(self):
+        cid = self.comentarios.criar(self.autor_id, 1, 10, 'Crítica respeitosa à didática.')
+        self.denuncias.criar(cid, self.denunciante_id, 'fora_do_tema', None)
+
+        self.assertTrue(
+            self.moderacao.registrar_decisao(cid, self.moderador_id, 'manter', 'Crítica pedagógica válida.')
+        )
+        linha = self.cliente.table('comentarios').select('*').eq('id', cid).execute().data[0]
+        self.assertIsNone(linha.get('ocultado_em'))
+
+    def test_decisao_sem_justificativa_ou_comentario_inexistente(self):
+        cid = self.comentarios.criar(self.autor_id, 1, 10, 'Texto qualquer.')
+        with self.assertRaises(ValueError):
+            self.moderacao.registrar_decisao(cid, self.moderador_id, 'ocultar', ' ')
+        self.assertFalse(
+            self.moderacao.registrar_decisao(99999, self.moderador_id, 'ocultar', 'Não existe.')
+        )
 
 
 if __name__ == '__main__':

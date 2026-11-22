@@ -18,7 +18,7 @@ from supabase_auth.helpers import generate_pkce_challenge, generate_pkce_verifie
 
 from app.supabase_db import get_supabase, novo_cliente
 from app.utils import normalizar_busca
-from app.validacoes import CRITERIOS, validar_comentario, validar_denuncia
+from app.validacoes import CRITERIOS, validar_comentario, validar_denuncia, validar_decisao_moderacao
 
 LIMITE_COMENTARIOS = 50        # comentários por listagem; o "ver mais" fica para depois
 COLUNAS_AVALIACAO = ','.join(('id', 'usuario_id', 'professor_id', 'disciplina_id',
@@ -839,6 +839,172 @@ class ModeracaoRepository:
             .data
         )
 
+    def listar_fila(self):
+        """Lista somente comentários que possuem denúncias (mais antigas em aberto primeiro).
+
+        Agrupa as denúncias por comentário e anexa histórico de decisões e contestações.
+        """
+        denuncias = (
+            self.cliente.table('denuncias_comentarios')
+            .select('id,comentario_id,motivo,explicacao,criado_em,resolvida_em')
+            .order('criado_em')
+            .execute()
+            .data
+        )
+        if not denuncias:
+            return []
+
+        ids_comentarios = []
+        por_comentario = {}
+        for d in denuncias:
+            cid = d['comentario_id']
+            if cid not in por_comentario:
+                ids_comentarios.append(cid)
+                por_comentario[cid] = []
+            por_comentario[cid].append(d)
+
+        comentarios = {
+            c['id']: c
+            for c in self.cliente.table('comentarios')
+            .select('id,usuario_id,professor_id,disciplina_id,texto,criado_em,atualizado_em,ocultado_em')
+            .in_('id', ids_comentarios)
+            .execute()
+            .data
+        }
+        if not comentarios:
+            return []
+
+        prof_ids = sorted({c['professor_id'] for c in comentarios.values()})
+        professores = {
+            p['id']: p['nome']
+            for p in self.cliente.table('professores')
+            .select('id,nome')
+            .in_('id', prof_ids)
+            .execute()
+            .data
+        }
+        vinculos = (
+            self.cliente.table('vw_professor_disciplina')
+            .select('professor_id,disciplina_id,codigo_disciplina,disciplina')
+            .in_('professor_id', prof_ids)
+            .execute()
+            .data
+        )
+        disciplinas = {
+            (v['professor_id'], v['disciplina_id']): (v.get('disciplina', ''), v.get('codigo_disciplina', ''))
+            for v in vinculos
+        }
+
+        decisoes_raw = (
+            self.cliente.table('moderacoes_comentarios')
+            .select('id,comentario_id,moderador_id,acao,justificativa,criado_em')
+            .in_('comentario_id', ids_comentarios)
+            .order('criado_em', desc=True)
+            .execute()
+            .data
+        )
+        mod_ids = sorted({d['moderador_id'] for d in decisoes_raw})
+        moderadores = (
+            {
+                p['id']: p['username']
+                for p in self.cliente.table('perfis')
+                .select('id,username')
+                .in_('id', mod_ids)
+                .execute()
+                .data
+            }
+            if mod_ids
+            else {}
+        )
+        decisoes_por_comentario = {}
+        for dec in decisoes_raw:
+            decisoes_por_comentario.setdefault(dec['comentario_id'], []).append({
+                **dec,
+                'moderador_username': moderadores.get(dec['moderador_id'], ''),
+            })
+
+        contestacoes_raw = (
+            self.cliente.table('contestacoes_comentarios')
+            .select('id,comentario_id,justificativa,criado_em,resolvida_em')
+            .in_('comentario_id', ids_comentarios)
+            .order('criado_em', desc=True)
+            .execute()
+            .data
+        )
+        contestacoes_por_comentario = {}
+        for cont in contestacoes_raw:
+            contestacoes_por_comentario.setdefault(cont['comentario_id'], []).append(cont)
+
+        fila = []
+        for cid in ids_comentarios:
+            c = comentarios.get(cid)
+            if not c:
+                continue
+            disc_nome, disc_codigo = disciplinas.get((c['professor_id'], c['disciplina_id']), ('', ''))
+            lista_den = por_comentario[cid]
+            abertas = [d for d in lista_den if d.get('resolvida_em') is None]
+            fila.append({
+                'comentario_id': cid,
+                'professor_id': c['professor_id'],
+                'professor_nome': professores.get(c['professor_id'], ''),
+                'disciplina_nome': disc_nome,
+                'disciplina_codigo': disc_codigo,
+                'texto': c['texto'],
+                'criado_em': c.get('criado_em'),
+                'ocultado': c.get('ocultado_em') is not None,
+                'ocultado_em': c.get('ocultado_em'),
+                'denuncias': lista_den,
+                'denuncias_abertas': len(abertas),
+                'total_denuncias': len(lista_den),
+                'decisoes': decisoes_por_comentario.get(cid, []),
+                'contestacoes': contestacoes_por_comentario.get(cid, []),
+            })
+        return fila
+
+    def registrar_decisao(self, comentario_id, moderador_id, acao, justificativa):
+        """Registra decisão (manter/ocultar/restaurar) com justificativa e atualiza o comentário.
+
+        False se o comentário não existir; ValueError se ação ou justificativa forem inválidas.
+        """
+        acao, justificativa, erros = validar_decisao_moderacao(acao, justificativa)
+        if erros:
+            raise ValueError(next(iter(erros.values())))
+
+        existente = (
+            self.cliente.table('comentarios')
+            .select('id')
+            .eq('id', comentario_id)
+            .limit(1)
+            .execute()
+            .data
+        )
+        if not existente:
+            return False
+
+        agora = datetime.now(timezone.utc).isoformat()
+        self.cliente.table('moderacoes_comentarios').insert({
+            'comentario_id': comentario_id,
+            'moderador_id': moderador_id,
+            'acao': acao,
+            'justificativa': justificativa,
+            'criado_em': agora,
+        }).execute()
+
+        if acao == 'ocultar':
+            self.cliente.table('comentarios').update({'ocultado_em': agora}).eq('id', comentario_id).execute()
+        elif acao == 'restaurar':
+            self.cliente.table('comentarios').update({'ocultado_em': None}).eq('id', comentario_id).execute()
+
+        # Marca denúncias e contestações abertas daquele comentário como resolvidas
+        self.cliente.table('denuncias_comentarios').update({'resolvida_em': agora}).eq(
+            'comentario_id', comentario_id
+        ).is_('resolvida_em', 'null').execute()
+        self.cliente.table('contestacoes_comentarios').update({'resolvida_em': agora}).eq(
+            'comentario_id', comentario_id
+        ).is_('resolvida_em', 'null').execute()
+        return True
+
+    
 class FavoritoRepository:
     """Professores favoritos de cada usuário (tabela favoritos, issue #223).
 
