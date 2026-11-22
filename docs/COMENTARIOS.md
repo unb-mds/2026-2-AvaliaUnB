@@ -49,7 +49,7 @@ Uma conta de comentários não concede acesso à moderação.
 | Limite de envio | 10 comentários por hora por usuário, com contador separado do das avaliações |
 | Tamanho | De 2 a 1.000 caracteres após remover espaços, tabulações e quebras de linha das extremidades |
 | Formato | Texto simples; HTML e Markdown não são interpretados |
-| Identificação pública | Decidido (C05): comentários anônimos para o público, sem nome de usuário, e-mail nem nome completo. Hoje o nome de usuário ainda é exibido, até a implementação dessa decisão. O e-mail do autor nunca é exibido |
+| Identificação pública | Sem nome de usuário, nome completo, e-mail, avatar ou rótulo substituto. O vínculo com a conta permanece privado no backend. A leitura direta pela API exige a migração de privacidade da #258 |
 | Ordem da lista | Mais recentes primeiro, em ordem fixa. Mais antigos, escolhido pela pessoa, fica para a issue #213. Mais curtidos e Mais reações vêm junto com as reações (#212) |
 | Quantidade exibida | Os 50 comentários mais recentes, com o filtro de disciplina já aplicado. A página avisa quando há mais; o "ver mais" fica para depois |
 | Filtro | Por disciplina, no perfil do professor. "Todas as disciplinas" é o padrão e um valor inválido volta a "todas" |
@@ -128,11 +128,9 @@ A lista mostra os 50 comentários mais recentes e tem um filtro **Disciplina**,
 com "Todas as disciplinas" por padrão. Quando há mais de 50, a página avisa
 "Mostrando os 50 comentários mais recentes."
 
-O formulário informa antes da publicação que o texto e o nome de usuário
-serão públicos: "Seu nome de usuário aparece junto do comentário." O e-mail
-não é exibido. A publicação usa o botão **Publicar**. Pela decisão C05, esse
-aviso e a exibição do nome de usuário deixam de existir quando os comentários
-passarem a ser anônimos; até lá, valem como descritos.
+O formulário informa: "Sua identificação não aparece junto do comentário.
+Evite incluir dados pessoais no texto." A listagem não mostra identificação
+do autor nem rótulo substituto. A publicação usa o botão **Publicar**.
 Mostra o limite, exige a escolha de uma disciplina ministrada pelo professor
 e preserva o texto em erros de validação ou moderação. Durante a
 verificação, a interface desabilita o botão de envio e só confirma a
@@ -232,15 +230,17 @@ denúncias, a publicação de novos comentários fica pausada até haver cobertu
 
 ## Privacidade e ciclo dos dados
 
-Decisão C05: os comentários passam a ser anônimos para o público, sem nome de
-usuário, e-mail nem nome completo. O vínculo entre o comentário e a conta é
-mantido internamente, para o limite de comentários por hora, para a edição e a
-exclusão pela própria pessoa e para a apuração de abusos. Até a implementação,
-cada comentário publicado ainda mostra o nome de usuário da conta. O e-mail de
-cadastro do autor nunca é exibido: não aparece na listagem, nas páginas de
-editar e excluir nem por consulta ao clicar no nome. O e-mail, o nome
-completo, tokens, dados de denúncias e identificadores internos da conta
-ficam privados.
+Decisão C05, implementada na #258: a listagem não inclui nome de usuário,
+e-mail, nome completo, avatar ou rótulo substituto. O vínculo entre o comentário
+e a conta permanece interno, para os limites de participação, a edição e a
+exclusão pela própria pessoa e a apuração de abusos. A resposta pública do
+backend não inclui identificadores da conta nem consulta o perfil do autor.
+
+A [migração de privacidade](migrations/20261122155752_anonimato_comentarios.sql)
+deve ser aplicada após as migrações 001 a 007 para proteger também a leitura
+direta pela Data API: `anon` e `authenticated` só podem consultar as colunas
+públicas. `usuario_id` e `ocultado_em` permanecem privados. O backend mantém
+acesso por `service_role`, sem mudanças nas políticas de escrita ou de RLS.
 
 A orientação ao autor deve pedir que não publique matrículas, contatos,
 documentos, informações pessoais de terceiros ou relatos que exponham pessoas
@@ -264,7 +264,7 @@ rotina de descarte fica para a implementação após revisão do grupo.
 | C02 | Disciplina obrigatória. A pessoa pode comentar quantas vezes quiser para o mesmo professor e disciplina | Decidida; já implementada. Pode comentar mais de uma vez no mesmo professor e disciplina, com limite de 10 por hora por usuário |
 | C03 | Texto simples de 2 a 1.000 caracteres após remover espaços em branco das extremidades | Decidida; já implementada e verificada. Texto de 2 a 1.000 caracteres, contados após remover espaços nas pontas e normalizar quebras de linha |
 | C04 | Estrelas e comentários são independentes e podem ser enviados em qualquer ordem. Uma avaliação por estrelas por estudante, professor e disciplina | Decidida; já implementada e verificada. Comentar não exige avaliar e avaliar não exige comentar; editar ou excluir um não altera o outro |
-| C05 | Comentários anônimos para o público: o comentário continua como é hoje, apenas sem o nome de usuário. E-mail e nome completo também não aparecem. O vínculo com a conta é mantido internamente, para o limite de comentários por hora, para a edição e exclusão pela própria pessoa e para a apuração de abusos | Decidida em reunião da equipe (revisa a decisão da #167). Implementação: issue a criar; hoje o nome de usuário ainda é exibido |
+| C05 | Comentários anônimos para o público: sem identificação ou rótulo substituto. O vínculo com a conta permanece interno para os limites de participação, edição, exclusão e apuração de abusos | Decidida em reunião da equipe (revisa a #167). Implementação na #258; proteção da leitura direta depende da migração de privacidade |
 | C06 | Denúncia privada e moderação por responsáveis autorizados | Decidida. A denúncia já funciona (#215). A moderação é feita só por moderadores autorizados, sem acesso por padrão, em uma página restrita. Implementação da página na #216 |
 | C07 | Ocultação motivada, sem republicação automática por edição | Decidida. Comentário ocultado por moderação não volta por edição do autor; só um moderador restaura, com justificativa registrada. Implementação na #216 |
 | C08 | Comentários publicados na hora. A tela de moderação mostra somente os denunciados, e o moderador pode manter, ocultar da visão pública ou restaurar, sempre com justificativa. Todos os integrantes da equipe têm acesso, e toda ação registra quem a fez e a justificativa. Primeira análise em até três dias úteis, formulário privado de contestação e retenção de até 90 dias após o encerramento | Decidida. Não existe moderação manual pelo painel do Supabase como etapa oficial. Prazo de 3 dias úteis e retenção de 90 dias: a confirmar pelo grupo. Implementação na #216; retenção na #217 |

@@ -95,7 +95,7 @@ class TestFormulario(BasePublicar):
         self.assertRegex(form, r'<textarea name="texto" id="texto_comentario" rows="5" maxlength="1000" required')
         self.assertIn('<label for="texto_comentario">', form)
         self.assertIn('2 a 1.000 caracteres', form)
-        self.assertIn('Seu nome de usuário aparece junto do comentário.', form)
+        self.assertIn('Sua identificação não aparece junto do comentário.', form)
         self.assertIn('>Publicar</button>', form)
         self.assertNotIn('Entrar para comentar', html)
 
@@ -131,12 +131,14 @@ class TestPublicar(BasePublicar):
         self.assertEqual((gravado['professor_id'], gravado['disciplina_id']), (1, 10))
         self.assertEqual(gravado['texto'], 'Boa didática')
 
-    def test_comentario_publicado_aparece_no_perfil_com_o_username(self):
+    def test_comentario_publicado_aparece_sem_identificacao_do_autor(self):
         self.entrar()
         self.postar({'disciplina_id': '11', 'texto': 'explica muito bem'})
         html = self.perfil()
         self.assertIn('explica muito bem', html)
-        self.assertIn('<strong>ana</strong>', html)
+        self.assertNotIn('<strong>ana</strong>', html)
+        self.assertNotIn('Seu nome de usuário aparece junto do comentário.', html)
+        self.assertIn('Sua identificação não aparece junto do comentário.', html)
         self.assertIn('CÁLCULO 2 — FGA0011', html)
 
     def test_mesma_conta_pode_comentar_varias_vezes_no_mesmo_par(self):

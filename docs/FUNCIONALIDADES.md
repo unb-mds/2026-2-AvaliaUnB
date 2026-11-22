@@ -139,8 +139,8 @@ O perfil do professor tem uma seção **Comentários**, separada das notas.
 - **Filtro:** o parâmetro `comentarios_disciplina` filtra por disciplina. Vazio ou
   inválido volta a "Todas as disciplinas", sem erro. Ele é independente do
   `disciplina_id`, que escolhe as médias.
-- **Exibição:** cada comentário mostra o nome de usuário do autor (nunca o
-  e-mail), a disciplina, a data em dd/mm/aaaa no horário de Brasília e
+- **Exibição:** não há nome, avatar, identificação do autor ou rótulo substituto.
+  O comentário mostra o texto, a disciplina, a data em dd/mm/aaaa no horário de Brasília e
   "(editado)" quando a atualização é posterior à criação. O texto é simples,
   escapado, com as quebras de linha preservadas.
 - **Publicar:** exige login (basta a conta Google; não se exige e-mail
@@ -151,6 +151,9 @@ O perfil do professor tem uma seção **Comentários**, separada das notas.
   `/comentarios/<id>/excluir` (a exclusão passa por uma confirmação). O
   comentário de outra pessoa, ou inexistente, responde HTTP 404.
 - Comentários não alteram notas, médias, comparação nem ranking.
+- A autoria permanece privada no backend. A proteção da leitura direta da Data API
+  exige aplicar a [migração de privacidade](migrations/20261122155752_anonimato_comentarios.sql)
+  depois das migrações existentes. Login e permissões do autor continuam necessários.
 
 Reações, denúncia, moderação, ocultação e filtro automático não fazem parte
 desta entrega; veja as [regras dos comentários](COMENTARIOS.md).

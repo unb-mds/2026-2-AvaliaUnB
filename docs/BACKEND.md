@@ -210,11 +210,11 @@ autoria e o vínculo entre professor e disciplina são conferidos no servidor:
 - `listar_por_professor(professor_id, disciplina_id=None, usuario_atual_id=None)`
   devolve `(comentarios, ha_mais)`. Filtra `ocultado_em IS NULL` e a disciplina,
   ordena por `criado_em` e `id` do mais recente para o mais antigo e busca
-  `LIMITE_COMENTARIOS + 1` (50 + 1) linhas só para saber se há mais. Os nomes de
-  usuário vêm de `perfis` (`id` e `username`); o e-mail nunca é selecionado.
-  Cada comentário tem apenas `id`, `texto`, `username`, `disciplina_nome`,
+  `LIMITE_COMENTARIOS + 1` (50 + 1) linhas só para saber se há mais. A listagem não
+  consulta os perfis dos autores nem devolve seus nomes ou dados de conta.
+  Cada comentário tem apenas `id`, `texto`, `disciplina_nome`,
   `disciplina_codigo`, `criado_em`, `editado` e `e_meu`, este calculado no
-  servidor. O `usuario_id` não sai do repositório.
+  servidor. O `usuario_id` não integra o resultado da listagem pública.
 - `buscar_do_usuario(comentario_id, usuario_id)` devolve o comentário se for
   do usuário, ou `None`.
 - `criar(usuario_id, professor_id, disciplina_id, texto)` e

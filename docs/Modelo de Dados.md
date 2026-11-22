@@ -292,7 +292,7 @@ do conteúdo atual da migração.
 
 | Tema | Proposta | Motivo |
 |---|---|---|
-| Ligação privada com usuário | `usuario_id` → `perfis(id)` | Garante autoria e permissões. A listagem exibe o nome de usuário sem expor o identificador da conta. |
+| Ligação privada com usuário | `usuario_id` → `perfis(id)` | Garante autoria e permissões no backend. A listagem não expõe identificação do autor. |
 | Ligação com professor | `professor_id` → `professores(id)`, `NOT NULL` | O comentário é sempre sobre um professor. |
 | Ligação com disciplina | `disciplina_id` → `disciplinas(id)`, `NOT NULL` | Todo relato se refere a uma disciplina ministrada pelo professor. |
 | Quantidade por usuário | Vários relatos para o mesmo professor e disciplina | Cada comentário é identificado pelo seu próprio ID. |
@@ -365,13 +365,18 @@ REVOKE ALL ON comentarios_reacoes FROM PUBLIC, anon, authenticated;
    permissões e campos, independentemente de haver registro na outra tabela.
    A tabela `avaliacoes` admite um registro por conta, professor e
    disciplina, conforme a seção 2.5.
-3. **Leitura pública com autoria.** O backend lista comentários visíveis com
-   ID do comentário, texto, disciplina, datas, contagens e `perfis.username`.
+3. **Leitura pública sem identificação.** O backend lista comentários visíveis com
+   ID do comentário, texto, disciplina, datas e contagens.
    A ordenação usa a data da primeira publicação (`criado_em`), a contagem
    de curtidas ou a soma de curtidas e descurtidas, conforme a
    [especificação](COMENTARIOS.md).
-   O e-mail de cadastro do autor não é consultado nem exibido: a listagem usa
-   só `perfis.username`, conforme o [fluxo de privacidade](COMENTARIOS.md).
+   O perfil do autor não é consultado. A resposta não inclui `usuario_id` nem
+   `username`, conforme o [fluxo de privacidade](COMENTARIOS.md). A migração
+   [`20261122155752_anonimato_comentarios.sql`](migrations/20261122155752_anonimato_comentarios.sql)
+   revoga a leitura da tabela inteira e concede às roles públicas somente
+   as colunas públicas. Consultas diretas devem especificar essas colunas;
+   `SELECT *`, filtros e junções por `usuario_id` são bloqueados. O vínculo
+   privado, a escrita por autor, o RLS e o acesso do backend permanecem.
 4. **Moderação.** A tabela `comentarios` guarda o texto já aprovado. Textos
    que precisam de revisão ficam em uma fila privada separada, inclusive
    revisões de comentários publicados. O modelo de fila, denúncias e decisões
