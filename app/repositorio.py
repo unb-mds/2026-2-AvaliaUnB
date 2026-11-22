@@ -820,6 +820,24 @@ class DenunciaRepository:
             raise
         return True
 
+class ModeracaoRepository:
+    """Papel de moderador, fila de denúncias, decisões e contestações (issue #216)."""
+
+    def __init__(self, cliente):
+        self.cliente = cliente
+
+    def eh_moderador(self, usuario_id):
+        """True somente se o usuário estiver cadastrado explicitamente em `moderadores`."""
+        if not usuario_id:
+            return False
+        return bool(
+            self.cliente.table('moderadores')
+            .select('usuario_id')
+            .eq('usuario_id', usuario_id)
+            .limit(1)
+            .execute()
+            .data
+        )
 
 class FavoritoRepository:
     """Professores favoritos de cada usuário (tabela favoritos, issue #223).
@@ -863,13 +881,14 @@ class FavoritoRepository:
 
 class Repositorios:
     def __init__(self, usuarios, professores, avaliacoes, comentarios=None, denuncias=None,
-                 favoritos=None):
+                 favoritos=None, moderacao=None):
         self.usuarios = usuarios
         self.professores = professores
         self.avaliacoes = avaliacoes
         self.comentarios = comentarios
         self.denuncias = denuncias
         self.favoritos = favoritos
+        self.moderacao = moderacao
 
 
 def configurar_repositorios(app):
@@ -880,7 +899,8 @@ def configurar_repositorios(app):
     app.extensions['repositorios'] = Repositorios(
         UsuarioRepository(cliente, fabrica), ProfessorRepository(cliente),
         AvaliacaoRepository(cliente), ComentarioRepository(cliente),
-        DenunciaRepository(cliente), FavoritoRepository(cliente))
+        DenunciaRepository(cliente), FavoritoRepository(cliente),
+        ModeracaoRepository(cliente))
 
 
 def repositorios() -> Repositorios:

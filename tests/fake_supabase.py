@@ -259,6 +259,10 @@ class ClienteFalso:
             'comentarios': [],
             'denuncias_comentarios': [],
             'favoritos': [],
+            'favoritos': [],
+            'moderadores': [],
+            'moderacoes_comentarios': [],
+            'contestacoes_comentarios': [],
         }
 
     def table(self, nome):
