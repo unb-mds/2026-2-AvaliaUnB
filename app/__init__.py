@@ -10,6 +10,7 @@ from app.repositorio import configurar_repositorios
 from app.routes.auth_routes import auth_bp
 from app.routes.main_routes import main_bp
 from app.routes.professor_routes import professor_bp
+from app.routes.moderacao_routes import moderacao_bp
 from app.seguranca import configurar_seguranca
 
 
@@ -34,5 +35,6 @@ def create_app(config=None) -> Flask:
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(professor_bp)
+    app.register_blueprint(moderacao_bp)
 
     return app

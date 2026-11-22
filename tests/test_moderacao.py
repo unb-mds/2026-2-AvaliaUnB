@@ -275,7 +275,94 @@ class TestOcultacaoERepublicacao(unittest.TestCase):
 
         # Outro usuário não vê os comentários ocultados do autor
         self.assertEqual(self.moderacao.listar_ocultados_do_usuario(self.denunciante_id), [])
-        
+
+class TestRotasModeracao(unittest.TestCase):
+    def setUp(self):
+        self.cliente = ClienteFalso()
+        self.app = create_app({
+            'TESTING': True,
+            'SECRET_KEY': 'chave-teste-local',
+            'SUPABASE_CLIENT': self.cliente,
+            'WTF_CSRF_ENABLED': False,
+        })
+        self.web = self.app.test_client()
+
+    def _logar(self, email, username, moderador=False):
+        codigo = f'cod-{username}'
+        verificador = f'ver-{username}'
+        self.cliente.auth.preparar_retorno_google(
+            codigo, email, {'nome': username.title(), 'username': username}, verificador
+        )
+        resp = self.cliente.auth.exchange_code_for_session({
+            'auth_code': codigo, 'code_verifier': verificador,
+        })
+        uid = str(resp.user.id)
+        self.cliente.table('perfis').insert({
+            'id': uid, 'username': username, 'nome_completo': username.title(),
+        }).execute()
+        if moderador:
+            self.cliente.table('moderadores').insert({'usuario_id': uid}).execute()
+        self.web.set_cookie(COOKIE_ACESSO, resp.session.access_token)
+        return uid
+
+    def _criar_comentario_denunciado(self):
+        from app.repositorio import ComentarioRepository, DenunciaRepository
+        autor_id = '11111111-1111-1111-1111-111111111111'
+        denunciante_id = '22222222-2222-2222-2222-222222222222'
+        for uid, user in ((autor_id, 'autor1'), (denunciante_id, 'denunciante1')):
+            self.cliente.table('perfis').insert({
+                'id': uid, 'username': user, 'nome_completo': user.title(),
+            }).execute()
+        comentarios = ComentarioRepository(self.cliente)
+        denuncias = DenunciaRepository(self.cliente)
+        c_normal = comentarios.criar(autor_id, 1, 10, 'Comentário normal sem denúncia.')
+        c_denunciado = comentarios.criar(autor_id, 1, 10, 'Comentário ofensivo denunciado.')
+        denuncias.criar(c_denunciado, denunciante_id, 'ofensa', 'Contém ataque pessoal.')
+        return c_normal, c_denunciado
+
+    def test_fila_bloqueia_comum_e_exibe_somente_denunciados_para_moderador(self):
+        self._criar_comentario_denunciado()
+
+        # Usuário comum recebe 403
+        self._logar('comum@gmail.com', 'comum', moderador=False)
+        self.assertEqual(self.web.get('/moderacao').status_code, 403)
+
+        # Moderador acessa a fila e vê apenas o denunciado
+        self._logar('mod@gmail.com', 'moderadora', moderador=True)
+        resp = self.web.get('/moderacao')
+        self.assertEqual(resp.status_code, 200)
+        html = resp.get_data(as_text=True)
+        self.assertIn('Comentário ofensivo denunciado.', html)
+        self.assertNotIn('Comentário normal sem denúncia.', html)
+        self.assertNotIn('style=', html)
+
+    def test_post_decidir_registra_ocultar_e_valida_erros(self):
+        _, c_denunciado = self._criar_comentario_denunciado()
+
+        # Usuário comum não decide
+        self._logar('comum@gmail.com', 'comum', moderador=False)
+        resp_negado = self.web.post(
+            f'/moderacao/comentarios/{c_denunciado}/decidir',
+            data={'acao': 'ocultar', 'justificativa': 'Tentativa indevida.'},
+        )
+        self.assertEqual(resp_negado.status_code, 403)
+
+        # Moderador sem justificativa recebe 400
+        self._logar('mod@gmail.com', 'moderadora', moderador=True)
+        resp_invalido = self.web.post(
+            f'/moderacao/comentarios/{c_denunciado}/decidir',
+            data={'acao': 'ocultar', 'justificativa': ' '},
+        )
+        self.assertEqual(resp_invalido.status_code, 400)
+
+        # Moderador com justificativa válida oculta e redireciona (303)
+        resp_ok = self.web.post(
+            f'/moderacao/comentarios/{c_denunciado}/decidir',
+            data={'acao': 'ocultar', 'justificativa': 'Ofensa pessoal comprovada.'},
+        )
+        self.assertEqual(resp_ok.status_code, 303)
+        linha = self.cliente.table('comentarios').select('*').eq('id', c_denunciado).execute().data[0]
+        self.assertIsNotNone(linha.get('ocultado_em'))
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moderação de Comentários - AvaliaUnB</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='indicadores.css') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <script src="{{ url_for('static', filename='tema.js') }}"></script>
+</head>
+<body>
+    {% include '_topo.html' %}
+
+    <main class="conteudo">
+        <header class="cabecalho-pagina">
+            <h1>Moderação de Comentários</h1>
+            <p class="subtitulo">Fila restrita à equipe para análise de comentários denunciados.</p>
+        </header>
+
+        {% if fila %}
+        <section aria-label="Fila de comentários denunciados">
+            {% for item in fila %}
+            <article class="card">
+                <header>
+                    <h2>{{ item.professor_nome }} — {{ item.disciplina_nome }}{% if item.disciplina_codigo %} ({{ item.disciplina_codigo }}){% endif %}</h2>
+                    <p class="ajuda">
+                        Status: <strong>{{ 'Ocultado' if item.ocultado else 'Publicado' }}</strong>
+                        · Denúncias abertas: <strong>{{ item.denuncias_abertas }}</strong> (total: {{ item.total_denuncias }})
+                    </p>
+                </header>
+
+                <blockquote>{{ item.texto }}</blockquote>
+
+                <h3>Denúncias recebidas</h3>
+                <ul>
+                    {% for d in item.denuncias %}
+                    <li>
+                        <strong>{{ motivos.get(d.motivo, d.motivo) }}</strong>
+                        {% if d.explicacao %} — {{ d.explicacao }}{% endif %}
+                        {% if d.resolvida_em %} (resolvida){% else %} (em aberto){% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+
+                {% if item.contestacoes %}
+                <h3>Contestações do autor</h3>
+                <ul>
+                    {% for c in item.contestacoes %}
+                    <li>
+                        {{ c.justificativa }}
+                        {% if c.resolvida_em %} (analisada){% else %} (em aberto){% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+
+                {% if item.decisoes %}
+                <h3>Histórico de decisões</h3>
+                <ul>
+                    {% for dec in item.decisoes %}
+                    <li>
+                        <strong>{{ acoes_rotulos.get(dec.acao, dec.acao) }}</strong>
+                        por {{ dec.moderador_username or 'moderador' }}:
+                        {{ dec.justificativa }}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+
+                {% if comentario_erro_id == item.comentario_id and erros %}
+                <ul class="erros" role="alert">
+                    {% for erro in erros.values() %}
+                    <li>{{ erro }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+
+                <form method="POST" action="{{ url_for('moderacao.decidir', comentario_id=item.comentario_id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <label for="acao-{{ item.comentario_id }}">Decisão</label>
+                    <select id="acao-{{ item.comentario_id }}" name="acao" required>
+                        <option value="manter">Manter publicado</option>
+                        <option value="ocultar" {% if not item.ocultado %}selected{% endif %}>Ocultar da visão pública</option>
+                        <option value="restaurar" {% if item.ocultado %}selected{% endif %}>Restaurar comentário</option>
+                    </select>
+
+                    <label for="justificativa-{{ item.comentario_id }}">Justificativa obrigatória</label>
+                    <textarea id="justificativa-{{ item.comentario_id }}" name="justificativa" rows="3" minlength="2" maxlength="1000" required>{{ dados_form.get('justificativa', '') if dados_form and comentario_erro_id == item.comentario_id else '' }}</textarea>
+
+                    <button type="submit" class="botao botao-primario">Registrar decisão</button>
+                </form>
+            </article>
+            {% endfor %}
+        </section>
+        {% else %}
+        <p role="status">Não há comentários denunciados na fila no momento.</p>
+        {% endif %}
+    </main>
+
+    {% include '_rodape.html' %}
+</body>
+</html>
