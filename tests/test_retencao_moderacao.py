@@ -166,5 +166,68 @@ class TestRotinaAgendadaRetencao(unittest.TestCase):
         self.assertIn('scripts/descartar_moderacao_90_dias.py', conteudo)
 
 
+class TestCriteriosAceiteRetencao(unittest.TestCase):
+    def test_fronteira_89_e_91_dias_e_validacao_de_parametro(self):
+        from datetime import datetime, timedelta, timezone
+        from app.repositorio import ModeracaoRepository
+        from tests.fake_supabase import ClienteFalso
+
+        cliente = ClienteFalso()
+        agora = datetime.now(timezone.utc)
+        ha_91_dias = (agora - timedelta(days=91)).isoformat()
+        ha_89_dias = (agora - timedelta(days=89)).isoformat()
+
+        cliente.tabelas['denuncias_comentarios'].extend([
+            {'id': 1, 'comentario_id': 10, 'usuario_id': 'u1', 'motivo': 'spam',
+             'criado_em': ha_91_dias, 'resolvida_em': ha_91_dias},
+            {'id': 2, 'comentario_id': 10, 'usuario_id': 'u2', 'motivo': 'spam',
+             'criado_em': ha_89_dias, 'resolvida_em': ha_89_dias},
+        ])
+        cliente.tabelas['moderacoes_comentarios'].extend([
+            {'id': 3, 'comentario_id': 10, 'moderador_id': 'm1', 'acao': 'manter',
+             'justificativa': 'Antiga', 'criado_em': ha_91_dias},
+            {'id': 4, 'comentario_id': 10, 'moderador_id': 'm1', 'acao': 'manter',
+             'justificativa': 'Dentro do prazo', 'criado_em': ha_89_dias},
+        ])
+        cliente.tabelas['contestacoes_comentarios'].extend([
+            {'id': 5, 'comentario_id': 10, 'usuario_id': 'u1', 'justificativa': 'Antiga',
+             'criado_em': ha_91_dias, 'resolvida_em': ha_91_dias},
+            {'id': 6, 'comentario_id': 10, 'usuario_id': 'u2', 'justificativa': 'Dentro do prazo',
+             'criado_em': ha_89_dias, 'resolvida_em': ha_89_dias},
+        ])
+
+        repo = ModeracaoRepository(cliente)
+        for invalido in (0, -5, True, '90'):
+            with self.assertRaises(ValueError):
+                repo.descartar_registros_expirados(dias_retencao=invalido, agora=agora)
+
+        resumo = repo.descartar_registros_expirados(dias_retencao=90, agora=agora)
+        self.assertEqual(resumo['denuncias_removidas'], 1)
+        self.assertEqual(resumo['moderacoes_removidas'], 1)
+        self.assertEqual(resumo['contestacoes_removidas'], 1)
+        self.assertEqual([d['id'] for d in cliente.tabelas['denuncias_comentarios']], [2])
+        self.assertEqual([m['id'] for m in cliente.tabelas['moderacoes_comentarios']], [4])
+        self.assertEqual([c['id'] for c in cliente.tabelas['contestacoes_comentarios']], [6])
+
+    def test_rpc_descarte_remove_expirados_e_preserva_comentarios(self):
+        from datetime import datetime, timedelta, timezone
+        from tests.fake_supabase import ClienteFalso
+
+        cliente = ClienteFalso()
+        expirado = (datetime.now(timezone.utc) - timedelta(days=100)).isoformat()
+        cliente.tabelas['comentarios'].append({
+            'id': 1, 'usuario_id': 'u1', 'professor_id': 1, 'disciplina_id': 10,
+            'texto': 'Comentário publicado preservado', 'criado_em': expirado, 'ocultado_em': None,
+        })
+        cliente.tabelas['moderacoes_comentarios'].append({
+            'id': 1, 'comentario_id': 1, 'moderador_id': 'm1', 'acao': 'manter',
+            'justificativa': 'Encerrado há 100 dias', 'criado_em': expirado,
+        })
+
+        resp = cliente.rpc('descartar_registros_moderacao_expirados', {'dias_retencao': 90}).execute()
+        self.assertEqual(resp.data['moderacoes_removidas'], 1)
+        self.assertEqual(len(cliente.tabelas['comentarios']), 1)
+
+
 if __name__ == '__main__':
     unittest.main()
