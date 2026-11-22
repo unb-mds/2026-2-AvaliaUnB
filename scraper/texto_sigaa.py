@@ -3,12 +3,104 @@ import re
 
 A_DEFINIR = "A DEFINIR DOCENTE"
 
+# Grafia comum dos nomes (issue #236). Listas fáceis de editar: tudo em minúsculas
+# nas partículas e em maiúsculas nas siglas.
+TIPOS_NOME = ("professor", "disciplina", "departamento")
+
+# Ficam em minúsculo, exceto no início de um trecho (texto, depois de ":" e de " - ").
+PARTICULAS = frozenset({
+    "de", "da", "do", "dos", "das", "e", "em", "na", "no", "nas", "nos",
+    "ao", "aos", "à", "às", "a", "o", "as", "os", "um", "uma",
+    "di", "del", "van", "von", "du",
+    "para", "com", "por", "sobre", "sem", "como", "que",
+    "pelo", "pela", "pelos", "pelas", "sob", "entre", "até",
+})
+
+# Siglas fixas, só para disciplina e departamento. "UNB" é tratada à parte (vira "UnB").
+SIGLAS = frozenset({"TCC", "TV", "LGBT", "LSB", "PSL", "PBSL", "LS", "WRTV", "DPG", "DAP", "EJA", "EDF"})
+
+# Algarismos romanos (só I, V e X, até XXXIX), apenas em disciplinas e como palavra inteira.
+_ROMANO = re.compile(r"X{0,3}(?:IX|IV|V?I{0,3})")
+_SEPARADORES_DE_TRECHO = ("-", "–", "—")
+_APOSTROFOS = "'’´`"
+
 
 def normalizar_texto(texto) -> str:
     """Troca \\xa0 por espaço, colapsa espaços/quebras e remove as pontas."""
     if not texto:
         return ""
     return re.sub(r"\s+", " ", str(texto).replace("\xa0", " ")).strip()
+
+
+def _tem_minuscula(texto: str) -> bool:
+    return any(c.lower() == c and c.upper() != c for c in texto)
+
+
+def _tem_maiuscula(texto: str) -> bool:
+    return any(c.upper() == c and c.lower() != c for c in texto)
+
+
+def _maiuscula_inicial(palavra: str) -> str:
+    return palavra[:1].upper() + palavra[1:].lower()
+
+
+def grafia_comum(texto, tipo):
+    """Converte um nome em CAIXA ALTA para a grafia comum, mantendo os acentos.
+
+    `tipo` é "professor", "disciplina" ou "departamento" (ValueError nos demais).
+    Só converte textos 100% em caixa alta: se houver qualquer letra minúscula, ou se
+    o texto for vazio, None ou sem letras, devolve o valor como veio (idempotente).
+    Partículas (de, da, e...) ficam em minúsculo, menos no início de um trecho;
+    siglas e algarismos romanos seguem as listas e regras do topo do módulo.
+    """
+    if tipo not in TIPOS_NOME:
+        raise ValueError(f"Tipo de nome inválido: {tipo!r} (esperado {', '.join(TIPOS_NOME)}).")
+    if not texto or not _tem_maiuscula(texto) or _tem_minuscula(texto):
+        return texto
+
+    partes = []
+    inicio_de_trecho = True
+    depois_da_barra = False
+    for pedaco in re.split(r"(\s+)", texto):
+        if not pedaco or pedaco.isspace():
+            partes.append(pedaco)
+            continue
+        if pedaco in _SEPARADORES_DE_TRECHO:
+            partes.append(pedaco)
+            inicio_de_trecho = True
+            depois_da_barra = False
+            continue
+
+        primeira = True
+        resultado, posicao = [], 0
+        for achado in re.finditer(r"[^\W\d_]+", pedaco):
+            resultado.append(pedaco[posicao:achado.start()])
+            palavra = achado.group()
+            antes = pedaco[achado.start() - 1] if achado.start() > 0 else ""
+            depois = pedaco[achado.end()] if achado.end() < len(pedaco) else ""
+            minuscula = palavra.lower()
+            colada = (antes != "" and (antes in _APOSTROFOS or antes == "-" or antes.isdigit())) or depois.isdigit()
+            if tipo == "departamento" and (antes == "/" or (primeira and depois_da_barra)):
+                novo = palavra
+            elif tipo != "professor" and palavra in SIGLAS:
+                novo = palavra
+            elif tipo != "professor" and palavra == "UNB":
+                novo = "UnB"
+            elif tipo == "disciplina" and _ROMANO.fullmatch(palavra):
+                novo = palavra
+            elif (minuscula in PARTICULAS and not colada
+                  and not (primeira and inicio_de_trecho)):
+                novo = minuscula
+            else:
+                novo = _maiuscula_inicial(palavra)
+            resultado.append(novo)
+            posicao = achado.end()
+            primeira = False
+        resultado.append(pedaco[posicao:])
+        partes.append("".join(resultado))
+        inicio_de_trecho = pedaco.endswith(":")
+        depois_da_barra = pedaco.endswith("/")
+    return "".join(partes)
 
 
 class UnidadeInvalidaError(ValueError):
