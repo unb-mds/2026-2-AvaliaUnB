@@ -459,6 +459,117 @@ class TestContestacaoAutor(unittest.TestCase):
         html_fila = self.web.get('/moderacao').get_data(as_text=True)
         self.assertIn('Não houve ofensa, apenas relato pedagógico.', html_fila)
 
+class TestFluxoCompletoModeracao(unittest.TestCase):
+    def setUp(self):
+        self.cliente = ClienteFalso()
+        self.app = create_app({
+            'TESTING': True,
+            'SECRET_KEY': 'chave-teste-local',
+            'SUPABASE_CLIENT': self.cliente,
+            'WTF_CSRF_ENABLED': False,
+        })
+        self.web = self.app.test_client()
+
+    def _logar(self, email, username, moderador=False):
+        codigo = f'cod-{username}'
+        verificador = f'ver-{username}'
+        self.cliente.auth.preparar_retorno_google(
+            codigo, email, {'nome': username.title(), 'username': username}, verificador
+        )
+        resp = self.cliente.auth.exchange_code_for_session({
+            'auth_code': codigo, 'code_verifier': verificador,
+        })
+        uid = str(resp.user.id)
+        if not self.cliente.table('perfis').select('id').eq('id', uid).execute().data:
+            self.cliente.table('perfis').insert({
+                'id': uid, 'username': username, 'nome_completo': username.title(),
+            }).execute()
+        if moderador and not self.cliente.table('moderadores').select('usuario_id').eq('usuario_id', uid).execute().data:
+            self.cliente.table('moderadores').insert({'usuario_id': uid}).execute()
+        self.web.set_cookie(COOKIE_ACESSO, resp.session.access_token)
+        return uid
+
+    def test_ciclo_completo_denuncia_ocultacao_edicao_contestacao_e_restauracao(self):
+        # 1. Autor publica comentário no perfil do professor 1 (disciplina 10)
+        self._logar('autor@gmail.com', 'autor', moderador=False)
+        resp_pub = self.web.post(
+            '/professores/1/comentarios',
+            data={'disciplina_id': '10', 'texto': 'Comentário inicial com termo ofensivo.'},
+        )
+        self.assertEqual(resp_pub.status_code, 303)
+        cid = self.cliente.table('comentarios').select('id').execute().data[0]['id']
+
+        # Comentário aparece publicamente no perfil
+        html_publico = self.web.get('/professores/1').get_data(as_text=True)
+        self.assertIn('Comentário inicial com termo ofensivo.', html_publico)
+
+        # 2. Outro usuário denuncia o comentário
+        self._logar('denunciante@gmail.com', 'denunciante', moderador=False)
+        resp_den = self.web.post(
+            f'/comentarios/{cid}/denunciar',
+            data={'motivo': 'ofensa', 'explicacao': 'Linguagem ofensiva.'},
+        )
+        self.assertEqual(resp_den.status_code, 303)
+
+        # Usuário comum não acessa a moderação
+        self.assertEqual(self.web.get('/moderacao').status_code, 403)
+
+        # 3. Moderador vê o comentário na fila e oculta com justificativa
+        self._logar('mod@gmail.com', 'moderadora', moderador=True)
+        html_fila = self.web.get('/moderacao').get_data(as_text=True)
+        self.assertIn('Comentário inicial com termo ofensivo.', html_fila)
+
+        resp_ocultar = self.web.post(
+            f'/moderacao/comentarios/{cid}/decidir',
+            data={'acao': 'ocultar', 'justificativa': 'Contém ofensa pessoal.'},
+        )
+        self.assertEqual(resp_ocultar.status_code, 303)
+
+        # 4. Comentário saiu da listagem pública
+        html_apos_ocultar = self.web.get('/professores/1').get_data(as_text=True)
+        self.assertNotIn('Comentário inicial com termo ofensivo.', html_apos_ocultar)
+
+        # 5. Autor edita o comentário ocultado: texto muda, mas NÃO volta à listagem pública
+        self._logar('autor@gmail.com', 'autor', moderador=False)
+        resp_edit = self.web.post(
+            f'/comentarios/{cid}/editar',
+            data={'disciplina_id': '10', 'texto': 'Comentário revisado focando apenas na didática.'},
+        )
+        self.assertEqual(resp_edit.status_code, 303)
+        html_apos_edicao = self.web.get('/professores/1').get_data(as_text=True)
+        self.assertNotIn('Comentário revisado focando apenas na didática.', html_apos_edicao)
+
+        # 6. Autor envia contestação privada
+        resp_cont = self.web.post(
+            f'/comentarios/{cid}/contestar',
+            data={'justificativa': 'Removi o termo ofensivo, solicito restauração.'},
+        )
+        self.assertEqual(resp_cont.status_code, 303)
+
+        # 7. Moderador vê a contestação na fila e restaura o comentário com justificativa
+        self._logar('mod@gmail.com', 'moderadora', moderador=True)
+        html_fila_cont = self.web.get('/moderacao').get_data(as_text=True)
+        self.assertIn('Removi o termo ofensivo, solicito restauração.', html_fila_cont)
+
+        resp_rest = self.web.post(
+            f'/moderacao/comentarios/{cid}/decidir',
+            data={'acao': 'restaurar', 'justificativa': 'Texto adequado após revisão do autor.'},
+        )
+        self.assertEqual(resp_rest.status_code, 303)
+
+        # 8. Comentário restaurado volta à listagem pública com o texto editado
+        html_final = self.web.get('/professores/1').get_data(as_text=True)
+        self.assertIn('Comentário revisado focando apenas na didática.', html_final)
+
+        # Verifica que todas as decisões ficaram registradas com moderador e justificativa
+        decisoes = self.cliente.table('moderacoes_comentarios').select('*').eq('comentario_id', cid).execute().data
+        self.assertEqual(len(decisoes), 2)
+        self.assertEqual([d['acao'] for d in decisoes], ['ocultar', 'restaurar'])
+        for d in decisoes:
+            self.assertTrue(d['moderador_id'])
+            self.assertTrue(d['justificativa'])
+
+            
 
 if __name__ == '__main__':
     unittest.main()

@@ -6,7 +6,7 @@
     <title>Contestar Moderação - AvaliaUnB</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='indicadores.css') }}">
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
-    <script src="{{ url_for('static', filename='tema.js') }}"></script>
+    {% include '_tema.html' %}
 </head>
 <body>
     {% include '_topo.html' %}
