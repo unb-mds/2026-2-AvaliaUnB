@@ -22,6 +22,20 @@ Aqui estão as versões mais recentes e atualizadas da arquitetura do projeto Av
 
 ## Aprofundamento
 
+### Estratégia de histórico de semestres (#242)
+
+A arquitetura mantém a coleta e a persistência cumulativas de ofertas e
+avaliações. A proposta de consulta híbrida separa três conceitos: período de
+oferta ativo (configuração operacional), período cursado (dado de avaliação)
+e período selecionado para consulta (estado da navegação).
+
+O scraper registra ofertas por ano e período; uma futura confirmação
+operacional define o período ativo depois da validação. O repositório de
+catálogo deverá aplicar o recorte selecionado antes da paginação. Os
+repositórios de avaliação continuarão agregando a série histórica, sem
+dependência do período ativo. A configuração e o novo recorte são trabalho
+futuro, detalhado no [registro da decisão](DECISAO_HISTORICO_SEMESTRES.md).
+
 Os diagramas mostram as relações gerais. Consulte o [guia do backend](BACKEND.md)
 para rotas e repositórios, o [modelo de dados](Modelo%20de%20Dados.md)
 para tabelas e RLS, o [scraper](COMO_USAR_SCRAPER.md) para a coleta e

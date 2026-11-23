@@ -44,6 +44,8 @@ anteriores podem conter apenas parte delas.
 | R1 — fluxo essencial | Cadastro, login, busca de professores e disciplinas, perfil do professor, avaliação por cinco critérios e consulta de médias | Implementado |
 | R2 — consulta e gestão de avaliações | Ranking, comparação entre dois professores, filtro por departamento, busca que ignora acentos e espaços extras e perfil do usuário com edição e exclusão das próprias avaliações | Implementado |
 | Evolução dos filtros | Faixa de nota e volume de avaliações | Pendente |
+| Histórico de semestres | Preservação das turmas, avaliação por turma cursada e evolução de notas | Implementado (#225, #252, #224) |
+| Consulta por oferta | Priorizar o semestre ativo e permitir outros períodos | [Proposta híbrida (#242)](docs/DECISAO_HISTORICO_SEMESTRES.md); implementação futura |
 | Comentários | Listar os 50 mais recentes, filtrar por disciplina, publicar, editar e excluir o próprio comentário anonimamente; reagir com 👍 ou 👎 e denunciar | Implementado ([regras](docs/COMENTARIOS.md)) |
 | Reações e moderação | Reações, ordenação escolhida pela pessoa, filtro automático, denúncia e moderação | [Proposta para revisão](docs/COMENTARIOS.md) |
 | Outras funcionalidades planejadas | Favoritos e gráficos de desempenho | Pendente |
@@ -161,6 +163,9 @@ docker compose up --build
 A aplicação será servida pelo Gunicorn em `http://localhost:8000`.
 O scraper é executado separadamente. A cada semestre, ele roda pelo workflow manual
 *Atualizar dados do SIGAA* no GitHub Actions; veja o [guia do scraper](docs/COMO_USAR_SCRAPER.md).
+As coletas acrescentam ofertas sem apagar o histórico. A opção híbrida da #242
+propõe definir o período de oferta ativo após validação da coleta e manter os
+anteriores consultáveis. A regra das avaliações por turma cursada permanece.
 
 ### Hospedagem
 
