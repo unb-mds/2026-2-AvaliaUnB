@@ -108,7 +108,7 @@ depende da configuração `COOKIE_SECURE`, habilitada fora do debug.
 necessário e guarda o usuário em `flask.g` durante a requisição. O hook
 `after_request` envia os cookies renovados. O logout solicita a revogação ao
 Supabase e remove os cookies. A falha de revogação com token de acesso expirado
-foi registrada na auditoria e é tratada na
+foi registrada na auditoria e corrigida na
 [issue #126](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/126).
 
 `login_required` redireciona navegadores sem sessão para `/login`; clientes que
@@ -138,7 +138,9 @@ independente. A aplicação atual usa `SUPABASE_URL` e `SUPABASE_SERVICE_KEY`
 no servidor. A
 [auditoria concluída na #111](AUDITORIA_SEGURANCA.md)
 identificou a necessidade de reduzir o uso da service key; a migração para
-chave pública com RLS é acompanhada nas issues #124, #129 e #130.
+chave pública com RLS (#124, #129 e #130) foi adiada para depois do lançamento,
+pois o PR #141 causou regressão em produção e foi revertido pelo PR #157.
+A autorização continua sendo responsabilidade do backend.
 
 Consultas extensas usam paginação em lotes de mil registros. O catálogo é
 armazenado em memória por processo por até cinco minutos; registrar, editar ou
