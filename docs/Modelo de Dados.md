@@ -72,6 +72,7 @@ Alimentada pelo scraper do SIGAA.
 | `criado_em` | `TIMESTAMPTZ` | default `NOW()` |
 
 - **Unicidade:** `uq_professores_nome` em `(nome)`, criada por [`004_professores_unicos.sql`](migrations/004_professores_unicos.sql) no lugar da antiga `uq_professores_nome_departamento` em `(nome, departamento)` (issue #235).
+- **Grafia dos textos:** `nome` e `departamento` são gravados em grafia comum, com acentos (por exemplo, `Ana de Souza`), e não mais em CAIXA ALTA. O importador converte na extração e os dados antigos são convertidos por `converter-nomes` (issue #236). A unicidade de `nome` diferencia caixa e acento no banco; a busca e a ordenação do app não. Veja [Nomes em grafia comum](COMO_USAR_SCRAPER.md#nomes-em-grafia-comum).
 
 ### 2.2 `disciplinas`
 
@@ -85,6 +86,7 @@ Alimentada pelo scraper do SIGAA.
 | `criado_em` | `TIMESTAMPTZ` | default `NOW()` |
 
 - **Unicidade:** `uq_disciplinas_codigo` em `(codigo)`.
+- **Grafia dos textos:** `nome` é gravado em grafia comum, com acentos (por exemplo, `Cálculo 1`). A chave de conflito do importador é `codigo`, então `nome` é sobrescrito a cada coleta. Veja [Nomes em grafia comum](COMO_USAR_SCRAPER.md#nomes-em-grafia-comum).
 
 ### 2.3 `turmas`
 

@@ -1,10 +1,82 @@
 """Gravação no Supabase dos dados do scraper (sem selenium)."""
+from manutencao_banco import ler_tabela, normalizar_chave
+from texto_sigaa import grafia_comum
 from turmas_sigaa import montar_payload_turmas
 
 CONFLITO_PROFESSORES = "nome"
 CONFLITO_DISCIPLINAS = "codigo"
 CONFLITO_TURMAS = "professor_id,disciplina_id,ano,periodo"
 LOTE_CONSULTA = 100  # nomes por consulta .in_() (mantém a URL do PostgREST curta)
+
+# Trava contra duplicatas (issue #236): o banco precisa estar convertido antes da importação.
+COMANDO_CONVERSAO = "python scraper/manutencao_banco.py converter-nomes --gravar"
+MAXIMO_EXEMPLOS_CONFLITO = 5
+CODIGO_SAIDA_CONVERSAO_PENDENTE = 2
+
+
+class ConversaoPendenteError(RuntimeError):
+    """O banco ainda tem professores em CAIXA ALTA que o importador duplicaria."""
+
+    def __init__(self, conflitos):
+        self.conflitos = list(conflitos)
+        exemplos = "\n".join(
+            f"  {existente!r} -> {novo!r}"
+            for existente, novo in self.conflitos[:MAXIMO_EXEMPLOS_CONFLITO]
+        )
+        restantes = len(self.conflitos) - MAXIMO_EXEMPLOS_CONFLITO
+        if restantes > 0:
+            exemplos += f"\n  ... e mais {restantes}"
+        super().__init__(
+            f"Importação interrompida: {len(self.conflitos)} conflito(s) entre professores "
+            "já gravados em CAIXA ALTA e os nomes que o importador gravaria em grafia "
+            "comum. Nada foi gravado.\n"
+            "Exemplos (nome no banco -> nome que seria gravado):\n"
+            f"{exemplos}\n"
+            f"Rode {COMANDO_CONVERSAO} antes de usar este importador."
+        )
+
+
+def conflitos_de_grafia(nomes_a_gravar, nomes_existentes) -> list:
+    """[(nome no banco, nome a gravar)] que criariam um professor duplicado.
+
+    Conflito: o nome existente é diferente do nome a gravar, tem a mesma normalizar_chave
+    (sem acento e sem diferença de caixa) e ainda não está em grafia comum. Nomes idênticos
+    e nomes já corretos no banco não são conflito. Função pura.
+    """
+    por_chave = {}
+    for nome in nomes_a_gravar:
+        por_chave.setdefault(normalizar_chave(nome), set()).add(nome)
+    conflitos = set()
+    for existente in nomes_existentes:
+        if not existente or grafia_comum(existente, "professor") == existente:
+            continue
+        for novo in por_chave.get(normalizar_chave(existente), ()):
+            if novo != existente:
+                conflitos.add((existente, novo))
+    return sorted(conflitos)
+
+
+def verificar_conversao_pendente(professores: list, cliente=None) -> None:
+    """Levanta ConversaoPendenteError se gravar `professores` duplicaria nomes não convertidos.
+
+    Lê os professores do banco com paginação. Não escreve nada.
+    """
+    cliente = cliente or _supabase()
+    existentes = [linha["nome"] for linha in ler_tabela(cliente, "professores", "id,nome")]
+    conflitos = conflitos_de_grafia([p["nome"] for p in professores], existentes)
+    if conflitos:
+        raise ConversaoPendenteError(conflitos)
+
+
+def gravar_catalogo(professores: list, disciplinas: list, turmas: list, cliente=None) -> None:
+    """Grava professores, disciplinas e turmas, nessa ordem, depois de conferir a trava.
+
+    A conferência vem antes de qualquer escrita: se houver conflito, nada é gravado.
+    """
+    verificar_conversao_pendente(professores, cliente)
+    mapa_prof = salvar_professores(professores, cliente)
+    mapa_disc = salvar_disciplinas(disciplinas, cliente)
+    salvar_turmas(turmas, mapa_prof, mapa_disc, cliente)
 
 
 def _supabase():

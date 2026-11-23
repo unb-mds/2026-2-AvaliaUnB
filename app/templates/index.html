@@ -43,7 +43,7 @@
             {% if destaques %}<div class="teacher-grid">
                 {% for professor in destaques %}
                 <article class="teacher">
-                    <div class="teacher-head"><div class="avatar" aria-hidden="true">{% for parte in professor.nome.split()[:2] %}{{ parte[0] }}{% endfor %}</div><div class="score"><span class="accent" aria-hidden="true">★</span>{{ nota(professor.media) }}</div></div>
+                    <div class="teacher-head"><div class="avatar" aria-hidden="true">{{ professor.nome|iniciais }}</div><div class="score"><span class="accent" aria-hidden="true">★</span>{{ nota(professor.media) }}</div></div>
                     <h3><a href="{{ url_for('professores.perfil', professor_id=professor.id) }}">{{ professor.nome }}</a></h3>
                     <p>{{ professor.departamento }}</p>
                     <div class="teacher-foot"><span>{{ professor.quantidade }} avaliações</span><a href="{{ url_for('professores.perfil', professor_id=professor.id) }}">Ver perfil {{ icone_seta() }}</a></div>
