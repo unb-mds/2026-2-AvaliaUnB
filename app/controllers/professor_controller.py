@@ -541,6 +541,14 @@ def carregar_comentarios_usuario(usuario):
                 erro_comentarios_usuario=False)
 
 
+def definir_reacao(comentario_id, usuario, valor):
+    comentario = repositorios().comentarios.buscar_visivel(comentario_id)
+    if comentario is None or comentario['usuario_id'] == usuario['id']:
+        abort(404)
+    repositorios().reacoes.definir(comentario_id, usuario['id'], valor)
+    return comentario['professor_id']
+
+
 def carregar_comentarios(professor_id, disciplinas, filtro_bruto, usuario):
     """Contexto da seção de comentários do perfil. Nunca levanta: se a consulta falhar,
     registra o erro e devolve erro_comentarios=True para o resto do perfil continuar."""
@@ -550,7 +558,10 @@ def carregar_comentarios(professor_id, disciplinas, filtro_bruto, usuario):
     try:
         comentarios, ha_mais = repositorios().comentarios.listar_por_professor(
             professor_id, filtro, usuario['id'] if usuario else None)
+        resumo = repositorios().reacoes.resumo([c['id'] for c in comentarios],
+                                              usuario['id'] if usuario else None)
         for comentario in comentarios:
+            comentario.update(resumo[comentario['id']])
             comentario['data'] = ComentarioRepository.formatar_data(comentario['criado_em'])
     except Exception:
         current_app.logger.exception('Falha ao carregar os comentários do professor %s', professor_id)

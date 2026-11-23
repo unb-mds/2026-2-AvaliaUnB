@@ -238,6 +238,20 @@ def excluir_comentario(comentario_id):
                            disciplina_medias=origem.get('disciplina_medias', ''))
 
 
+@professor_bp.post('/comentarios/<int:comentario_id>/reacao')
+@login_required
+def reagir_comentario(comentario_id):
+    valor = request.form.get('valor', type=int)
+    if valor not in (-1, 0, 1):
+        abort(400)
+    professor_id = controller.definir_reacao(comentario_id, obter_usuario_atual(), valor)
+    disciplinas = controller.listar_disciplinas(professor_id)
+    filtro = controller.filtro_de_comentarios(request.form.get('comentarios_disciplina'), disciplinas)
+    disciplina = controller.disciplina_das_medias(disciplinas, request.form.get('disciplina_medias'))
+    return redirect(_url_perfil(professor_id, _next_seguro(request.form.get('next')),
+                                disciplina, filtro), code=303)
+
+
 @professor_bp.route('/comentarios/<int:comentario_id>/denunciar', methods=['GET', 'POST'])
 @login_required
 @limitar_denuncia
