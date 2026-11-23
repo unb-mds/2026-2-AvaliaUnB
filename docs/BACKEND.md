@@ -129,6 +129,7 @@ por `repositorios()` dentro do contexto Flask.
 - `ComentarioRepository`: listagem, busca, criação, edição e exclusão de
   comentários (veja a seção [Comentários](#comentarios)).
 - `DenunciaRepository`: denúncias privadas de comentários.
+- `ReacaoRepository`: reação por comentário e conta, contagens e seleção da sessão.
 - `FavoritoRepository`: lista pessoal de professores favoritos (adicionar,
   remover, consultar e listar por usuário).
 
@@ -193,15 +194,22 @@ O
 [modelo de dados e a proposta de comentários](Modelo%20de%20Dados.md)
 foram publicados na [issue #109](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/109).
 Este guia descreve as operações do backend, incluindo os comentários abaixo; as
-regras futuras de reações, denúncia e moderação serão consolidadas e revisadas
+regras de comentários, reações, denúncia e moderação são consolidadas e revisadas
 na [issue #116](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/116).
 
 ## Comentários
 
 O perfil do professor lista, e usuários autenticados publicam, editam e excluem,
 comentários sobre a experiência com um professor em uma disciplina que ele
-ministra. As regras de negócio estão em [Comentários](COMENTARIOS.md). Reações,
-denúncia, moderação, ocultação e filtro automático ainda não têm backend.
+ministra. As regras de negócio estão em [Comentários](COMENTARIOS.md). Reações
+e denúncia estão implementadas; moderação, ocultação e filtro automático ainda
+estão planejados.
+
+`POST /comentarios/<id>/reacao` exige login e CSRF. Aceita `valor` 1, -1 ou 0
+(remover). O servidor verifica visibilidade e autoria e usa a conta da sessão.
+`ReacaoRepository` usa upsert pela chave composta e exclusão restrita à conta.
+O controller enriquece a listagem com `curtidas`, `descurtidas` e `minha_reacao`,
+sem devolver identificadores de quem reagiu. A resposta redireciona ao perfil.
 
 **Repositório.** `ComentarioRepository` (em `app/repositorio.py`) acessa a
 tabela `comentarios`. Como o backend usa a service key, que ignora RLS, a

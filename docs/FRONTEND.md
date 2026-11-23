@@ -151,4 +151,6 @@ são propostas.
 A conferência de contraste e o inventário de estados de carregamento continuam
 no escopo da #112. A aprovação das regras de comentários é uma etapa do grupo
 na #116; a interface de listar, publicar, editar e excluir comentários está
-implementada, e a de reações, ordenação, denúncia e moderação ainda não.
+implementada, assim como reações (#212) e denúncia (#215). Ordenação e moderação
+continuam planejadas. Os controles de reação usam os tokens de ambos os temas,
+`aria-pressed`, marca de seleção, foco visível e alvos de toque de 44 px.
