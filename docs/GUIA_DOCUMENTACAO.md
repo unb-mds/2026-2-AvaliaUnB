@@ -16,7 +16,7 @@ os detalhes. **Descrição do estado atual não equivale a funcionalidade planej
 | Templates e componentes | [Frontend](FRONTEND.md) | [Design system](DESIGN_SYSTEM.md) |
 | CI, checks e publicação | [Pipeline](pipeline.md) | [Hospedagem](HOSPEDAGEM.md) |
 | Auditoria e plano de correção | [Auditoria de segurança](AUDITORIA_SEGURANCA.md) | [Cibersegurança](CIBERSEGURANCA.md) |
-| Comentários (parte implementada na #167; reações e moderação ainda futuras) | [Especificação](COMENTARIOS.md) | [Mockups](TELAS_COMENTARIOS.md) |
+| Comentários (#167), reações (#212) e denúncias (#215); moderação futura | [Especificação](COMENTARIOS.md) | [Mockups](TELAS_COMENTARIOS.md) |
 | Pronto para começar/concluído | [Critérios de contribuição](PROCESSO_CONTRIBUICAO.md) | Templates de issue/PR em `.github/` |
 
 ## Inventário da revisão (issue #136)

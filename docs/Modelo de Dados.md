@@ -1,7 +1,7 @@
 # Modelo de dados do AvaliaUnB (Supabase / PostgreSQL)
 
 > Issue #109. Depende da #90 (esquema versionado em `docs/migrations/`).
-> O esquema e as políticas estão versionados em SQL; sua aplicação em cada ambiente deve ser conferida. A tabela `comentarios` está versionada em `docs/migrations/002_comentarios.sql`, existe no banco e é usada pelo perfil do professor; as denúncias estão em `docs/migrations/005_denuncias_comentarios.sql` (seção 7) e os favoritos em `docs/migrations/006_favoritos.sql` (seção 8); as reações continuam **apenas proposta**, sem migração.
+> O esquema e as políticas estão versionados em SQL; sua aplicação em cada ambiente deve ser conferida. A tabela `comentarios` está versionada em `docs/migrations/002_comentarios.sql`, existe no banco e é usada pelo perfil do professor; as denúncias estão em `docs/migrations/005_denuncias_comentarios.sql` (seção 7), os favoritos em `docs/migrations/006_favoritos.sql` (seção 8) e as reações em [`20261123100000_reacoes.sql`](migrations/20261123100000_reacoes.sql).
 
 ## 1. Visão geral
 
@@ -287,9 +287,11 @@ do conteúdo atual da migração.
 > **Status: a tabela `comentarios` está implementada** pela migração
 > [`002_comentarios.sql`](migrations/002_comentarios.sql), que é a fonte de
 > verdade da tabela (inclui RLS e permissões por coluna, além do que o bloco
-> abaixo mostra) e é usada pelo perfil do professor. O restante desta seção,
-> em especial as reações (`comentarios_reacoes`), continua **proposta para
-> revisão do grupo, sem migração**.
+> abaixo mostra) e é usada pelo perfil do professor. `comentarios_reacoes` foi
+> implementada na #212 pela migração `20261123100000_reacoes.sql`. O número 004
+> já pertence à migração de professores únicos; foi usado um identificador por
+> data para evitar colisão. O backend persiste somente uma linha por comentário
+> e conta e expõe apenas totais e a reação da própria sessão.
 
 ### 6.1 Decisões de projeto
 
@@ -460,10 +462,11 @@ REVOKE ALL ON comentarios_reacoes FROM PUBLIC, anon, authenticated;
    - `SUPABASE_SERVICE_KEY`: chave `service_role` em *Project Settings → API*. É secreta: não commitar e não expor em templates.
    - `FLASK_DEBUG`: `0`, ou `1` somente em desenvolvimento local.
 4. Executar o scraper do SIGAA para popular `professores`, `disciplinas` e `turmas`.
-5. Executar `docs/migrations/002_comentarios.sql`, que depende do esquema inicial, para criar a tabela `comentarios`. Reações e moderação ainda não têm migração (seção 6).
+5. Executar `docs/migrations/002_comentarios.sql`, que depende do esquema inicial, para criar a tabela `comentarios`.
 6. Executar `docs/migrations/003_emails_verificados.sql` e `docs/migrations/004_professores_unicos.sql`. A 004 troca a chave do professor para `UNIQUE (nome)`; num banco vazio ela só faz essa troca.
 7. Executar `docs/migrations/005_denuncias_comentarios.sql` para criar a tabela privada de denúncias (seção 7).
 8. Executar `docs/migrations/006_favoritos.sql` para criar a tabela de favoritos (seção 8).
 9. Executar `docs/migrations/007_avaliacao_por_semestre.sql` para permitir uma avaliação por turma cursada (seção 2.5).
+10. Aplicar `docs/migrations/20261122155752_anonimato_comentarios.sql` e `docs/migrations/20261123100000_reacoes.sql` para privacidade e reações. A chave composta evita duplicação, `valor` aceita somente 1 ou -1, e a exclusão do comentário ou da conta remove as reações em cascata. A tabela de reações é privada e acessada pelo backend.
 
 Veja também: [guia do backend](BACKEND.md), [guia do scraper](COMO_USAR_SCRAPER.md) e [mapa da documentação](GUIA_DOCUMENTACAO.md).

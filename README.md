@@ -44,7 +44,7 @@ anteriores podem conter apenas parte delas.
 | R1 — fluxo essencial | Cadastro, login, busca de professores e disciplinas, perfil do professor, avaliação por cinco critérios e consulta de médias | Implementado |
 | R2 — consulta e gestão de avaliações | Ranking, comparação entre dois professores, filtro por departamento, busca que ignora acentos e espaços extras e perfil do usuário com edição e exclusão das próprias avaliações | Implementado |
 | Evolução dos filtros | Faixa de nota e volume de avaliações | Pendente |
-| Comentários | Listar os 50 mais recentes, filtrar por disciplina, publicar, editar e excluir o próprio comentário, com nome de usuário (sem e-mail) | Implementado ([regras](docs/COMENTARIOS.md)) |
+| Comentários | Listar os 50 mais recentes, filtrar por disciplina, publicar, editar e excluir o próprio comentário anonimamente; reagir com 👍 ou 👎 e denunciar | Implementado ([regras](docs/COMENTARIOS.md)) |
 | Reações e moderação | Reações, ordenação escolhida pela pessoa, filtro automático, denúncia e moderação | [Proposta para revisão](docs/COMENTARIOS.md) |
 | Outras funcionalidades planejadas | Favoritos e gráficos de desempenho | Pendente |
 
@@ -201,11 +201,10 @@ baseada na #109, para revisão do grupo na
 [#116](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/116).
 Já estão implementados no perfil do professor (#167): listar os comentários
 (mais recentes primeiro, 50 por vez), filtrar por disciplina, publicar, editar e
-excluir o próprio comentário. O comentário mostra só o nome de usuário, nunca o
-e-mail, e basta estar logado para comentar, com limite de 10 comentários por
-hora por usuário. Reações, ordenação escolhida pela pessoa, filtro antes da
-publicação, denúncias e moderação continuam propostos e ainda não estão
-implementados.
+excluir o próprio comentário. A listagem não identifica o autor. Basta estar
+logado para comentar, com limite de 10 comentários por hora por usuário.
+Reações (#212) e denúncias (#215) estão implementadas; ordenação escolhida pela
+pessoa, filtro antes da publicação e moderação continuam planejados.
 
 ## Documentação
 

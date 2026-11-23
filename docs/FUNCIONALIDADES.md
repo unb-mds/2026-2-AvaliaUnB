@@ -264,12 +264,12 @@ catálogo. Se ninguém atingir o mínimo, a página informa esse estado.
 ## Funcionalidades planejadas
 
 Filtros por faixa de nota e volume de avaliações, outros gráficos,
-reações, ordenação de comentários escolhida pela pessoa,
-denúncias e moderação ainda não têm fluxo implementado.
+ordenação de comentários escolhida pela pessoa e moderação ainda não têm fluxo
+implementado. Reações e denúncias já estão disponíveis.
 
 A [proposta de banco para comentários](Modelo%20de%20Dados.md#6-proposta-tabela-comentarios)
-já está publicada. A [especificação](COMENTARIOS.md) reúne nome de usuário
-visível, reações, filtro e denúncias; o que ainda é proposta está indicado nela.
+já está publicada. A [especificação](COMENTARIOS.md) reúne anonimato,
+reações, filtro e denúncias; o que ainda é proposta está indicado nela.
 A proposta começou na
 [issue #116](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/116).
 

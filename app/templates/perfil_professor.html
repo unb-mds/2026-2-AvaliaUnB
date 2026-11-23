@@ -268,6 +268,7 @@
                         {% if c.editado %}<span class="comentario-editado">(editado)</span>{% endif %}
                     </p>
                     <p class="comentario-texto">{% for linha in c.texto.splitlines() %}{{ linha }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>
+                    {% include '_reacoes_comentario.html' %}
                     {% if c.e_meu %}
                     {{ acoes_comentario(c.id, next_url, filtro_comentarios, disciplina.id if disciplina else None) }}
                     {% elif usuario %}
