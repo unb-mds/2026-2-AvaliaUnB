@@ -8,7 +8,7 @@ from tests.fake_supabase import ClienteFalso, entrar_pela_web
 
 ANA, BIA = 'uuid-ana', 'uuid-bia'
 EMAIL_ANA, EMAIL_BIA = 'ana@gmail.com', 'bia@gmail.com'
-FRASE_LIMITE = 'Mostrando os 50 comentários mais recentes.'
+FRASE_LIMITE = 'Mostrando os 50 primeiros comentários.'
 FRASE_VAZIO = 'Ainda não há comentários para este professor.'
 AVISO_ERRO = 'Não foi possível carregar os comentários agora.'
 

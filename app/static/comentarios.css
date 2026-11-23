@@ -312,6 +312,7 @@
 @media (min-width: 601px) {
     .comentarios .filtros {
         flex-direction: row;
+        flex-wrap: wrap;
         align-items: flex-end;
     }
 

@@ -75,23 +75,28 @@ def _next_seguro(valor):
     return valor if is_safe_url(valor) else url_for('professores.listar')
 
 
-def _url_perfil(professor_id, next_url, disciplina, filtro):
-    """URL do perfil (com #comentarios) preservando next, a disciplina das médias e o filtro."""
+def _url_perfil(professor_id, next_url, disciplina, filtro, ordem=None):
+    """URL do perfil (com #comentarios) preservando next, a disciplina das médias, o filtro
+    e a ordem dos comentários (omitida quando é a padrão, 'recentes')."""
     return url_for('professores.perfil', professor_id=professor_id, next=next_url,
                    disciplina_id=disciplina['id'] if disciplina else None,
-                   comentarios_disciplina=filtro, _anchor='comentarios')
+                   comentarios_disciplina=filtro,
+                   ordem=ordem if ordem and ordem != 'recentes' else None,
+                   _anchor='comentarios')
 
 
 def _renderizar_perfil(professor, disciplinas, disciplina, next_url, filtro_bruto,
-                       status=200, **extra):
+                       status=200, ordem_bruta=None, **extra):
     """Monta a página do perfil. `extra` traz o estado do formulário de comentário em caso de erro."""
     professor_id = professor['id']
     usuario = obter_usuario_atual()
-    comentarios = controller.carregar_comentarios(professor_id, disciplinas, filtro_bruto, usuario)
+    comentarios = controller.carregar_comentarios(professor_id, disciplinas, filtro_bruto, usuario,
+                                              ordem_bruta)
     login_url = None
     if usuario is None:
         destino = sanitizar_destino(_url_perfil(professor_id, next_url, disciplina,
-                                                comentarios['filtro_comentarios']))
+                                                comentarios['filtro_comentarios'],
+                                                comentarios['ordem_comentarios']))
         login_url = url_for('auth.login', next=destino) if destino else url_for('auth.login')
     contexto = dict(erros_comentario={}, texto_form='', disciplina_form=None)
     contexto.update(extra)
@@ -122,7 +127,8 @@ def perfil(professor_id):
     professor, disciplinas, disciplina = controller.carregar_perfil(professor_id)
     return _renderizar_perfil(professor, disciplinas, disciplina,
                               _next_seguro(request.args.get('next')),
-                              request.args.get('comentarios_disciplina'))
+                              request.args.get('comentarios_disciplina'),
+                              ordem_bruta=request.args.get('ordem'))
 
 
 @professor_bp.post('/professores/<int:professor_id>/favorito')
@@ -167,12 +173,14 @@ def comentar(professor_id):
     disciplina_medias = controller.disciplina_das_medias(
         disciplinas, request.form.get('disciplina_medias'))
     filtro_bruto = request.form.get('comentarios_disciplina')
+    ordem_bruta = request.form.get('ordem')
     if not erros:
         filtro = controller.filtro_de_comentarios(filtro_bruto, disciplinas)
-        return redirect(_url_perfil(professor_id, next_url, disciplina_medias, filtro), code=303)
+        return redirect(_url_perfil(professor_id, next_url, disciplina_medias, filtro,
+                                    controller.ordem_de_comentarios(ordem_bruta)), code=303)
     return _renderizar_perfil(professor, disciplinas, disciplina_medias, next_url, filtro_bruto,
-                              status=400, erros_comentario=erros, texto_form=texto,
-                              disciplina_form=disciplina_id)
+                              status=400, ordem_bruta=ordem_bruta, erros_comentario=erros,
+                              texto_form=texto, disciplina_form=disciplina_id)
 
 
 def _contexto_do_comentario(comentario_id, usuario, origem):
@@ -186,7 +194,8 @@ def _contexto_do_comentario(comentario_id, usuario, origem):
     disciplina_medias = controller.disciplina_das_medias(disciplinas, origem.get('disciplina_medias'))
     url_voltar = (url_for('auth.perfil', _anchor='meus-comentarios')
                   if origem.get('origem') == 'perfil' else
-                  _url_perfil(professor['id'], next_url, disciplina_medias, filtro))
+                  _url_perfil(professor['id'], next_url, disciplina_medias, filtro,
+                              controller.ordem_de_comentarios(origem.get('ordem'))))
     return (comentario, professor, disciplinas, next_url, filtro,
             url_voltar)
 
@@ -215,6 +224,7 @@ def editar_comentario(comentario_id):
     return render_template('editar_comentario.html', professor=professor, disciplinas=disciplinas,
                            comentario=comentario, texto_form=texto, disciplina_form=disciplina_form,
                            erros_comentario=erros, next_url=next_url, filtro_comentarios=filtro,
+                           ordem_comentarios=controller.ordem_de_comentarios(origem.get('ordem')),
                            url_voltar=url_voltar, usuario=usuario,
                            origem_perfil=origem.get('origem') == 'perfil',
                            disciplina_medias=origem.get('disciplina_medias', '')), status
@@ -234,6 +244,7 @@ def excluir_comentario(comentario_id):
         return redirect(url_voltar, code=303)
     return render_template('excluir_comentario.html', professor=professor, comentario=comentario,
                            next_url=next_url, filtro_comentarios=filtro, url_voltar=url_voltar,
+                           ordem_comentarios=controller.ordem_de_comentarios(origem.get('ordem')),
                            usuario=usuario, origem_perfil=origem.get('origem') == 'perfil',
                            disciplina_medias=origem.get('disciplina_medias', ''))
 
@@ -248,8 +259,9 @@ def reagir_comentario(comentario_id):
     disciplinas = controller.listar_disciplinas(professor_id)
     filtro = controller.filtro_de_comentarios(request.form.get('comentarios_disciplina'), disciplinas)
     disciplina = controller.disciplina_das_medias(disciplinas, request.form.get('disciplina_medias'))
+    ordem = controller.ordem_de_comentarios(request.form.get('ordem'))
     return redirect(_url_perfil(professor_id, _next_seguro(request.form.get('next')),
-                                disciplina, filtro), code=303)
+                                disciplina, filtro, ordem), code=303)
 
 
 @professor_bp.route('/comentarios/<int:comentario_id>/denunciar', methods=['GET', 'POST'])
@@ -265,7 +277,8 @@ def denunciar_comentario(comentario_id):
     disciplinas = controller.listar_disciplinas(professor['id'])
     next_url = _next_seguro(origem.get('next'))
     filtro = controller.filtro_de_comentarios(origem.get('comentarios_disciplina'), disciplinas)
-    url_voltar = _url_perfil(professor['id'], next_url, None, filtro)
+    ordem = controller.ordem_de_comentarios(origem.get('ordem'))
+    url_voltar = _url_perfil(professor['id'], next_url, None, filtro, ordem)
     quer_json = request.accept_mimetypes.best == 'application/json'
 
     erros, status, dados = {}, 200, {}
@@ -279,7 +292,8 @@ def denunciar_comentario(comentario_id):
             if quer_json:
                 return jsonify({'mensagem': 'Denúncia recebida.'}), 201
             return redirect(url_for('professores.denunciar_comentario', comentario_id=comentario_id,
-                                    next=next_url, comentarios_disciplina=filtro), code=303)
+                                    next=next_url, comentarios_disciplina=filtro,
+                                    ordem=ordem if ordem != 'recentes' else None), code=303)
         else:
             ja_denunciou = True
     if request.method == 'POST' and ja_denunciou:
@@ -291,8 +305,8 @@ def denunciar_comentario(comentario_id):
     return render_template('denunciar_comentario.html', professor=professor, comentario=comentario,
                            motivos=controller.motivos_denuncia(), ja_denunciou=ja_denunciou,
                            erros=erros, dados=dados, next_url=next_url,
-                           filtro_comentarios=filtro, url_voltar=url_voltar,
-                           usuario=usuario), status
+                           filtro_comentarios=filtro, ordem_comentarios=ordem,
+                           url_voltar=url_voltar, usuario=usuario), status
 
 
 @professor_bp.route('/avaliar/<int:professor_id>', methods=['GET', 'POST'])

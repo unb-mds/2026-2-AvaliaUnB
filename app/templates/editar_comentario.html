@@ -27,6 +27,7 @@
             {% if origem_perfil %}<input type="hidden" name="origem" value="perfil">{% endif %}
             {% if disciplina_medias %}<input type="hidden" name="disciplina_medias" value="{{ disciplina_medias }}">{% endif %}
             {% if filtro_comentarios %}<input type="hidden" name="comentarios_disciplina" value="{{ filtro_comentarios }}">{% endif %}
+            {% if ordem_comentarios and ordem_comentarios != 'recentes' %}<input type="hidden" name="ordem" value="{{ ordem_comentarios }}">{% endif %}
 
             <div class="campo">
                 <label for="disciplina_comentario">Disciplina do comentário</label>

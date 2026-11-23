@@ -10,6 +10,7 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="next" value="{{ next_url }}">
                 {% if filtro_comentarios %}<input type="hidden" name="comentarios_disciplina" value="{{ filtro_comentarios }}">{% endif %}
+                {% if ordem_comentarios and ordem_comentarios != 'recentes' %}<input type="hidden" name="ordem" value="{{ ordem_comentarios }}">{% endif %}
                 {% if disciplina %}<input type="hidden" name="disciplina_medias" value="{{ disciplina.id }}">{% endif %}
                 <button class="reacao" type="submit" name="valor" value="{{ 0 if selecionado else valor }}" aria-label="{{ nome }} ({{ total }})" aria-pressed="{{ 'true' if selecionado else 'false' }}"><span aria-hidden="true">{{ icone }}{% if total %} {{ total }}{% endif %}{% if selecionado %} ✓{% endif %}</span></button>
             </form>
