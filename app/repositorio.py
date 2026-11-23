@@ -802,6 +802,43 @@ class ComentarioRepository:
         return bool(apagadas)
 
 
+class ReacaoRepository:
+    """Uma reação por conta/comentário; identidade nunca sai da listagem."""
+
+    def __init__(self, cliente):
+        self.cliente = cliente
+
+    def definir(self, comentario_id, usuario_id, valor):
+        if valor not in (-1, 0, 1):
+            raise ValueError('Reação inválida.')
+        tabela = self.cliente.table('comentarios_reacoes')
+        if valor == 0:
+            tabela.delete().eq('comentario_id', comentario_id).eq('usuario_id', usuario_id).execute()
+        else:
+            tabela.upsert([{'comentario_id': comentario_id, 'usuario_id': usuario_id,
+                            'valor': valor}], on_conflict='comentario_id,usuario_id').execute()
+
+    def resumo(self, ids, usuario_id=None):
+        resultado = {i: {'curtidas': 0, 'descurtidas': 0, 'minha_reacao': 0} for i in ids}
+        if not ids:
+            return resultado
+        inicio = 0
+        while True:
+            linhas = (self.cliente.table('comentarios_reacoes')
+                      .select('comentario_id,usuario_id,valor').in_('comentario_id', ids)
+                      .order('comentario_id').order('usuario_id')
+                      .range(inicio, inicio + 999).execute().data)
+            for linha in linhas:
+                resumo = resultado[linha['comentario_id']]
+                valor = linha['valor']
+                resumo['curtidas' if valor == 1 else 'descurtidas'] += 1
+                if usuario_id is not None and linha['usuario_id'] == usuario_id:
+                    resumo['minha_reacao'] = valor
+            if len(linhas) < 1000:
+                return resultado
+            inicio += 1000
+
+
 class DenunciaRepository:
     """Denúncias de comentários (tabela denuncias_comentarios, issue #215).
 
@@ -883,13 +920,14 @@ class FavoritoRepository:
 
 class Repositorios:
     def __init__(self, usuarios, professores, avaliacoes, comentarios=None, denuncias=None,
-                 favoritos=None):
+                 favoritos=None, reacoes=None):
         self.usuarios = usuarios
         self.professores = professores
         self.avaliacoes = avaliacoes
         self.comentarios = comentarios
         self.denuncias = denuncias
         self.favoritos = favoritos
+        self.reacoes = reacoes
 
 
 def configurar_repositorios(app):
@@ -900,7 +938,7 @@ def configurar_repositorios(app):
     app.extensions['repositorios'] = Repositorios(
         UsuarioRepository(cliente, fabrica), ProfessorRepository(cliente),
         AvaliacaoRepository(cliente), ComentarioRepository(cliente),
-        DenunciaRepository(cliente), FavoritoRepository(cliente))
+        DenunciaRepository(cliente), FavoritoRepository(cliente), ReacaoRepository(cliente))
 
 
 def repositorios() -> Repositorios:
