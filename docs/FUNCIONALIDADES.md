@@ -35,6 +35,9 @@ depois da normalização.
 A normalização ignora acentos, maiúsculas e espaços extras. A lista é ordenada
 pela quantidade de avaliações, com desempate por nome e identificador.
 Essa ordenação é diferente do ranking, que usa a média das notas.
+Os nomes de professores, disciplinas e departamentos são armazenados em grafia
+comum (por exemplo, "Ana de Souza"); a ordenação por nome também ignora caixa e
+acento.
 
 O seletor **Departamento** é preenchido com os departamentos distintos do
 catálogo completo, em ordem alfabética. Substitui os atalhos fixos de áreas.
@@ -116,7 +119,7 @@ professor e disciplina, com notas inteiras de um a cinco para os cinco critério
 - Em **Médias Consolidadas**, o padrão **Todos** é a média de todas as avaliações
   da disciplina escolhida. Os botões de semestre (parâmetro `semestre=2026-2`)
   mostram só as avaliações daquela turma; o resumo indica o recorte
-  ("CÁLCULO 1 · 2025/2 · 3 avaliações"). Semestre inválido volta para Todos. Os
+  ("Cálculo 1 · 2025/2 · 3 avaliações"). Semestre inválido volta para Todos. Os
   botões só aparecem quando a disciplina tem mais de uma turma.
 - O botão **Avaliar este Professor** leva o semestre filtrado para o formulário.
 
@@ -166,6 +169,12 @@ O perfil do professor tem uma seção **Comentários**, separada das notas.
   verificado). Texto de 2 a 1.000 caracteres e uma disciplina ministrada pelo
   professor. O autor vem da sessão. Há um limite de 10 comentários por hora por
   usuário, separado do das avaliações.
+- **Filtro automático:** ao publicar e ao editar, o texto é verificado no
+  servidor, depois da validação de tamanho. Dados pessoais (e-mail, telefone,
+  CPF e matrícula), links e palavrões ou ofensas são recusados com HTTP 400, o
+  texto digitado é preservado e a mensagem junto ao campo informa só a
+  categoria. Na edição, o comentário original não muda. Veja a
+  [especificação](COMENTARIOS.md).
 - **Editar e excluir:** só o autor, nas páginas `/comentarios/<id>/editar` e
   `/comentarios/<id>/excluir` (a exclusão passa por uma confirmação). O
   comentário de outra pessoa, ou inexistente, responde HTTP 404.
@@ -174,8 +183,7 @@ O perfil do professor tem uma seção **Comentários**, separada das notas.
   exige aplicar a [migração de privacidade](migrations/20261122155752_anonimato_comentarios.sql)
   depois das migrações existentes. Login e permissões do autor continuam necessários.
 
-Reações, denúncia, moderação, ocultação e filtro automático não fazem parte
-desta entrega; veja as [regras dos comentários](COMENTARIOS.md).
+Reações, denúncia, moderação e ocultação não fazem parte desta entrega; veja as [regras dos comentários](COMENTARIOS.md).
 
 ## Perfil do usuário
 
@@ -256,8 +264,8 @@ catálogo. Se ninguém atingir o mínimo, a página informa esse estado.
 ## Funcionalidades planejadas
 
 Filtros por faixa de nota e volume de avaliações, outros gráficos,
-ordenação de comentários escolhida pela pessoa, filtro automático e moderação
-ainda não têm fluxo implementado. Reações e denúncias já estão disponíveis.
+ordenação de comentários escolhida pela pessoa e moderação ainda não têm fluxo
+implementado. Reações e denúncias já estão disponíveis.
 
 A [proposta de banco para comentários](Modelo%20de%20Dados.md#6-proposta-tabela-comentarios)
 já está publicada. A [especificação](COMENTARIOS.md) reúne anonimato,

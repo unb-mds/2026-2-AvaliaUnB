@@ -185,14 +185,14 @@ foi concluída na #111. O relatório registra um achado de prioridade alta,
 três de prioridade média e oito de prioridade baixa, sem achados críticos.
 O [PR #139](https://github.com/unb-mds/2026-2-AvaliaUnB/pull/139)
 versionou RLS e políticas no esquema inicial. A aplicação ainda usa a chave
-de serviço. As mudanças seguintes estão nas issues
+de serviço no servidor; a autorização depende do backend. A migração para a
+chave pública foi adiada para depois do lançamento após a reversão do PR #141
+no PR #157 por regressão em produção. As etapas adiadas são
 [#124](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/124),
-[#125](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/125),
-[#126](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/126),
-[#127](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/127),
 [#129](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/129) e
 [#130](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/130).
-A conclusão da auditoria não significa que essas correções já foram aplicadas.
+A revogação de sessão no logout (#126) foi entregue; os ajustes de baixa
+prioridade são acompanhados na #127.
 O [resumo de cibersegurança](docs/CIBERSEGURANCA.md) relaciona os mecanismos do
 código, a situação do RLS e os resultados da auditoria com cada correção.
 

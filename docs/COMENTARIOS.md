@@ -4,9 +4,9 @@
 documento descreve o comportamento dos comentários, das reações e da
 moderação. A primeira parte já está implementada no perfil do professor
 (issue #167): listar, filtrar por disciplina, publicar, editar e excluir o
-próprio comentário. A denúncia está implementada na issue #215 e as reações na #212.
-Ordenação escolhida pela pessoa, filtro automático, moderação e ocultação
-continuam sendo planos futuros (issues #212 a #217). As decisões C01 a C11,
+próprio comentário. A denúncia está implementada na issue #215, o filtro automático
+na issue #214 e as reações na #212. Ordenação escolhida pela pessoa, moderação e ocultação
+continuam sendo planos futuros (issues #213, #216 e #217). As decisões C01 a C11,
 na [tabela do final do documento](#decisoes-para-o-grupo-revisar), foram
 decididas pela equipe; os pontos ainda a confirmar estão indicados nelas.
 
@@ -161,10 +161,11 @@ O autor pode pedir revisão pelo formulário privado descrito abaixo.
 ## Filtro automático antes da publicação
 
 O backend verifica comentários novos e edições antes de disponibilizá-los.
-A proposta começa com regras em português para ofensas, discriminação,
-ameaças, spam e dados pessoais, como e-mails, telefones e matrículas. O filtro
-normaliza espaços e variações de escrita para reconhecer tentativas simples de
-disfarçar termos. Uma crítica à didática ou uma avaliação negativa, por si só,
+O filtro aplica regras em português para dados pessoais (e-mail, telefone,
+CPF e matrícula), links e uma lista de palavrões e ofensas. Ameaças, spam e
+outros abusos que as regras não reconhecem ficam para a denúncia e a moderação.
+O filtro normaliza maiúsculas, acentos, caracteres invisíveis e letras repetidas
+para reconhecer tentativas simples de disfarçar termos. Uma crítica à didática ou uma avaliação negativa, por si só,
 deve passar.
 
 | Resultado | Comportamento |
@@ -172,10 +173,9 @@ deve passar.
 | Aprovado | Publica o texto ou aplica a edição |
 | Bloqueado | Mostra o motivo ao autor e mantém o texto no formulário para revisão |
 | Incerto | Casos duvidosos não são julgados pelo filtro: o comentário é publicado e, se houver denúncia, segue para a moderação (C08) |
-| Filtro indisponível | Mantém o texto no formulário e pede nova tentativa sem publicar |
+| Filtro indisponível | Não se aplica na implementação da #214: o filtro roda no próprio servidor, sem serviço externo, e não tem estado de indisponibilidade |
 
-Uma edição bloqueada ou em análise preserva a última versão aprovada de um
-comentário publicado. Se o comentário já estiver oculto, a edição continua
+Uma edição bloqueada preserva a versão anterior de um comentário publicado. Se o comentário já estiver oculto, a edição continua
 privada até decisão da moderação. O filtro e a denúncia cumprem papéis
 complementares, pois uma regra automática pode deixar passar conteúdo impróprio.
 
@@ -186,7 +186,50 @@ CPF, matrícula (qualquer sequência de 8 ou mais dígitos, mesmo com pontos ou
 espaços), links e uma lista de palavrões e ofensas claramente inadequados. A
 lista vale por palavra inteira, sem diferenciar maiúscula, minúscula ou
 acento, fica em arquivo separado e extensa, e é fácil de atualizar. O filtro
-não julga opinião e não usa IA. A issue de implementação está a confirmar.
+não julga opinião e não usa IA. Implementado na issue #214.
+
+Como o filtro funciona (#214):
+
+- A lista de termos fica em `app/dados/termos_bloqueados.txt`, um termo por
+  linha, e é carregada uma vez. Linhas vazias e linhas iniciadas por `#` são
+  ignoradas, o que facilita a atualização pelo grupo.
+- Os termos são comparados por palavra inteira, sem diferenciar maiúscula nem
+  acento. O plural com "s" é coberto. Uma palavra que apenas contém um termo
+  (como "burocracia") passa.
+- Há expressões de mais de uma palavra, inclusive frases de duas palavras que
+  combinam identidade e ofensa (como "negro imundo"), porque palavras como
+  "negro", "gordo" ou "nordestino" não são bloqueadas sozinhas.
+- A matrícula vale com ponto, hífen ou barra entre os dígitos, e com espaços
+  quando há três ou mais grupos de três dígitos ou mais. Números de um ou dois
+  dígitos separados por espaço (notas, listas) nunca contam. Semestres
+  (2024.1, 2023/2), listas de anos, datas no formato dd/mm/aaaa e códigos de
+  disciplina com semestre (FGA0011/2024.1) passam.
+- O filtro vale ao publicar e ao editar, depois da validação de tamanho
+  (2 a 1.000 caracteres) e antes de gravar.
+- Quando bloqueia, a rota responde HTTP 400 e devolve o formulário com o texto
+  preservado e uma mensagem junto ao campo, que informa só a categoria, sem
+  revelar o trecho nem a lista. As mensagens são "Seu comentário não foi
+  publicado porque parece conter dados pessoais (telefone, e-mail, CPF ou
+  matrícula). Remova e tente novamente.", "... contém um link. Remova e tente
+  novamente." e "... contém linguagem ofensiva. Reescreva e tente novamente."
+  Na edição, "publicado" vira "salvo".
+- Na edição bloqueada, o comentário original não muda.
+- O texto bloqueado não é gravado nem registrado em log.
+- O envio bloqueado conta no limite de 10 comentários por hora, porque o
+  limite se aplica a toda requisição de publicação. A edição não tem esse limite.
+- Casos duvidosos passam; se houver denúncia, seguem para a moderação.
+
+Limitações conhecidas:
+
+- Telefone escrito dígito a dígito, com espaços entre os números, passa.
+- Números escritos por extenso passam.
+- Identificadores de redes sociais (`@usuario`) não são bloqueados.
+- Trocas de letras por homóglifos (por exemplo, letras de outros alfabetos) não
+  são reconhecidas.
+- As frases de duas palavras só pegam a combinação exata e adjacente.
+- Texto colado a um domínio, como "bom.com", é tratado como link.
+- O filtro está no controller: quem chamar o repositório diretamente não passa
+  por ele.
 
 ## Denúncia e moderação
 
@@ -271,8 +314,8 @@ rotina de descarte fica para a implementação após revisão do grupo.
 | C07 | Ocultação motivada, sem republicação automática por edição | Decidida. Comentário ocultado por moderação não volta por edição do autor; só um moderador restaura, com justificativa registrada. Implementação na #216 |
 | C08 | Comentários publicados na hora. A tela de moderação mostra somente os denunciados, e o moderador pode manter, ocultar da visão pública ou restaurar, sempre com justificativa. Todos os integrantes da equipe têm acesso, e toda ação registra quem a fez e a justificativa. Primeira análise em até três dias úteis, formulário privado de contestação e retenção de até 90 dias após o encerramento | Decidida. Não existe moderação manual pelo painel do Supabase como etapa oficial. Prazo de 3 dias úteis e retenção de 90 dias: a confirmar pelo grupo. Implementação na #216; retenção na #217 |
 | C09 | Ícones 👍 e 👎 sempre visíveis, com números apenas nas reações recebidas. Uma reação por conta e comentário, com opção de trocar ou remover | Implementada na #212 |
-| C10 | Filtrar no servidor antes de publicar ou editar. Bloquear violações claras e deixar os casos incertos para a moderação, que atua mediante denúncia | Decidida quanto às regras (veja "Regras decididas (C10)" acima): rejeita sem salvar, com aviso para reescrever; sem IA. Issue de implementação: a confirmar |
-| C11 | Data em cada comentário. Ordenação por Mais recentes, Mais curtidos, Mais antigos ou Mais reações | Decidida. Por enquanto, mais recentes primeiro, com a data em cada comentário (#167). As outras ordens ficam para a #213 |
+| C10 | Filtrar no servidor antes de publicar ou editar. Bloquear violações claras e deixar os casos incertos para a moderação, que atua mediante denúncia | Decidida e implementada (#214; veja "Regras decididas (C10)" acima): rejeita sem salvar, com aviso para reescrever; sem IA. Vale ao publicar e ao editar |
+| C11 | Data em cada comentário. Ordenação por Mais recentes, Mais curtidos, Mais antigos ou Mais reações | Decidida. Por enquanto, mais recentes primeiro, com a data em cada comentário (#167). As outras ordens (Mais antigos e as ordens por reação) ficam para a #213 |
 
 As decisões podem ser revisadas no PR ou na
 [issue #116](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/116).
@@ -309,9 +352,10 @@ acompanham estas regras.
   curtidas, e Mais antigos inverte a ordem por data. A edição preserva
   a posição nas duas ordens por data.
 - O filtro barra uma ofensa inequívoca e a exposição de um telefone, deixa
-  passar uma crítica respeitosa e encaminha um caso ambíguo sem publicar.
-- O filtro também cobre edições. Falhas deixam o texto disponível para tentar
-  de novo, e edições bloqueadas preservam a última versão aprovada.
+  passar uma crítica respeitosa e deixa passar um caso ambíguo, que segue para
+  a moderação se for denunciado.
+- O filtro também cobre edições. Edições bloqueadas devolvem o texto digitado
+  para revisão e preservam a versão anterior do comentário.
 - Uma conta autorizada a usar as duas ações consegue enviar só estrelas,
   publicar só um comentário ou fazer os dois em qualquer ordem.
 - A mesma conta pode avaliar com estrelas Cálculo 1 e Cálculo 2 com o mesmo
@@ -327,5 +371,5 @@ Documentos relacionados: [modelo de dados](Modelo%20de%20Dados.md),
 [protótipos](TELAS_COMENTARIOS.md), [frontend](FRONTEND.md) e
 [cibersegurança](CIBERSEGURANCA.md). Os comentários (listar, filtrar por
 disciplina, publicar, editar e excluir) já estão ativos no perfil do professor
-desde a #167; reações (#212) e denúncia (#215) estão implementadas.
-Ordenação, filtro automático e moderação ficam nas demais issues.
+desde a #167 e o filtro automático desde a #214; reações (#212) e denúncia (#215) também
+estão implementadas. Ordenação e moderação ficam nas demais issues.

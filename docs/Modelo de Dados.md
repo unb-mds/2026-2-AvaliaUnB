@@ -72,6 +72,7 @@ Alimentada pelo scraper do SIGAA.
 | `criado_em` | `TIMESTAMPTZ` | default `NOW()` |
 
 - **Unicidade:** `uq_professores_nome` em `(nome)`, criada por [`004_professores_unicos.sql`](migrations/004_professores_unicos.sql) no lugar da antiga `uq_professores_nome_departamento` em `(nome, departamento)` (issue #235).
+- **Grafia dos textos:** `nome` e `departamento` são gravados em grafia comum, com acentos (por exemplo, `Ana de Souza`), e não mais em CAIXA ALTA. O importador converte na extração e os dados antigos são convertidos por `converter-nomes` (issue #236). A unicidade de `nome` diferencia caixa e acento no banco; a busca e a ordenação do app não. Veja [Nomes em grafia comum](COMO_USAR_SCRAPER.md#nomes-em-grafia-comum).
 
 ### 2.2 `disciplinas`
 
@@ -85,6 +86,7 @@ Alimentada pelo scraper do SIGAA.
 | `criado_em` | `TIMESTAMPTZ` | default `NOW()` |
 
 - **Unicidade:** `uq_disciplinas_codigo` em `(codigo)`.
+- **Grafia dos textos:** `nome` é gravado em grafia comum, com acentos (por exemplo, `Cálculo 1`). A chave de conflito do importador é `codigo`, então `nome` é sobrescrito a cada coleta. Veja [Nomes em grafia comum](COMO_USAR_SCRAPER.md#nomes-em-grafia-comum).
 
 ### 2.3 `turmas`
 
@@ -232,10 +234,11 @@ que as políticas já foram aplicadas em cada ambiente Supabase.
 
 A aplicação Flask em `main` ainda cria clientes com `SUPABASE_SERVICE_KEY`.
 O papel `service_role` ignora o RLS, portanto as permissões no código Flask
-continuam essenciais. A adoção da chave pública e de um token de usuário é
-acompanhada nas issues [#124](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/124),
+continuam essenciais. A adoção da chave pública e de um token de usuário foi
+adiada para depois do lançamento nas issues [#124](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/124),
 [#129](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/129) e
 [#130](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/130).
+O PR #141 foi revertido pelo PR #157 por regressão em produção.
 
 As políticas atuais da migração são a **base versionada**, não uma comprovação
 de isolamento suficiente: antes de migrar perfis, definir exatamente quais

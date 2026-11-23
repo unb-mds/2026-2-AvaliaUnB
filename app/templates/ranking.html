@@ -19,7 +19,7 @@
             {% for professor in ranking %}
             <li><a class="rankrow" href="{{ url_for('professores.perfil', professor_id=professor.id) }}">
                 <span class="rankno{% if professor.posicao == 1 %} first{% endif %}" aria-label="Posição {{ professor.posicao }}º lugar">{{ '%02d'|format(professor.posicao) }}</span>
-                <span class="avatar" aria-hidden="true">{% for parte in professor.nome.split()[:2] %}{{ parte[0] }}{% endfor %}</span>
+                <span class="avatar" aria-hidden="true">{{ professor.nome|iniciais }}</span>
                 <span class="rankname"><strong>{{ professor.nome }}</strong><span>{{ professor.departamento }}</span></span>
                 <span class="rankstar" aria-label="Média geral {{ ('%.2f'|format(professor.media))|replace('.', ',') }} / 5"><span class="accent" aria-hidden="true">★</span> {{ ('%.2f'|format(professor.media))|replace('.', ',') }} <span class="sr-only">/ 5</span></span>
                 <span class="rankcount" aria-label="Avaliações: {{ professor.quantidade }}">{{ professor.quantidade }} avaliações</span>

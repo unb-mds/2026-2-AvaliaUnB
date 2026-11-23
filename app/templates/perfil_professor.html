@@ -11,7 +11,7 @@
         {% set ns = namespace(soma=0, n=0) %}
         {% for c in criterios if c != 'dificuldade' and geral.quantidade %}{% set ns.soma = ns.soma + geral.medias[c] %}{% set ns.n = ns.n + 1 %}{% endfor %}
         <header class="profile-top">
-            <div class="profile-avatar" aria-hidden="true">{% for parte in professor.nome.split()[:2] %}{{ parte[0] }}{% endfor %}</div>
+            <div class="profile-avatar" aria-hidden="true">{{ professor.nome|iniciais }}</div>
             <div class="profile-title">
                 <h1>{{ professor.nome }}</h1>
                 <p>{{ professor.departamento }}</p>
