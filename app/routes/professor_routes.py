@@ -203,7 +203,7 @@ def editar_comentario(comentario_id):
         # Só texto e disciplina mudam; professor_id e usuario_id do formulário são ignorados.
         texto = request.form.get('texto', '')
         disciplina_form, erros = controller.validar_novo_comentario(
-            disciplinas, request.form.get('disciplina_id'), texto)
+            disciplinas, request.form.get('disciplina_id'), texto, acao='salvo')
         if not erros:
             try:
                 controller.editar_comentario(comentario_id, usuario, disciplina_form, texto)

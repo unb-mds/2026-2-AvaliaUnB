@@ -3,6 +3,7 @@ import math
 
 from flask import abort, current_app, request, url_for
 
+from app.filtro_comentarios import mensagem_bloqueio, verificar_comentario
 from app.grafico import MAXIMO_SEMESTRES_GRAFICO, montar_grafico
 from app.repositorio import (CRITERIOS_RANKING, LIMITE_COMENTARIOS, LIMITE_SUGESTOES,
                              MAXIMO_SUGESTOES, MINIMO_AVALIACOES_RANKING,
@@ -463,8 +464,12 @@ def listar_disciplinas(professor_id):
     return repositorios().professores.listar_disciplinas(professor_id)
 
 
-def validar_novo_comentario(disciplinas, disciplina_bruta, texto):
-    """(disciplina_id ou None, erros): a disciplina precisa ser uma das do professor."""
+def validar_novo_comentario(disciplinas, disciplina_bruta, texto, acao='publicado'):
+    """(disciplina_id ou None, erros): a disciplina precisa ser uma das do professor.
+
+    Depois da validação de tamanho roda o filtro automático (issue #214); `acao` ('publicado'
+    ou 'salvo') só ajusta a mensagem. O texto bloqueado não é registrado nem devolvido no erro.
+    """
     erros = {}
     disciplina_id = _inteiro_ou_none(disciplina_bruta)
     if not any(d['id'] == disciplina_id for d in disciplinas):
@@ -473,6 +478,10 @@ def validar_novo_comentario(disciplinas, disciplina_bruta, texto):
     _, erro = validar_comentario(texto)
     if erro:
         erros['texto'] = erro
+    else:
+        categoria = verificar_comentario(texto)
+        if categoria:
+            erros['texto'] = mensagem_bloqueio(categoria, acao)
     return disciplina_id, erros
 
 

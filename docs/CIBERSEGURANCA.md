@@ -15,7 +15,7 @@ O relatório detalhado é a referência para evidências, método e limites da r
 | Formulários | Proteção CSRF; token inválido ou ausente resulta em HTTP 400 | `app/__init__.py`, `app/seguranca.py`, templates |
 | Autorização | Login exigido nas rotas protegidas; edição e exclusão filtradas pelo autor | Controllers, rotas e repositório de avaliações |
 | Headers | CSP, proteção contra enquadramento, tipo de conteúdo e política de referência; HSTS em HTTPS fora do debug | `app/seguranca.py` |
-| Limites | Limitação de requisições do login com Google e de avaliação | `app/seguranca.py` |
+| Limites | Limitação de requisições do login com Google, de avaliação, de publicação de comentários (10 por hora por usuário) e de denúncias (10 por hora por usuário) | `app/seguranca.py` |
 | Qualidade | Testes automatizados, pip-audit e Bandit no GitHub Actions | [Pipeline](pipeline.md) |
 
 `SECRET_KEY` é obrigatória na fábrica da aplicação. A configuração de segurança
@@ -67,6 +67,25 @@ implantada apenas porque existe uma branch ou PR.
 Concluir a auditoria significa ter o relatório e o plano de correção. Cada
 correção deve atualizar o comportamento documentado quando for entregue.
 Não é necessário esperar essas implementações para publicar o diagnóstico.
+
+## Filtro de comentários
+
+O filtro automático (issue #214) reduz a exposição de dados pessoais e de
+ofensas em texto público. Ele roda no servidor, ao publicar e ao editar um
+comentário, depois da validação de tamanho e antes de gravar. Bloqueia e-mail,
+telefone, CPF, matrícula, links e termos de uma lista em
+`app/dados/termos_bloqueados.txt`. As regras estão em
+[Comentários](COMENTARIOS.md) e o código, em `app/filtro_comentarios.py`.
+
+- O texto bloqueado não é gravado nem registrado em log, e a mensagem de erro
+  não revela o trecho que disparou o filtro nem a lista de termos.
+- O envio bloqueado conta no limite de 10 comentários por hora por usuário,
+  pois o limite se aplica a toda requisição de publicação.
+- O filtro não é moderação e não substitui as denúncias: reconhece só violações
+  claras e pode ser driblado (por exemplo, com homóglifos ou números por
+  extenso). Casos duvidosos passam e ficam para a moderação por denúncia.
+- A lista de termos deve ser revisada pelo grupo e mantida em arquivo
+  versionado, para que as mudanças passem por revisão no PR.
 
 ## Comentários e moderação
 

@@ -166,6 +166,12 @@ O perfil do professor tem uma seção **Comentários**, separada das notas.
   verificado). Texto de 2 a 1.000 caracteres e uma disciplina ministrada pelo
   professor. O autor vem da sessão. Há um limite de 10 comentários por hora por
   usuário, separado do das avaliações.
+- **Filtro automático:** ao publicar e ao editar, o texto é verificado no
+  servidor, depois da validação de tamanho. Dados pessoais (e-mail, telefone,
+  CPF e matrícula), links e palavrões ou ofensas são recusados com HTTP 400, o
+  texto digitado é preservado e a mensagem junto ao campo informa só a
+  categoria. Na edição, o comentário original não muda. Veja a
+  [especificação](COMENTARIOS.md).
 - **Editar e excluir:** só o autor, nas páginas `/comentarios/<id>/editar` e
   `/comentarios/<id>/excluir` (a exclusão passa por uma confirmação). O
   comentário de outra pessoa, ou inexistente, responde HTTP 404.
@@ -174,8 +180,7 @@ O perfil do professor tem uma seção **Comentários**, separada das notas.
   exige aplicar a [migração de privacidade](migrations/20261122155752_anonimato_comentarios.sql)
   depois das migrações existentes. Login e permissões do autor continuam necessários.
 
-Reações, denúncia, moderação, ocultação e filtro automático não fazem parte
-desta entrega; veja as [regras dos comentários](COMENTARIOS.md).
+Reações, denúncia, moderação e ocultação não fazem parte desta entrega; veja as [regras dos comentários](COMENTARIOS.md).
 
 ## Perfil do usuário
 
@@ -256,7 +261,7 @@ catálogo. Se ninguém atingir o mínimo, a página informa esse estado.
 ## Funcionalidades planejadas
 
 Filtros por faixa de nota e volume de avaliações, outros gráficos,
-reações, ordenação de comentários escolhida pela pessoa, filtro automático,
+reações, ordenação de comentários escolhida pela pessoa,
 denúncias e moderação ainda não têm fluxo implementado.
 
 A [proposta de banco para comentários](Modelo%20de%20Dados.md#6-proposta-tabela-comentarios)
