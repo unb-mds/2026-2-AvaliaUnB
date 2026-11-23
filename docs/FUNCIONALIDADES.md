@@ -112,6 +112,10 @@ professor e disciplina, com notas inteiras de um a cinco para os cinco critério
 - **Edição:** mostra a turma ("Turma de 2026/1"), mas não permite trocá-la; para
   mudar o semestre, a pessoa exclui e avalia de novo.
 
+A [decisão #242](DECISAO_HISTORICO_SEMESTRES.md) preserva esse comportamento:
+o futuro padrão de oferta atual não limita a escolha da turma cursada. Não há
+remoção automática de avaliações ou comentários ao trocar o período de oferta.
+
 ### Médias: todos os semestres ou um semestre
 
 - O **topo do perfil** (nota grande e estrelas) é sempre a média de todas as
