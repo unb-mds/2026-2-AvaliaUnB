@@ -4,16 +4,16 @@
 documento descreve o comportamento dos comentários, das reações e da
 moderação. A primeira parte já está implementada no perfil do professor
 (issue #167): listar, filtrar por disciplina, publicar, editar e excluir o
-próprio comentário. A denúncia está implementada na issue #215. Reações,
-ordenação escolhida pela pessoa, filtro automático, moderação e ocultação
+próprio comentário. A denúncia está implementada na issue #215 e as reações na #212.
+Ordenação escolhida pela pessoa, filtro automático, moderação e ocultação
 continuam sendo planos futuros (issues #212 a #217). As decisões C01 a C11,
 na [tabela do final do documento](#decisoes-para-o-grupo-revisar), foram
 decididas pela equipe; os pontos ainda a confirmar estão indicados nelas.
 
 A base é a [proposta de dados da #109](Modelo%20de%20Dados.md#6-proposta-tabela-comentarios).
 A tabela `comentarios` está versionada em
-[`002_comentarios.sql`](migrations/002_comentarios.sql). O SQL da proposta
-permanece como referência para o que ainda não existe, como as reações.
+[`002_comentarios.sql`](migrations/002_comentarios.sql). As reações usam
+[`20261123100000_reacoes.sql`](migrations/20261123100000_reacoes.sql).
 
 ## Objetivo
 
@@ -50,7 +50,7 @@ Uma conta de comentários não concede acesso à moderação.
 | Tamanho | De 2 a 1.000 caracteres após remover espaços, tabulações e quebras de linha das extremidades |
 | Formato | Texto simples; HTML e Markdown não são interpretados |
 | Identificação pública | Sem nome de usuário, nome completo, e-mail, avatar ou rótulo substituto. O vínculo com a conta permanece privado no backend. A leitura direta pela API exige a migração de privacidade da #258 |
-| Ordem da lista | Mais recentes primeiro, em ordem fixa. Mais antigos, escolhido pela pessoa, fica para a issue #213. Mais curtidos e Mais reações vêm junto com as reações (#212) |
+| Ordem da lista | Mais recentes primeiro, em ordem fixa. As demais ordens ficam para a issue #213 |
 | Quantidade exibida | Os 50 comentários mais recentes, com o filtro de disciplina já aplicado. A página avisa quando há mais; o "ver mais" fica para depois |
 | Filtro | Por disciplina, no perfil do professor. "Todas as disciplinas" é o padrão e um valor inválido volta a "todas" |
 | Datas | Exibir a data da primeira publicação em cada comentário, em dd/mm/aaaa no horário de Brasília, e indicar com "(editado)" quando a atualização for posterior à criação |
@@ -77,14 +77,16 @@ Cada conta tem uma reação por comentário e pode trocar de opção ou tocar
 novamente para removê-la. O servidor
 confere a sessão, impede votos no próprio texto e grava a reação com unicidade
 por conta e comentário. A lista mostra as contagens, sem revelar quem reagiu.
-Reações podem mudar a posição de um comentário nas ordenações por curtidas
-ou reações. As notas e o ranking são independentes.
+O formulário envia POST com CSRF para `/comentarios/<id>/reacao`: `valor=1`
+para curtir, `-1` para descurtir e `0` para retirar. A página retorna ao perfil
+preservando o filtro. O autor vê os totais sem controles de voto; visitantes
+são encaminhados ao login. As notas e o ranking são independentes. A ordenação
+por reação fica para a #213.
 
 ## Ordenação dos comentários
 
 Hoje a lista usa só a ordem Mais recentes, fixa. A escolha da ordem pela
-pessoa fica para a issue #213, que entrega também a ordem Mais antigos. As
-ordens por reação vêm junto com as reações (#212).
+pessoa fica para a issue #213, inclusive as ordens por reação.
 
 | Opção | Como a lista é ordenada |
 |---|---|
@@ -268,9 +270,9 @@ rotina de descarte fica para a implementação após revisão do grupo.
 | C06 | Denúncia privada e moderação por responsáveis autorizados | Decidida. A denúncia já funciona (#215). A moderação é feita só por moderadores autorizados, sem acesso por padrão, em uma página restrita. Implementação da página na #216 |
 | C07 | Ocultação motivada, sem republicação automática por edição | Decidida. Comentário ocultado por moderação não volta por edição do autor; só um moderador restaura, com justificativa registrada. Implementação na #216 |
 | C08 | Comentários publicados na hora. A tela de moderação mostra somente os denunciados, e o moderador pode manter, ocultar da visão pública ou restaurar, sempre com justificativa. Todos os integrantes da equipe têm acesso, e toda ação registra quem a fez e a justificativa. Primeira análise em até três dias úteis, formulário privado de contestação e retenção de até 90 dias após o encerramento | Decidida. Não existe moderação manual pelo painel do Supabase como etapa oficial. Prazo de 3 dias úteis e retenção de 90 dias: a confirmar pelo grupo. Implementação na #216; retenção na #217 |
-| C09 | Ícones 👍 e 👎 sempre visíveis, com números apenas nas reações recebidas. Uma reação por conta e comentário, com opção de trocar ou remover | Decidida. As reações aos comentários ficam para depois, na #212 |
+| C09 | Ícones 👍 e 👎 sempre visíveis, com números apenas nas reações recebidas. Uma reação por conta e comentário, com opção de trocar ou remover | Implementada na #212 |
 | C10 | Filtrar no servidor antes de publicar ou editar. Bloquear violações claras e deixar os casos incertos para a moderação, que atua mediante denúncia | Decidida quanto às regras (veja "Regras decididas (C10)" acima): rejeita sem salvar, com aviso para reescrever; sem IA. Issue de implementação: a confirmar |
-| C11 | Data em cada comentário. Ordenação por Mais recentes, Mais curtidos, Mais antigos ou Mais reações | Decidida. Por enquanto, mais recentes primeiro, com a data em cada comentário (#167). A #213 entrega também a ordem Mais antigos; as ordens por reação vêm junto com as reações |
+| C11 | Data em cada comentário. Ordenação por Mais recentes, Mais curtidos, Mais antigos ou Mais reações | Decidida. Por enquanto, mais recentes primeiro, com a data em cada comentário (#167). As outras ordens ficam para a #213 |
 
 As decisões podem ser revisadas no PR ou na
 [issue #116](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/116).
@@ -279,8 +281,7 @@ acompanham estas regras.
 
 ## Critérios para a futura implementação
 
-- Visitantes consultam comentários, com nome de usuário até a implementação
-  da C05 (depois, sem identificação), e contagens de reações. Estar logado
+- Visitantes consultam comentários sem identificação do autor e contagens de reações. Estar logado
   (login pelo Google) é obrigatório para comentar,
   reagir ou denunciar; não se exige e-mail verificado.
 - «ok» passa pela validação de tamanho. Campo vazio, texto com menos de
@@ -320,12 +321,11 @@ acompanham estas regras.
 - As telas cobrem vazio, envio, erro, edição, confirmação de exclusão e ocultação.
 - As permissões de backend e banco seguem o modelo aprovado, com testes de
   autorização. A tabela `comentarios` vem da migração `002_comentarios.sql`;
-  as demais tabelas propostas (reações, denúncias e moderação) ainda não têm
-  migração.
+  reações e denúncias têm migrações versionadas; moderação ainda não.
 
 Documentos relacionados: [modelo de dados](Modelo%20de%20Dados.md),
 [protótipos](TELAS_COMENTARIOS.md), [frontend](FRONTEND.md) e
 [cibersegurança](CIBERSEGURANCA.md). Os comentários (listar, filtrar por
 disciplina, publicar, editar e excluir) já estão ativos no perfil do professor
-desde a #167; reações, ordenação, filtro automático, denúncia e moderação
-dependem de decisões registradas em issue/PR e das issues #212 a #217.
+desde a #167; reações (#212) e denúncia (#215) estão implementadas.
+Ordenação, filtro automático e moderação ficam nas demais issues.
