@@ -1270,44 +1270,26 @@ class ModeracaoRepository:
             raise
         return True
 
-    def descartar_registros_expirados(self, dias_retencao=90, agora=None):
-        """Descarta registros de denúncia, decisão e contestação encerrados há mais de `dias_retencao` dias.
+    def descartar_registros_expirados(self, dias_retencao=90):
+        """Descarta registros encerrados há mais de `dias_retencao` dias via função SQL.
 
-        Cumpre a política de retenção da LGPD (issue #217). Nunca apaga comentários publicados.
+        Delega a regra para `descartar_registros_moderacao_expirados` (migração 009),
+        mantendo uma única implementação para o expurgo LGPD (issue #217).
         """
         if not isinstance(dias_retencao, int) or isinstance(dias_retencao, bool) or dias_retencao < 1:
             raise ValueError('dias_retencao deve ser um inteiro positivo.')
 
-        referencia = agora or datetime.now(timezone.utc)
-        limite = (referencia - timedelta(days=dias_retencao)).isoformat()
-
-        denuncias = (
-            self.cliente.table('denuncias_comentarios')
-            .delete()
-            .lt('resolvida_em', limite)
-            .execute()
-            .data
-        )
-        moderacoes = (
-            self.cliente.table('moderacoes_comentarios')
-            .delete()
-            .lt('criado_em', limite)
-            .execute()
-            .data
-        )
-        contestacoes = (
-            self.cliente.table('contestacoes_comentarios')
-            .delete()
-            .lt('resolvida_em', limite)
+        resultado = (
+            self.cliente.rpc(
+                'descartar_registros_moderacao_expirados',
+                {'dias_retencao': dias_retencao},
+            )
             .execute()
             .data
         )
         return {
             'dias_retencao': dias_retencao,
-            'limite_utc': limite,
-            'denuncias_removidas': len(denuncias),
-            'moderacoes_removidas': len(moderacoes),
-            'contestacoes_removidas': len(contestacoes),
+            **(resultado or {}),
         }
     
     

@@ -12,10 +12,10 @@ from app.repositorio import ModeracaoRepository
 from app.supabase_db import get_supabase
 
 
-def executar_descarte(cliente=None, dias_retencao=90, agora=None):
-    """Executa o descarte via ModeracaoRepository e devolve o resumo das remoções."""
+def executar_descarte(cliente=None, dias_retencao=90):
+    """Executa o descarte via ModeracaoRepository (RPC SQL) e devolve o resumo das remoções."""
     repo = ModeracaoRepository(cliente or get_supabase())
-    return repo.descartar_registros_expirados(dias_retencao=dias_retencao, agora=agora)
+    return repo.descartar_registros_expirados(dias_retencao=dias_retencao)
 
 
 def main(argv=None):

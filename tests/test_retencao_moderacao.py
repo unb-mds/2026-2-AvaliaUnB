@@ -129,7 +129,7 @@ class TestRepositorioRetencaoModeracao(unittest.TestCase):
         ])
 
         repo = ModeracaoRepository(cliente)
-        resumo = repo.descartar_registros_expirados(dias_retencao=90, agora=agora)
+        resumo = repo.descartar_registros_expirados(dias_retencao=90,)
 
         self.assertEqual(resumo['denuncias_removidas'], 1)
         self.assertEqual(resumo['moderacoes_removidas'], 1)
@@ -140,6 +140,41 @@ class TestRepositorioRetencaoModeracao(unittest.TestCase):
         # Comentários publicados continuam todos intactos
         self.assertEqual([c['id'] for c in cliente.tabelas['comentarios']], [1, 2])
 
+    def test_repositorio_delega_descarte_para_funcao_sql_via_rpc(self):
+        from datetime import datetime, timedelta, timezone
+        from app.repositorio import ModeracaoRepository
+        from tests.fake_supabase import ClienteFalso
+
+        cliente = ClienteFalso()
+        chamadas_rpc = []
+        rpc_original = cliente.rpc
+
+        def _espionar_rpc(nome, params=None):
+            chamadas_rpc.append((nome, params))
+            return rpc_original(nome, params)
+
+        cliente.rpc = _espionar_rpc
+
+        ha_100_dias = (datetime.now(timezone.utc) - timedelta(days=100)).isoformat()
+        cliente.tabelas['comentarios'].append({
+            'id': 1, 'usuario_id': 'u1', 'professor_id': 1, 'disciplina_id': 10,
+            'texto': 'Comentário oculto', 'criado_em': ha_100_dias, 'ocultado_em': ha_100_dias,
+        })
+        cliente.tabelas['moderacoes_comentarios'].append({
+            'id': 20, 'comentario_id': 1, 'moderador_id': 'm1', 'acao': 'ocultar',
+            'justificativa': 'Ofensa grave', 'criado_em': ha_100_dias,
+        })
+
+        repo = ModeracaoRepository(cliente)
+        resumo = repo.descartar_registros_expirados(dias_retencao=90)
+
+        self.assertEqual(
+            chamadas_rpc,
+            [('descartar_registros_moderacao_expirados', {'dias_retencao': 90})],
+        )
+        self.assertEqual(resumo['moderacoes_removidas'], 0)
+        self.assertEqual(len(cliente.tabelas['moderacoes_comentarios']), 1)
+        
 
 class TestRotinaAgendadaRetencao(unittest.TestCase):
     WORKFLOW = Path('.github/workflows/retencao_moderacao.yml')
@@ -157,7 +192,7 @@ class TestRotinaAgendadaRetencao(unittest.TestCase):
             'criado_em': expirado, 'resolvida_em': expirado,
         })
 
-        resumo = executar_descarte(cliente=cliente, dias_retencao=90, agora=agora)
+        resumo = executar_descarte(cliente=cliente, dias_retencao=90,)
         self.assertEqual(resumo['denuncias_removidas'], 1)
         self.assertEqual(cliente.tabelas['denuncias_comentarios'], [])
 
@@ -203,9 +238,9 @@ class TestCriteriosAceiteRetencao(unittest.TestCase):
         repo = ModeracaoRepository(cliente)
         for invalido in (0, -5, True, '90'):
             with self.assertRaises(ValueError):
-                repo.descartar_registros_expirados(dias_retencao=invalido, agora=agora)
+                repo.descartar_registros_expirados(dias_retencao=invalido,)
 
-        resumo = repo.descartar_registros_expirados(dias_retencao=90, agora=agora)
+        resumo = repo.descartar_registros_expirados(dias_retencao=90,)
         self.assertEqual(resumo['denuncias_removidas'], 1)
         self.assertEqual(resumo['moderacoes_removidas'], 1)
         self.assertEqual(resumo['contestacoes_removidas'], 1)
@@ -291,7 +326,7 @@ class TestCriteriosAceiteRetencao(unittest.TestCase):
         self.assertEqual([d['id'] for d in cliente.tabelas['denuncias_comentarios']], [10])
         self.assertEqual([m['id'] for m in cliente.tabelas['moderacoes_comentarios']], [20])
         self.assertEqual([c['id'] for c in cliente.tabelas['contestacoes_comentarios']], [30])
-        
+
 
 class TestPoliticaPrivacidadeRetencao(unittest.TestCase):
     def test_pagina_privacidade_documenta_retencao_de_90_dias(self):
