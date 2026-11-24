@@ -419,7 +419,7 @@ REVOKE ALL ON comentarios_reacoes FROM PUBLIC, anon, authenticated;
 
 > Issue #215 (RF10, decisão C06). Versionada em
 > [`005_denuncias_comentarios.sql`](migrations/005_denuncias_comentarios.sql).
-> O painel do moderador fica para a #216.
+> O painel do moderador foi implementado na #216 e a rotina de descarte na #217.
 
 | Coluna | Tipo | Regra |
 |---|---|---|
@@ -443,8 +443,13 @@ REVOKE ALL ON comentarios_reacoes FROM PUBLIC, anon, authenticated;
   exige login e CSRF, limita a 10 envios por hora por usuário, recusa com 404 o
   comentário oculto, inexistente ou do próprio usuário, e usa o denunciante da
   sessão (um `usuario_id` enviado no formulário é ignorado).
-- **Retenção:** a proposta da C08 é apagar o registro até 90 dias após encerrar o
-  caso; a rotina de descarte fica para a moderação (#217).
+- **Retenção (Issue #217):** conforme a decisão C08 e a LGPD, denúncias, decisões
+  de moderação e contestações encerradas há mais de 90 dias são descartadas
+  automaticamente pela função SQL `descartar_registros_moderacao_expirados`
+  ([`009_retencao_moderacao_90_dias.sql`](migrations/009_retencao_moderacao_90_dias.sql)),
+  executada diariamente pelo workflow `.github/workflows/retencao_moderacao.yml`.
+  A rotina nunca apaga comentários publicados e preserva os registros enquanto o
+  comentário associado permanecer ocultado (`comentarios.ocultado_em IS NOT NULL`).
 
 ## Área de moderação e contestações (Issue #216)
 

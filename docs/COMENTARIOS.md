@@ -316,8 +316,7 @@ As cascatas propostas na #109 apagam comentários quando o perfil do autor ou o
 professor é excluído. Uma disciplina com comentários vinculados deve ser
 mantida para preservar o vínculo dos relatos históricos.
 O registro mínimo da denúncia, da decisão de moderação e da contestação é guardado por até 90 dias após o encerramento do caso e descartado automaticamente por rotina diária agendada no GitHub Actions (.github/workflows/retencao_moderacao.yml, com função SQL em docs/migrations/009_retencao_moderacao_90_dias.sql), sem apagar comentários publicados (issue #217).
-O texto excluído sai da listagem imediatamente. A definição da estrutura e da
-rotina de descarte fica para a implementação após revisão do grupo.
+O texto excluído sai da listagem imediatamente. O registro mínimo da denúncia, da decisão de moderação e da contestação é guardado por até **90 dias** após o encerramento do caso e descartado automaticamente por rotina diária agendada no GitHub Actions (`.github/workflows/retencao_moderacao.yml`, chamando a função SQL em `docs/migrations/009_retencao_moderacao_90_dias.sql`), sem apagar comentários publicados e preservando o histórico enquanto o comentário continuar ocultado (`ocultado_em IS NOT NULL`) (issue #217). O texto excluído sai da listagem imediatamente.
 
 ## Decisões para o grupo revisar
 
