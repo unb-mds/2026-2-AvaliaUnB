@@ -266,11 +266,14 @@ class ProfessorRepository:
                 unicos.setdefault(normalizar_busca(departamento), departamento)
         return [unicos[chave] for chave in sorted(unicos)]
 
-    def catalogo(self, nome='', disciplina='', departamento='', termo=''):
+    def catalogo(self, nome='', disciplina='', departamento='', termo='',
+                 nota_minima=None, nota_maxima=None, avaliacoes_minimas=None):
         """[(professor, disciplinas)] filtrado sem distinguir acento/caixa/espaços,
         ordenado do mais avaliado para o menos avaliado (desempate: nome).
         `termo` é a busca unificada: casa com o nome do professor, o departamento
-        ou o nome/código de alguma disciplina."""
+        ou o nome/código de alguma disciplina. Aceita também faixa de nota média
+        (`nota_minima`, `nota_maxima`) e volume mínimo (`avaliacoes_minimas`),
+        reaproveitando os dados já agregados em `_carregar_catalogo`."""
         nome_n, disciplina_n = normalizar_busca(nome), normalizar_busca(disciplina)
         departamento_n, termo_n = normalizar_busca(departamento), normalizar_busca(termo)
         resultado = []
@@ -284,6 +287,15 @@ class ProfessorRepository:
             if termo_n and not (termo_n in normalizar_busca(professor['nome'])
                                 or termo_n in normalizar_busca(professor.get('departamento'))
                                 or _alguma_disciplina_casa(termo_n, disciplinas)):
+                continue
+            if avaliacoes_minimas is not None and professor.get('total_avaliacoes', 0) < avaliacoes_minimas:
+                continue
+            media = professor.get('media_geral')
+            if (nota_minima is not None or nota_maxima is not None) and media is None:
+                continue
+            if nota_minima is not None and media < nota_minima - 1e-9:
+                continue
+            if nota_maxima is not None and media > nota_maxima + 1e-9:
                 continue
             resultado.append((professor, disciplinas))
         return sorted(resultado, key=lambda i: (-i[0]['total_avaliacoes'], normalizar_busca(i[0]['nome']),
