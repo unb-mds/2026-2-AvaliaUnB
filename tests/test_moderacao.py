@@ -584,6 +584,36 @@ class TestContestacaoAutor(unittest.TestCase):
         html_fila = self.web.get('/moderacao').get_data(as_text=True)
         self.assertIn('Não houve ofensa, apenas relato pedagógico.', html_fila)
 
+    def test_perfil_exibe_comentarios_ocultados_com_link_contestar_somente_para_o_autor(self):
+        cid = self._preparar_comentario_ocultado()
+
+        # Autor acessa /perfil em HTML
+        self._logar('autor@gmail.com', 'autor', moderador=False)
+        resp_html = self.web.get('/perfil', headers={'Accept': 'text/html'})
+        self.assertEqual(resp_html.status_code, 200)
+        html = resp_html.get_data(as_text=True)
+        self.assertIn('Comentários ocultados', html)
+        self.assertIn('Comentário crítico sobre a didática.', html)
+        self.assertIn('Linguagem considerada inadequada.', html)
+        self.assertIn(f'/comentarios/{cid}/contestar', html)
+        self.assertIn('Contestar', html)
+
+        # Autor acessa /perfil em JSON
+        resp_json = self.web.get('/perfil', headers={'Accept': 'application/json'})
+        self.assertEqual(resp_json.status_code, 200)
+        ocultados = resp_json.get_json()['comentarios_ocultados']
+        self.assertEqual(len(ocultados), 1)
+        self.assertEqual(ocultados[0]['id'], cid)
+
+        # Outro usuário não vê comentários ocultados do autor
+        self._logar('outro@gmail.com', 'outro', moderador=False)
+        resp_outro = self.web.get('/perfil', headers={'Accept': 'text/html'})
+        self.assertEqual(resp_outro.status_code, 200)
+        html_outro = resp_outro.get_data(as_text=True)
+        self.assertNotIn('Comentários ocultados', html_outro)
+        self.assertNotIn(f'/comentarios/{cid}/contestar', html_outro)
+
+
 class TestFluxoCompletoModeracao(unittest.TestCase):
     def setUp(self):
         self.cliente = ClienteFalso()
