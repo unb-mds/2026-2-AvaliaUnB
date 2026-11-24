@@ -137,6 +137,29 @@ summary { cursor: pointer; }
 .review .comentario-acoes .acao-editar { border-color: var(--text); }
 .review .comentario-acoes .acao-excluir:hover { color: var(--cor-erro); border-color: currentColor; }
 .review .comentario-acoes .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+/* Reações 👍/👎 (issue #270): fileira de botões fantasma no padrão .btn.ghost,
+   ícone em SVG na cor do texto e destaque na cor de acento quando é a sua reação. */
+.review .comentario-reacoes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
+.review .comentario-reacoes form { margin: 0; }
+.review .comentario-reacoes .reacao {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-width: 64px; min-height: 44px; margin: 0; padding: 0 14px;
+    border: 1px solid var(--line); border-radius: 10px; background: transparent;
+    color: var(--muted); font: 700 13px/1 Inter, sans-serif; font-variant-numeric: tabular-nums;
+    text-decoration: none; cursor: pointer;
+    transition: border-color .3s ease, color .3s ease, background-color .3s ease;
+}
+.review .comentario-reacoes .reacao-icone { flex: none; }
+.review .comentario-reacoes .reacao-icone-negativa { transform: rotate(180deg); }
+.review .comentario-reacoes :is(a, button).reacao:hover { border-color: var(--accent); color: var(--text); }
+.review .comentario-reacoes .reacao[aria-pressed="true"] {
+    border-color: var(--accent); color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.review .comentario-reacoes .reacao[aria-pressed="true"] .reacao-icone { fill: color-mix(in srgb, var(--accent) 25%, transparent); }
+.review .comentario-reacoes .reacao-leitura { min-width: 0; padding: 0 10px 0 0; border-color: transparent; cursor: default; }
+.review .comentario-reacoes :is(a, button).reacao:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .review .comentario-reacoes .reacao { transition: none; } }
 .meus-comentarios { margin-block: 32px; scroll-margin-top: 100px; }
 .lista-meus-comentarios { display: grid; gap: 16px; list-style: none; margin: 0; padding: 0; }
 .lista-meus-comentarios .review { padding: 0; border: 0; }
