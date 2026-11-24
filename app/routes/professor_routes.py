@@ -9,7 +9,8 @@ from app.seguranca import (is_safe_url, limitar_avaliacao, limitar_comentario,
 
 professor_bp = Blueprint('professores', __name__)
 
-CAMPOS_FILTRO = ('nome', 'disciplina', 'departamento', 'q')
+CAMPOS_FILTRO = ('nome', 'disciplina', 'departamento', 'q',
+                 'nota_min', 'nota_max', 'avaliacoes_min')
 
 
 @professor_bp.get('/comparar')
