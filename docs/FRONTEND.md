@@ -65,6 +65,11 @@ deixa o "Cancelar" em destaque. Em telas de até 600 px, a seção usa coluna ú
 e botões em largura total. A confirmação de exclusão do comentário é uma página
 própria, sem JavaScript.
 
+Na listagem pública não há nome de usuário, avatar ou rótulo substituto acima
+do comentário. A disciplina, a data e o texto continuam visíveis. Os avisos de
+publicação e edição informam que a identificação da conta não aparece. Edição,
+exclusão e denúncia continuam exigindo as permissões da conta autenticada (#258).
+
 O catálogo mostra mensagens diferentes para ausência de dados e ausência de
 resultados dos filtros e exibe a média
 geral em cinco estrelas ou `N/A (Não avaliado)`. A busca é um campo único
@@ -146,4 +151,6 @@ são propostas.
 A conferência de contraste e o inventário de estados de carregamento continuam
 no escopo da #112. A aprovação das regras de comentários é uma etapa do grupo
 na #116; a interface de listar, publicar, editar e excluir comentários está
-implementada, e a de reações, ordenação, denúncia e moderação ainda não.
+implementada, assim como reações (#212) e denúncia (#215). Ordenação e moderação
+continuam planejadas. Os controles de reação usam os tokens de ambos os temas,
+`aria-pressed`, marca de seleção, foco visível e alvos de toque de 44 px.

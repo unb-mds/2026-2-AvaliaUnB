@@ -223,7 +223,7 @@ class ProfessorRepository:
         # A view traz uma linha por turma (ano/período); o perfil usa uma por disciplina.
         unicas = {l['disciplina_id']: {'id': l['disciplina_id'], 'nome': l['disciplina'],
                                        'codigo': l['codigo_disciplina']} for l in linhas}
-        return sorted(unicas.values(), key=lambda d: (d['nome'] or '', d['id']))
+        return sorted(unicas.values(), key=lambda d: (normalizar_busca(d['nome']), d['id']))
 
     def invalidar_cache(self):
         self._catalogo = None
@@ -286,7 +286,8 @@ class ProfessorRepository:
                                 or _alguma_disciplina_casa(termo_n, disciplinas)):
                 continue
             resultado.append((professor, disciplinas))
-        return sorted(resultado, key=lambda i: (-i[0]['total_avaliacoes'], i[0]['nome'] or '', i[0]['id']))
+        return sorted(resultado, key=lambda i: (-i[0]['total_avaliacoes'], normalizar_busca(i[0]['nome']),
+                                                i[0]['id']))
 
     def sugerir(self, termo, limite=LIMITE_SUGESTOES, tipos=TIPOS_SUGESTAO):
         """Sugestões da busca unificada: [{tipo, id, texto, detalhe}].
@@ -618,7 +619,8 @@ class ComentarioRepository:
 
     O backend usa a service key, que ignora RLS: toda regra de autoria e de vínculo
     entre professor e disciplina é conferida aqui. O e-mail e o id da conta do autor
-    nunca saem deste repositório; só o username público.
+    não são incluídos na listagem pública. A autoria permanece privada para as
+    verificações do backend e não depende da identificação mostrada na tela.
     """
 
     def __init__(self, cliente):
@@ -689,10 +691,6 @@ class ComentarioRepository:
         if not linhas:
             return [], False
 
-        ids_autores = sorted({l['usuario_id'] for l in linhas})
-        autores = {p['id']: p['username'] for p in
-                   self.cliente.table('perfis').select('id,username')
-                   .in_('id', ids_autores).execute().data}
         disciplinas = self._disciplinas_do_professor(professor_id)
         comentarios = []
         for l in linhas:
@@ -700,7 +698,6 @@ class ComentarioRepository:
             comentarios.append({
                 'id': l['id'],
                 'texto': l['texto'],
-                'username': autores.get(l['usuario_id'], ''),
                 'disciplina_nome': nome,
                 'disciplina_codigo': codigo,
                 'criado_em': l['criado_em'],
@@ -708,6 +705,30 @@ class ComentarioRepository:
                 'e_meu': usuario_atual_id is not None and l['usuario_id'] == usuario_atual_id,
             })
         return comentarios, ha_mais
+
+    def listar_do_usuario(self, usuario_id):
+        """Relatos visíveis da própria conta, sem dados de identidade no resultado."""
+        linhas = (self.cliente.table('comentarios')
+                  .select('id,professor_id,disciplina_id,texto,criado_em,atualizado_em')
+                  .eq('usuario_id', usuario_id).is_('ocultado_em', 'null')
+                  .order('criado_em', desc=True).order('id', desc=True)
+                  .limit(LIMITE_COMENTARIOS + 1).execute().data)
+        ha_mais = len(linhas) > LIMITE_COMENTARIOS
+        linhas = linhas[:LIMITE_COMENTARIOS]
+        if not linhas:
+            return [], False
+        professores = {p['id']: p['nome'] for p in self.cliente.table('professores')
+                       .select('id,nome').in_('id', sorted({l['professor_id'] for l in linhas}))
+                       .execute().data}
+        disciplinas = {d['id']: d for d in self.cliente.table('disciplinas')
+                       .select('id,nome,codigo').in_('id', sorted({l['disciplina_id'] for l in linhas}))
+                       .execute().data}
+        return [{**{c: l[c] for c in ('id', 'professor_id', 'disciplina_id', 'texto', 'criado_em')},
+                 'professor_nome': professores.get(l['professor_id'], 'Professor'),
+                 'disciplina_nome': disciplinas.get(l['disciplina_id'], {}).get('nome', ''),
+                 'disciplina_codigo': disciplinas.get(l['disciplina_id'], {}).get('codigo', ''),
+                 'data': self.formatar_data(l['criado_em']), 'editado': self._foi_editado(l)}
+                for l in linhas], ha_mais
 
     def buscar_do_usuario(self, comentario_id, usuario_id):
         """Comentário se pertencer ao usuário, senão None (a rota responde 404)."""
@@ -782,6 +803,43 @@ class ComentarioRepository:
         apagadas = (self.cliente.table('comentarios').delete()
                     .eq('id', comentario_id).eq('usuario_id', usuario_id).execute().data)
         return bool(apagadas)
+
+
+class ReacaoRepository:
+    """Uma reação por conta/comentário; identidade nunca sai da listagem."""
+
+    def __init__(self, cliente):
+        self.cliente = cliente
+
+    def definir(self, comentario_id, usuario_id, valor):
+        if valor not in (-1, 0, 1):
+            raise ValueError('Reação inválida.')
+        tabela = self.cliente.table('comentarios_reacoes')
+        if valor == 0:
+            tabela.delete().eq('comentario_id', comentario_id).eq('usuario_id', usuario_id).execute()
+        else:
+            tabela.upsert([{'comentario_id': comentario_id, 'usuario_id': usuario_id,
+                            'valor': valor}], on_conflict='comentario_id,usuario_id').execute()
+
+    def resumo(self, ids, usuario_id=None):
+        resultado = {i: {'curtidas': 0, 'descurtidas': 0, 'minha_reacao': 0} for i in ids}
+        if not ids:
+            return resultado
+        inicio = 0
+        while True:
+            linhas = (self.cliente.table('comentarios_reacoes')
+                      .select('comentario_id,usuario_id,valor').in_('comentario_id', ids)
+                      .order('comentario_id').order('usuario_id')
+                      .range(inicio, inicio + 999).execute().data)
+            for linha in linhas:
+                resumo = resultado[linha['comentario_id']]
+                valor = linha['valor']
+                resumo['curtidas' if valor == 1 else 'descurtidas'] += 1
+                if usuario_id is not None and linha['usuario_id'] == usuario_id:
+                    resumo['minha_reacao'] = valor
+            if len(linhas) < 1000:
+                return resultado
+            inicio += 1000
 
 
 class DenunciaRepository:
@@ -1210,13 +1268,14 @@ class FavoritoRepository:
 
 class Repositorios:
     def __init__(self, usuarios, professores, avaliacoes, comentarios=None, denuncias=None,
-                 favoritos=None, moderacao=None):
+                 favoritos=None, reacoes=None, moderacao=None):
         self.usuarios = usuarios
         self.professores = professores
         self.avaliacoes = avaliacoes
         self.comentarios = comentarios
         self.denuncias = denuncias
         self.favoritos = favoritos
+        self.reacoes = reacoes
         self.moderacao = moderacao
 
 
@@ -1229,7 +1288,7 @@ def configurar_repositorios(app):
         UsuarioRepository(cliente, fabrica), ProfessorRepository(cliente),
         AvaliacaoRepository(cliente), ComentarioRepository(cliente),
         DenunciaRepository(cliente), FavoritoRepository(cliente),
-        ModeracaoRepository(cliente))
+        ReacaoRepository(cliente), ModeracaoRepository(cliente))
 
 
 def repositorios() -> Repositorios:

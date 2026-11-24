@@ -183,8 +183,12 @@ def _contexto_do_comentario(comentario_id, usuario, origem):
     disciplinas = controller.listar_disciplinas(professor['id'])
     next_url = _next_seguro(origem.get('next'))
     filtro = controller.filtro_de_comentarios(origem.get('comentarios_disciplina'), disciplinas)
+    disciplina_medias = controller.disciplina_das_medias(disciplinas, origem.get('disciplina_medias'))
+    url_voltar = (url_for('auth.perfil', _anchor='meus-comentarios')
+                  if origem.get('origem') == 'perfil' else
+                  _url_perfil(professor['id'], next_url, disciplina_medias, filtro))
     return (comentario, professor, disciplinas, next_url, filtro,
-            _url_perfil(professor['id'], next_url, None, filtro))
+            url_voltar)
 
 
 @professor_bp.route('/comentarios/<int:comentario_id>/editar', methods=['GET', 'POST'])
@@ -199,7 +203,7 @@ def editar_comentario(comentario_id):
         # Só texto e disciplina mudam; professor_id e usuario_id do formulário são ignorados.
         texto = request.form.get('texto', '')
         disciplina_form, erros = controller.validar_novo_comentario(
-            disciplinas, request.form.get('disciplina_id'), texto)
+            disciplinas, request.form.get('disciplina_id'), texto, acao='salvo')
         if not erros:
             try:
                 controller.editar_comentario(comentario_id, usuario, disciplina_form, texto)
@@ -211,7 +215,9 @@ def editar_comentario(comentario_id):
     return render_template('editar_comentario.html', professor=professor, disciplinas=disciplinas,
                            comentario=comentario, texto_form=texto, disciplina_form=disciplina_form,
                            erros_comentario=erros, next_url=next_url, filtro_comentarios=filtro,
-                           url_voltar=url_voltar, usuario=usuario), status
+                           url_voltar=url_voltar, usuario=usuario,
+                           origem_perfil=origem.get('origem') == 'perfil',
+                           disciplina_medias=origem.get('disciplina_medias', '')), status
 
 
 @professor_bp.route('/comentarios/<int:comentario_id>/excluir', methods=['GET', 'POST'])
@@ -228,7 +234,22 @@ def excluir_comentario(comentario_id):
         return redirect(url_voltar, code=303)
     return render_template('excluir_comentario.html', professor=professor, comentario=comentario,
                            next_url=next_url, filtro_comentarios=filtro, url_voltar=url_voltar,
-                           usuario=usuario)
+                           usuario=usuario, origem_perfil=origem.get('origem') == 'perfil',
+                           disciplina_medias=origem.get('disciplina_medias', ''))
+
+
+@professor_bp.post('/comentarios/<int:comentario_id>/reacao')
+@login_required
+def reagir_comentario(comentario_id):
+    valor = request.form.get('valor', type=int)
+    if valor not in (-1, 0, 1):
+        abort(400)
+    professor_id = controller.definir_reacao(comentario_id, obter_usuario_atual(), valor)
+    disciplinas = controller.listar_disciplinas(professor_id)
+    filtro = controller.filtro_de_comentarios(request.form.get('comentarios_disciplina'), disciplinas)
+    disciplina = controller.disciplina_das_medias(disciplinas, request.form.get('disciplina_medias'))
+    return redirect(_url_perfil(professor_id, _next_seguro(request.form.get('next')),
+                                disciplina, filtro), code=303)
 
 
 @professor_bp.route('/comentarios/<int:comentario_id>/denunciar', methods=['GET', 'POST'])

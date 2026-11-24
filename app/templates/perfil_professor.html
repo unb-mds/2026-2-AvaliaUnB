@@ -1,4 +1,5 @@
 {% from '_macros.html' import icone_seta, nota, barra_dificuldade %}
+{% from '_acoes_comentario.html' import acoes_comentario %}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{ professor.nome }} - AvaliaUnb</title><link rel="stylesheet" href="{{ url_for('static', filename='indicadores.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='evolucao.css') }}">{% include '_tema.html' %}</head>
@@ -10,7 +11,7 @@
         {% set ns = namespace(soma=0, n=0) %}
         {% for c in criterios if c != 'dificuldade' and geral.quantidade %}{% set ns.soma = ns.soma + geral.medias[c] %}{% set ns.n = ns.n + 1 %}{% endfor %}
         <header class="profile-top">
-            <div class="profile-avatar" aria-hidden="true">{% for parte in professor.nome.split()[:2] %}{{ parte[0] }}{% endfor %}</div>
+            <div class="profile-avatar" aria-hidden="true">{{ professor.nome|iniciais }}</div>
             <div class="profile-title">
                 <h1>{{ professor.nome }}</h1>
                 <p>{{ professor.departamento }}</p>
@@ -225,7 +226,7 @@
                     <textarea name="texto" id="texto_comentario" rows="5" maxlength="1000" required
                               aria-describedby="ajuda-texto-comentario{% if erros_comentario.texto %} erro-texto-comentario{% endif %}"
                               {% if erros_comentario.texto %}aria-invalid="true"{% endif %}>{{ texto_form }}</textarea>
-                    <p class="campo-ajuda" id="ajuda-texto-comentario">2 a 1.000 caracteres. Seu nome de usuário aparece junto do comentário.</p>
+                    <p class="campo-ajuda" id="ajuda-texto-comentario">2 a 1.000 caracteres. Sua identificação não aparece junto do comentário. Evite incluir dados pessoais no texto.</p>
                     {% if erros_comentario.texto %}
                     <p class="campo-erro" id="erro-texto-comentario" role="alert">{{ erros_comentario.texto }}</p>
                     {% endif %}
@@ -262,17 +263,14 @@
                 {% for c in comentarios %}
                 <li class="comentario"><article class="review">
                     <p class="comentario-cabecalho review-top">
-                        <strong>{{ c.username }}</strong>
                         <span class="comentario-disciplina">{{ c.disciplina_nome }}{% if c.disciplina_codigo %} — {{ c.disciplina_codigo }}{% endif %}</span>
                         {% if c.data %}<span class="comentario-data">{{ c.data }}</span>{% endif %}
                         {% if c.editado %}<span class="comentario-editado">(editado)</span>{% endif %}
                     </p>
                     <p class="comentario-texto">{% for linha in c.texto.splitlines() %}{{ linha }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>
+                    {% include '_reacoes_comentario.html' %}
                     {% if c.e_meu %}
-                    <p class="comentario-acoes">
-                        <a href="{{ url_for('professores.editar_comentario', comentario_id=c.id, next=next_url, comentarios_disciplina=filtro_comentarios) }}">Editar</a>
-                        <a class="acao-excluir" href="{{ url_for('professores.excluir_comentario', comentario_id=c.id, next=next_url, comentarios_disciplina=filtro_comentarios) }}">Excluir</a>
-                    </p>
+                    {{ acoes_comentario(c.id, next_url, filtro_comentarios, disciplina.id if disciplina else None) }}
                     {% elif usuario %}
                     <p class="comentario-acoes">
                         <a class="acao-denunciar" href="{{ url_for('professores.denunciar_comentario', comentario_id=c.id, next=next_url, comentarios_disciplina=filtro_comentarios) }}">Denunciar</a>

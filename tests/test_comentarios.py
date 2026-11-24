@@ -6,7 +6,7 @@ from app.repositorio import LIMITE_COMENTARIOS, ComentarioRepository, repositori
 from tests.fake_supabase import ClienteFalso
 
 ANA, BIA = 'uuid-ana', 'uuid-bia'
-CAMPOS_PUBLICOS = {'id', 'texto', 'username', 'disciplina_nome', 'disciplina_codigo',
+CAMPOS_PUBLICOS = {'id', 'texto', 'disciplina_nome', 'disciplina_codigo',
                    'criado_em', 'editado', 'e_meu'}
 
 
@@ -105,7 +105,7 @@ class TestPrivacidade(BaseComentarios):
         self.semear(1, usuario=ANA)
         comentario, = self.repo.listar_por_professor(1)[0]
         self.assertEqual(set(comentario), CAMPOS_PUBLICOS)
-        self.assertEqual(comentario['username'], 'ana')
+        self.assertNotIn('username', comentario)
         texto_inteiro = repr(comentario)
         for segredo in ('ana@gmail.com', ANA, 'Ana Silva'):
             self.assertNotIn(segredo, texto_inteiro)
@@ -114,9 +114,22 @@ class TestPrivacidade(BaseComentarios):
         self.semear(1, usuario=ANA)
         self.semear(1, usuario=BIA)
         como_ana, _ = self.repo.listar_por_professor(1, usuario_atual_id=ANA)
-        self.assertEqual({c['username']: c['e_meu'] for c in como_ana}, {'ana': True, 'bia': False})
+        self.assertEqual({c['id']: c['e_meu'] for c in como_ana}, {1: True, 2: False})
         visitante, _ = self.repo.listar_por_professor(1)
         self.assertFalse(any(c['e_meu'] for c in visitante))
+
+    def test_listagem_nao_depende_da_leitura_dos_perfis_dos_autores(self):
+        from unittest.mock import patch
+        self.semear(1)
+        original = self.cliente.table
+        def sem_perfis(nome):
+            if nome == 'perfis':
+                raise AssertionError('A listagem não deve buscar a identidade do autor.')
+            return original(nome)
+        with patch.object(self.cliente, 'table', side_effect=sem_perfis):
+            comentario, = self.repo.listar_por_professor(1)[0]
+        self.assertEqual(comentario['texto'], 'comentário 1')
+        self.assertEqual(set(comentario), CAMPOS_PUBLICOS)
 
     def test_editado_so_depois_de_uma_edicao(self):
         self.semear(1)

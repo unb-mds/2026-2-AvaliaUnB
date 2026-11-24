@@ -24,6 +24,8 @@
         <form method="post" action="{{ url_for('professores.editar_comentario', comentario_id=comentario.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="next" value="{{ next_url }}">
+            {% if origem_perfil %}<input type="hidden" name="origem" value="perfil">{% endif %}
+            {% if disciplina_medias %}<input type="hidden" name="disciplina_medias" value="{{ disciplina_medias }}">{% endif %}
             {% if filtro_comentarios %}<input type="hidden" name="comentarios_disciplina" value="{{ filtro_comentarios }}">{% endif %}
 
             <div class="campo">
@@ -47,7 +49,7 @@
                 <textarea name="texto" id="texto_comentario" rows="5" maxlength="1000" required
                           aria-describedby="ajuda-texto-comentario{% if erros_comentario.texto %} erro-texto-comentario{% endif %}"
                           {% if erros_comentario.texto %}aria-invalid="true"{% endif %}>{{ texto_form }}</textarea>
-                <p class="campo-ajuda" id="ajuda-texto-comentario">2 a 1.000 caracteres. Seu nome de usuário aparece junto do comentário.</p>
+                <p class="campo-ajuda" id="ajuda-texto-comentario">2 a 1.000 caracteres. Sua identificação não aparece junto do comentário. Evite incluir dados pessoais no texto.</p>
                 {% if erros_comentario.texto %}
                 <p class="campo-erro" id="erro-texto-comentario" role="alert">{{ erros_comentario.texto }}</p>
                 {% endif %}

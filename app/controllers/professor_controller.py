@@ -3,6 +3,7 @@ import math
 
 from flask import abort, current_app, request, url_for
 
+from app.filtro_comentarios import mensagem_bloqueio, verificar_comentario
 from app.grafico import MAXIMO_SEMESTRES_GRAFICO, montar_grafico
 from app.repositorio import (CRITERIOS_RANKING, LIMITE_COMENTARIOS, LIMITE_SUGESTOES,
                              MAXIMO_SUGESTOES, MINIMO_AVALIACOES_RANKING,
@@ -202,7 +203,7 @@ def _carregar_comparacao_legada(dados):
     repos = repositorios()
     catalogo_completo = repos.professores.catalogo()
     professores = sorted((p for p, _ in catalogo_completo),
-                         key=lambda p: (p['nome'] or '', p['id']))
+                         key=lambda p: (normalizar_busca(p['nome']), p['id']))
     por_id = {p['id']: p for p in professores}
     disciplinas_por_id = {p['id']: vinculos for p, vinculos in catalogo_completo}
     selecionados, erros = {}, {}
@@ -245,7 +246,7 @@ def carregar_comparacao(dados):
     catalogo_completo = repos.professores.catalogo()
     todos_professores_lista = sorted(
         (p for p, _ in catalogo_completo),
-        key=lambda p: (p['nome'] or '', p['id']),
+        key=lambda p: (normalizar_busca(p['nome']), p['id']),
     )
     todos_professores = {str(p['id']): p for p in todos_professores_lista}
     disciplinas_por_professor = {str(p['id']): vinculos for p, vinculos in catalogo_completo}
@@ -266,7 +267,7 @@ def carregar_comparacao(dados):
 
     if modo != 'livre' and not disciplina_id and professor_previo:
         _, vinculos_previos = professor_previo
-        for d in sorted(vinculos_previos, key=lambda item: (item['nome'] or '', item['id'])):
+        for d in sorted(vinculos_previos, key=lambda item: (normalizar_busca(item['nome']), item['id'])):
             d_id = str(d['id'])
             total_na_disciplina = sum(
                 1 for _, v in catalogo_completo if any(str(vinc['id']) == d_id for vinc in v)
@@ -325,7 +326,7 @@ def carregar_comparacao(dados):
                       for p in campos if p in todos_professores}
 
         return dict(
-            disciplinas=sorted(disciplinas.values(), key=lambda d: (d['nome'] or '', d['id'])),
+            disciplinas=sorted(disciplinas.values(), key=lambda d: (normalizar_busca(d['nome']), d['id'])),
             disciplina=None,
             professores=opcoes,
             escolhidos=escolhidos,
@@ -379,9 +380,9 @@ def carregar_comparacao(dados):
                     for p in ids
                 ])
 
-    return dict(disciplinas=sorted(disciplinas.values(), key=lambda d: (d['nome'] or '', d['id'])),
+    return dict(disciplinas=sorted(disciplinas.values(), key=lambda d: (normalizar_busca(d['nome']), d['id'])),
                 disciplina=disciplina, professores=sorted(professores.values(),
-                    key=lambda p: (p['nome'] or '', p['id'])),
+                    key=lambda p: (normalizar_busca(p['nome']), p['id'])),
                 selecao_previa=selecao_previa, campos=(selecionados + ['', ''])[:max(2, len(selecionados))],
                 erros=erros, comparacao=comparacao, criterios=CRITERIOS,
                 disciplinas_diferentes=False, modo_livre=False, modo_legado=False,
@@ -463,8 +464,12 @@ def listar_disciplinas(professor_id):
     return repositorios().professores.listar_disciplinas(professor_id)
 
 
-def validar_novo_comentario(disciplinas, disciplina_bruta, texto):
-    """(disciplina_id ou None, erros): a disciplina precisa ser uma das do professor."""
+def validar_novo_comentario(disciplinas, disciplina_bruta, texto, acao='publicado'):
+    """(disciplina_id ou None, erros): a disciplina precisa ser uma das do professor.
+
+    Depois da validação de tamanho roda o filtro automático (issue #214); `acao` ('publicado'
+    ou 'salvo') só ajusta a mensagem. O texto bloqueado não é registrado nem devolvido no erro.
+    """
     erros = {}
     disciplina_id = _inteiro_ou_none(disciplina_bruta)
     if not any(d['id'] == disciplina_id for d in disciplinas):
@@ -473,6 +478,10 @@ def validar_novo_comentario(disciplinas, disciplina_bruta, texto):
     _, erro = validar_comentario(texto)
     if erro:
         erros['texto'] = erro
+    else:
+        categoria = verificar_comentario(texto)
+        if categoria:
+            erros['texto'] = mensagem_bloqueio(categoria, acao)
     return disciplina_id, erros
 
 
@@ -508,7 +517,7 @@ def carregar_comentario_denunciavel(comentario_id, usuario):
     comentario = repositorios().comentarios.buscar_visivel(comentario_id)
     if comentario is None or comentario['usuario_id'] == usuario['id']:
         abort(404, description='Comentário não encontrado.')
-    return comentario
+    return {campo: valor for campo, valor in comentario.items() if campo != 'usuario_id'}
 
 
 def motivos_denuncia():
@@ -529,6 +538,26 @@ def denunciar_comentario(comentario_id, usuario, motivo, explicacao):
     return repositorios().denuncias.criar(comentario_id, usuario['id'], motivo, explicacao)
 
 
+def carregar_comentarios_usuario(usuario):
+    """A falha da seção de comentários não impede o restante do perfil pessoal."""
+    try:
+        comentarios, ha_mais = repositorios().comentarios.listar_do_usuario(usuario['id'])
+    except Exception:
+        current_app.logger.exception('Falha ao listar comentários da própria conta.')
+        return dict(comentarios_usuario=[], ha_mais_comentarios=False,
+                    erro_comentarios_usuario=True)
+    return dict(comentarios_usuario=comentarios, ha_mais_comentarios=ha_mais,
+                erro_comentarios_usuario=False)
+
+
+def definir_reacao(comentario_id, usuario, valor):
+    comentario = repositorios().comentarios.buscar_visivel(comentario_id)
+    if comentario is None or comentario['usuario_id'] == usuario['id']:
+        abort(404)
+    repositorios().reacoes.definir(comentario_id, usuario['id'], valor)
+    return comentario['professor_id']
+
+
 def carregar_comentarios(professor_id, disciplinas, filtro_bruto, usuario):
     """Contexto da seção de comentários do perfil. Nunca levanta: se a consulta falhar,
     registra o erro e devolve erro_comentarios=True para o resto do perfil continuar."""
@@ -538,7 +567,10 @@ def carregar_comentarios(professor_id, disciplinas, filtro_bruto, usuario):
     try:
         comentarios, ha_mais = repositorios().comentarios.listar_por_professor(
             professor_id, filtro, usuario['id'] if usuario else None)
+        resumo = repositorios().reacoes.resumo([c['id'] for c in comentarios],
+                                              usuario['id'] if usuario else None)
         for comentario in comentarios:
+            comentario.update(resumo[comentario['id']])
             comentario['data'] = ComentarioRepository.formatar_data(comentario['criado_em'])
     except Exception:
         current_app.logger.exception('Falha ao carregar os comentários do professor %s', professor_id)

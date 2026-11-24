@@ -1,7 +1,7 @@
 # Modelo de dados do AvaliaUnB (Supabase / PostgreSQL)
 
 > Issue #109. Depende da #90 (esquema versionado em `docs/migrations/`).
-> O esquema e as políticas estão versionados em SQL; sua aplicação em cada ambiente deve ser conferida. A tabela `comentarios` está versionada em `docs/migrations/002_comentarios.sql`, existe no banco e é usada pelo perfil do professor; as denúncias estão em `docs/migrations/005_denuncias_comentarios.sql` (seção 7) e os favoritos em `docs/migrations/006_favoritos.sql` (seção 8); as reações continuam **apenas proposta**, sem migração.
+> O esquema e as políticas estão versionados em SQL; sua aplicação em cada ambiente deve ser conferida. A tabela `comentarios` está versionada em `docs/migrations/002_comentarios.sql`, existe no banco e é usada pelo perfil do professor; as denúncias estão em `docs/migrations/005_denuncias_comentarios.sql` (seção 7), os favoritos em `docs/migrations/006_favoritos.sql` (seção 8) e as reações em [`20261123100000_reacoes.sql`](migrations/20261123100000_reacoes.sql).
 
 ## 1. Visão geral
 
@@ -72,6 +72,7 @@ Alimentada pelo scraper do SIGAA.
 | `criado_em` | `TIMESTAMPTZ` | default `NOW()` |
 
 - **Unicidade:** `uq_professores_nome` em `(nome)`, criada por [`004_professores_unicos.sql`](migrations/004_professores_unicos.sql) no lugar da antiga `uq_professores_nome_departamento` em `(nome, departamento)` (issue #235).
+- **Grafia dos textos:** `nome` e `departamento` são gravados em grafia comum, com acentos (por exemplo, `Ana de Souza`), e não mais em CAIXA ALTA. O importador converte na extração e os dados antigos são convertidos por `converter-nomes` (issue #236). A unicidade de `nome` diferencia caixa e acento no banco; a busca e a ordenação do app não. Veja [Nomes em grafia comum](COMO_USAR_SCRAPER.md#nomes-em-grafia-comum).
 
 ### 2.2 `disciplinas`
 
@@ -85,6 +86,7 @@ Alimentada pelo scraper do SIGAA.
 | `criado_em` | `TIMESTAMPTZ` | default `NOW()` |
 
 - **Unicidade:** `uq_disciplinas_codigo` em `(codigo)`.
+- **Grafia dos textos:** `nome` é gravado em grafia comum, com acentos (por exemplo, `Cálculo 1`). A chave de conflito do importador é `codigo`, então `nome` é sobrescrito a cada coleta. Veja [Nomes em grafia comum](COMO_USAR_SCRAPER.md#nomes-em-grafia-comum).
 
 ### 2.3 `turmas`
 
@@ -232,10 +234,11 @@ que as políticas já foram aplicadas em cada ambiente Supabase.
 
 A aplicação Flask em `main` ainda cria clientes com `SUPABASE_SERVICE_KEY`.
 O papel `service_role` ignora o RLS, portanto as permissões no código Flask
-continuam essenciais. A adoção da chave pública e de um token de usuário é
-acompanhada nas issues [#124](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/124),
+continuam essenciais. A adoção da chave pública e de um token de usuário foi
+adiada para depois do lançamento nas issues [#124](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/124),
 [#129](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/129) e
 [#130](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/130).
+O PR #141 foi revertido pelo PR #157 por regressão em produção.
 
 As políticas atuais da migração são a **base versionada**, não uma comprovação
 de isolamento suficiente: antes de migrar perfis, definir exatamente quais
@@ -284,15 +287,17 @@ do conteúdo atual da migração.
 > **Status: a tabela `comentarios` está implementada** pela migração
 > [`002_comentarios.sql`](migrations/002_comentarios.sql), que é a fonte de
 > verdade da tabela (inclui RLS e permissões por coluna, além do que o bloco
-> abaixo mostra) e é usada pelo perfil do professor. O restante desta seção,
-> em especial as reações (`comentarios_reacoes`), continua **proposta para
-> revisão do grupo, sem migração**.
+> abaixo mostra) e é usada pelo perfil do professor. `comentarios_reacoes` foi
+> implementada na #212 pela migração `20261123100000_reacoes.sql`. O número 004
+> já pertence à migração de professores únicos; foi usado um identificador por
+> data para evitar colisão. O backend persiste somente uma linha por comentário
+> e conta e expõe apenas totais e a reação da própria sessão.
 
 ### 6.1 Decisões de projeto
 
 | Tema | Proposta | Motivo |
 |---|---|---|
-| Ligação privada com usuário | `usuario_id` → `perfis(id)` | Garante autoria e permissões. A listagem exibe o nome de usuário sem expor o identificador da conta. |
+| Ligação privada com usuário | `usuario_id` → `perfis(id)` | Garante autoria e permissões no backend. A listagem não expõe identificação do autor. |
 | Ligação com professor | `professor_id` → `professores(id)`, `NOT NULL` | O comentário é sempre sobre um professor. |
 | Ligação com disciplina | `disciplina_id` → `disciplinas(id)`, `NOT NULL` | Todo relato se refere a uma disciplina ministrada pelo professor. |
 | Quantidade por usuário | Vários relatos para o mesmo professor e disciplina | Cada comentário é identificado pelo seu próprio ID. |
@@ -365,13 +370,18 @@ REVOKE ALL ON comentarios_reacoes FROM PUBLIC, anon, authenticated;
    permissões e campos, independentemente de haver registro na outra tabela.
    A tabela `avaliacoes` admite um registro por conta, professor e
    disciplina, conforme a seção 2.5.
-3. **Leitura pública com autoria.** O backend lista comentários visíveis com
-   ID do comentário, texto, disciplina, datas, contagens e `perfis.username`.
+3. **Leitura pública sem identificação.** O backend lista comentários visíveis com
+   ID do comentário, texto, disciplina, datas e contagens.
    A ordenação usa a data da primeira publicação (`criado_em`), a contagem
    de curtidas ou a soma de curtidas e descurtidas, conforme a
    [especificação](COMENTARIOS.md).
-   O e-mail de cadastro do autor não é consultado nem exibido: a listagem usa
-   só `perfis.username`, conforme o [fluxo de privacidade](COMENTARIOS.md).
+   O perfil do autor não é consultado. A resposta não inclui `usuario_id` nem
+   `username`, conforme o [fluxo de privacidade](COMENTARIOS.md). A migração
+   [`20261122155752_anonimato_comentarios.sql`](migrations/20261122155752_anonimato_comentarios.sql)
+   revoga a leitura da tabela inteira e concede às roles públicas somente
+   as colunas públicas. Consultas diretas devem especificar essas colunas;
+   `SELECT *`, filtros e junções por `usuario_id` são bloqueados. O vínculo
+   privado, a escrita por autor, o RLS e o acesso do backend permanecem.
 4. **Moderação.** A tabela `comentarios` guarda o texto já aprovado. Textos
    que precisam de revisão ficam em uma fila privada separada, inclusive
    revisões de comentários publicados. O modelo de fila, denúncias e decisões
@@ -483,10 +493,11 @@ WHERE usuario_id = (SELECT id FROM perfis WHERE username = 'username_membro');
    - `SUPABASE_SERVICE_KEY`: chave `service_role` em *Project Settings → API*. É secreta: não commitar e não expor em templates.
    - `FLASK_DEBUG`: `0`, ou `1` somente em desenvolvimento local.
 4. Executar o scraper do SIGAA para popular `professores`, `disciplinas` e `turmas`.
-5. Executar `docs/migrations/002_comentarios.sql`, que depende do esquema inicial, para criar a tabela `comentarios`. Reações e moderação ainda não têm migração (seção 6).
+5. Executar `docs/migrations/002_comentarios.sql`, que depende do esquema inicial, para criar a tabela `comentarios`.
 6. Executar `docs/migrations/003_emails_verificados.sql` e `docs/migrations/004_professores_unicos.sql`. A 004 troca a chave do professor para `UNIQUE (nome)`; num banco vazio ela só faz essa troca.
 7. Executar `docs/migrations/005_denuncias_comentarios.sql` para criar a tabela privada de denúncias (seção 7).
 8. Executar `docs/migrations/006_favoritos.sql` para criar a tabela de favoritos (seção 8).
 9. Executar `docs/migrations/007_avaliacao_por_semestre.sql` para permitir uma avaliação por turma cursada (seção 2.5).
+10. Aplicar `docs/migrations/20261122155752_anonimato_comentarios.sql` e `docs/migrations/20261123100000_reacoes.sql` para privacidade e reações. A chave composta evita duplicação, `valor` aceita somente 1 ou -1, e a exclusão do comentário ou da conta remove as reações em cascata. A tabela de reações é privada e acessada pelo backend.
 
 Veja também: [guia do backend](BACKEND.md), [guia do scraper](COMO_USAR_SCRAPER.md) e [mapa da documentação](GUIA_DOCUMENTACAO.md).

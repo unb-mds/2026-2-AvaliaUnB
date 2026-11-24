@@ -4,16 +4,16 @@
 documento descreve o comportamento dos comentários, das reações e da
 moderação. A primeira parte já está implementada no perfil do professor
 (issue #167): listar, filtrar por disciplina, publicar, editar e excluir o
-próprio comentário. A denúncia está implementada na issue #215. Reações,
-ordenação escolhida pela pessoa, filtro automático, moderação e ocultação
-continuam sendo planos futuros (issues #212 a #217). As decisões C01 a C11,
+próprio comentário. A denúncia está implementada na issue #215, o filtro automático
+na issue #214 e as reações na #212. Ordenação escolhida pela pessoa, moderação e ocultação
+continuam sendo planos futuros (issues #213, #216 e #217). As decisões C01 a C11,
 na [tabela do final do documento](#decisoes-para-o-grupo-revisar), foram
 decididas pela equipe; os pontos ainda a confirmar estão indicados nelas.
 
 A base é a [proposta de dados da #109](Modelo%20de%20Dados.md#6-proposta-tabela-comentarios).
 A tabela `comentarios` está versionada em
-[`002_comentarios.sql`](migrations/002_comentarios.sql). O SQL da proposta
-permanece como referência para o que ainda não existe, como as reações.
+[`002_comentarios.sql`](migrations/002_comentarios.sql). As reações usam
+[`20261123100000_reacoes.sql`](migrations/20261123100000_reacoes.sql).
 
 ## Objetivo
 
@@ -49,8 +49,8 @@ Uma conta de comentários não concede acesso à moderação.
 | Limite de envio | 10 comentários por hora por usuário, com contador separado do das avaliações |
 | Tamanho | De 2 a 1.000 caracteres após remover espaços, tabulações e quebras de linha das extremidades |
 | Formato | Texto simples; HTML e Markdown não são interpretados |
-| Identificação pública | Decidido (C05): comentários anônimos para o público, sem nome de usuário, e-mail nem nome completo. Hoje o nome de usuário ainda é exibido, até a implementação dessa decisão. O e-mail do autor nunca é exibido |
-| Ordem da lista | Mais recentes primeiro, em ordem fixa. Mais antigos, escolhido pela pessoa, fica para a issue #213. Mais curtidos e Mais reações vêm junto com as reações (#212) |
+| Identificação pública | Sem nome de usuário, nome completo, e-mail, avatar ou rótulo substituto. O vínculo com a conta permanece privado no backend. A leitura direta pela API exige a migração de privacidade da #258 |
+| Ordem da lista | Mais recentes primeiro, em ordem fixa. As demais ordens ficam para a issue #213 |
 | Quantidade exibida | Os 50 comentários mais recentes, com o filtro de disciplina já aplicado. A página avisa quando há mais; o "ver mais" fica para depois |
 | Filtro | Por disciplina, no perfil do professor. "Todas as disciplinas" é o padrão e um valor inválido volta a "todas" |
 | Datas | Exibir a data da primeira publicação em cada comentário, em dd/mm/aaaa no horário de Brasília, e indicar com "(editado)" quando a atualização for posterior à criação |
@@ -77,14 +77,16 @@ Cada conta tem uma reação por comentário e pode trocar de opção ou tocar
 novamente para removê-la. O servidor
 confere a sessão, impede votos no próprio texto e grava a reação com unicidade
 por conta e comentário. A lista mostra as contagens, sem revelar quem reagiu.
-Reações podem mudar a posição de um comentário nas ordenações por curtidas
-ou reações. As notas e o ranking são independentes.
+O formulário envia POST com CSRF para `/comentarios/<id>/reacao`: `valor=1`
+para curtir, `-1` para descurtir e `0` para retirar. A página retorna ao perfil
+preservando o filtro. O autor vê os totais sem controles de voto; visitantes
+são encaminhados ao login. As notas e o ranking são independentes. A ordenação
+por reação fica para a #213.
 
 ## Ordenação dos comentários
 
 Hoje a lista usa só a ordem Mais recentes, fixa. A escolha da ordem pela
-pessoa fica para a issue #213, que entrega também a ordem Mais antigos. As
-ordens por reação vêm junto com as reações (#212).
+pessoa fica para a issue #213, inclusive as ordens por reação.
 
 | Opção | Como a lista é ordenada |
 |---|---|
@@ -128,11 +130,9 @@ A lista mostra os 50 comentários mais recentes e tem um filtro **Disciplina**,
 com "Todas as disciplinas" por padrão. Quando há mais de 50, a página avisa
 "Mostrando os 50 comentários mais recentes."
 
-O formulário informa antes da publicação que o texto e o nome de usuário
-serão públicos: "Seu nome de usuário aparece junto do comentário." O e-mail
-não é exibido. A publicação usa o botão **Publicar**. Pela decisão C05, esse
-aviso e a exibição do nome de usuário deixam de existir quando os comentários
-passarem a ser anônimos; até lá, valem como descritos.
+O formulário informa: "Sua identificação não aparece junto do comentário.
+Evite incluir dados pessoais no texto." A listagem não mostra identificação
+do autor nem rótulo substituto. A publicação usa o botão **Publicar**.
 Mostra o limite, exige a escolha de uma disciplina ministrada pelo professor
 e preserva o texto em erros de validação ou moderação. Durante a
 verificação, a interface desabilita o botão de envio e só confirma a
@@ -161,10 +161,11 @@ O autor pode pedir revisão pelo formulário privado descrito abaixo.
 ## Filtro automático antes da publicação
 
 O backend verifica comentários novos e edições antes de disponibilizá-los.
-A proposta começa com regras em português para ofensas, discriminação,
-ameaças, spam e dados pessoais, como e-mails, telefones e matrículas. O filtro
-normaliza espaços e variações de escrita para reconhecer tentativas simples de
-disfarçar termos. Uma crítica à didática ou uma avaliação negativa, por si só,
+O filtro aplica regras em português para dados pessoais (e-mail, telefone,
+CPF e matrícula), links e uma lista de palavrões e ofensas. Ameaças, spam e
+outros abusos que as regras não reconhecem ficam para a denúncia e a moderação.
+O filtro normaliza maiúsculas, acentos, caracteres invisíveis e letras repetidas
+para reconhecer tentativas simples de disfarçar termos. Uma crítica à didática ou uma avaliação negativa, por si só,
 deve passar.
 
 | Resultado | Comportamento |
@@ -172,10 +173,9 @@ deve passar.
 | Aprovado | Publica o texto ou aplica a edição |
 | Bloqueado | Mostra o motivo ao autor e mantém o texto no formulário para revisão |
 | Incerto | Casos duvidosos não são julgados pelo filtro: o comentário é publicado e, se houver denúncia, segue para a moderação (C08) |
-| Filtro indisponível | Mantém o texto no formulário e pede nova tentativa sem publicar |
+| Filtro indisponível | Não se aplica na implementação da #214: o filtro roda no próprio servidor, sem serviço externo, e não tem estado de indisponibilidade |
 
-Uma edição bloqueada ou em análise preserva a última versão aprovada de um
-comentário publicado. Se o comentário já estiver oculto, a edição continua
+Uma edição bloqueada preserva a versão anterior de um comentário publicado. Se o comentário já estiver oculto, a edição continua
 privada até decisão da moderação. O filtro e a denúncia cumprem papéis
 complementares, pois uma regra automática pode deixar passar conteúdo impróprio.
 
@@ -186,7 +186,50 @@ CPF, matrícula (qualquer sequência de 8 ou mais dígitos, mesmo com pontos ou
 espaços), links e uma lista de palavrões e ofensas claramente inadequados. A
 lista vale por palavra inteira, sem diferenciar maiúscula, minúscula ou
 acento, fica em arquivo separado e extensa, e é fácil de atualizar. O filtro
-não julga opinião e não usa IA. A issue de implementação está a confirmar.
+não julga opinião e não usa IA. Implementado na issue #214.
+
+Como o filtro funciona (#214):
+
+- A lista de termos fica em `app/dados/termos_bloqueados.txt`, um termo por
+  linha, e é carregada uma vez. Linhas vazias e linhas iniciadas por `#` são
+  ignoradas, o que facilita a atualização pelo grupo.
+- Os termos são comparados por palavra inteira, sem diferenciar maiúscula nem
+  acento. O plural com "s" é coberto. Uma palavra que apenas contém um termo
+  (como "burocracia") passa.
+- Há expressões de mais de uma palavra, inclusive frases de duas palavras que
+  combinam identidade e ofensa (como "negro imundo"), porque palavras como
+  "negro", "gordo" ou "nordestino" não são bloqueadas sozinhas.
+- A matrícula vale com ponto, hífen ou barra entre os dígitos, e com espaços
+  quando há três ou mais grupos de três dígitos ou mais. Números de um ou dois
+  dígitos separados por espaço (notas, listas) nunca contam. Semestres
+  (2024.1, 2023/2), listas de anos, datas no formato dd/mm/aaaa e códigos de
+  disciplina com semestre (FGA0011/2024.1) passam.
+- O filtro vale ao publicar e ao editar, depois da validação de tamanho
+  (2 a 1.000 caracteres) e antes de gravar.
+- Quando bloqueia, a rota responde HTTP 400 e devolve o formulário com o texto
+  preservado e uma mensagem junto ao campo, que informa só a categoria, sem
+  revelar o trecho nem a lista. As mensagens são "Seu comentário não foi
+  publicado porque parece conter dados pessoais (telefone, e-mail, CPF ou
+  matrícula). Remova e tente novamente.", "... contém um link. Remova e tente
+  novamente." e "... contém linguagem ofensiva. Reescreva e tente novamente."
+  Na edição, "publicado" vira "salvo".
+- Na edição bloqueada, o comentário original não muda.
+- O texto bloqueado não é gravado nem registrado em log.
+- O envio bloqueado conta no limite de 10 comentários por hora, porque o
+  limite se aplica a toda requisição de publicação. A edição não tem esse limite.
+- Casos duvidosos passam; se houver denúncia, seguem para a moderação.
+
+Limitações conhecidas:
+
+- Telefone escrito dígito a dígito, com espaços entre os números, passa.
+- Números escritos por extenso passam.
+- Identificadores de redes sociais (`@usuario`) não são bloqueados.
+- Trocas de letras por homóglifos (por exemplo, letras de outros alfabetos) não
+  são reconhecidas.
+- As frases de duas palavras só pegam a combinação exata e adjacente.
+- Texto colado a um domínio, como "bom.com", é tratado como link.
+- O filtro está no controller: quem chamar o repositório diretamente não passa
+  por ele.
 
 ## Denúncia e moderação
 
@@ -232,15 +275,17 @@ denúncias, a publicação de novos comentários fica pausada até haver cobertu
 
 ## Privacidade e ciclo dos dados
 
-Decisão C05: os comentários passam a ser anônimos para o público, sem nome de
-usuário, e-mail nem nome completo. O vínculo entre o comentário e a conta é
-mantido internamente, para o limite de comentários por hora, para a edição e a
-exclusão pela própria pessoa e para a apuração de abusos. Até a implementação,
-cada comentário publicado ainda mostra o nome de usuário da conta. O e-mail de
-cadastro do autor nunca é exibido: não aparece na listagem, nas páginas de
-editar e excluir nem por consulta ao clicar no nome. O e-mail, o nome
-completo, tokens, dados de denúncias e identificadores internos da conta
-ficam privados.
+Decisão C05, implementada na #258: a listagem não inclui nome de usuário,
+e-mail, nome completo, avatar ou rótulo substituto. O vínculo entre o comentário
+e a conta permanece interno, para os limites de participação, a edição e a
+exclusão pela própria pessoa e a apuração de abusos. A resposta pública do
+backend não inclui identificadores da conta nem consulta o perfil do autor.
+
+A [migração de privacidade](migrations/20261122155752_anonimato_comentarios.sql)
+deve ser aplicada após as migrações 001 a 007 para proteger também a leitura
+direta pela Data API: `anon` e `authenticated` só podem consultar as colunas
+públicas. `usuario_id` e `ocultado_em` permanecem privados. O backend mantém
+acesso por `service_role`, sem mudanças nas políticas de escrita ou de RLS.
 
 A orientação ao autor deve pedir que não publique matrículas, contatos,
 documentos, informações pessoais de terceiros ou relatos que exponham pessoas
@@ -264,13 +309,13 @@ rotina de descarte fica para a implementação após revisão do grupo.
 | C02 | Disciplina obrigatória. A pessoa pode comentar quantas vezes quiser para o mesmo professor e disciplina | Decidida; já implementada. Pode comentar mais de uma vez no mesmo professor e disciplina, com limite de 10 por hora por usuário |
 | C03 | Texto simples de 2 a 1.000 caracteres após remover espaços em branco das extremidades | Decidida; já implementada e verificada. Texto de 2 a 1.000 caracteres, contados após remover espaços nas pontas e normalizar quebras de linha |
 | C04 | Estrelas e comentários são independentes e podem ser enviados em qualquer ordem. Uma avaliação por estrelas por estudante, professor e disciplina | Decidida; já implementada e verificada. Comentar não exige avaliar e avaliar não exige comentar; editar ou excluir um não altera o outro |
-| C05 | Comentários anônimos para o público: o comentário continua como é hoje, apenas sem o nome de usuário. E-mail e nome completo também não aparecem. O vínculo com a conta é mantido internamente, para o limite de comentários por hora, para a edição e exclusão pela própria pessoa e para a apuração de abusos | Decidida em reunião da equipe (revisa a decisão da #167). Implementação: issue a criar; hoje o nome de usuário ainda é exibido |
+| C05 | Comentários anônimos para o público: sem identificação ou rótulo substituto. O vínculo com a conta permanece interno para os limites de participação, edição, exclusão e apuração de abusos | Decidida em reunião da equipe (revisa a #167). Implementação na #258; proteção da leitura direta depende da migração de privacidade |
 | C06 | Denúncia privada e moderação por responsáveis autorizados | Decidida e implementada (#215 e #216). A denúncia funciona na #215 e a área restrita de moderação (/moderacao) está implementada na #216, acessível apenas a usuários cadastrados na tabela privada moderadores. |
 | C07 | Ocultação motivada, sem republicação automática por edição | Decidida e implementada (#216). Comentário ocultado por moderação sai da listagem pública e não volta por edição do autor; só um moderador restaura, com justificativa registrada. |
 | C08 | Comentários publicados na hora. A tela de moderação mostra somente os denunciados, e o moderador pode manter, ocultar da visão pública ou restaurar, sempre com justificativa. Todos os integrantes da equipe têm acesso, e toda ação registra quem a fez e a justificativa. Primeira análise em até três dias úteis, formulário privado de contestação e retenção de até 90 dias após o encerramento | Decidida e implementada (#216; retenção na #217). Comentários são publicados na hora; a tela /moderacao mostra somente os denunciados e permite manter, ocultar ou restaurar com justificativa e registro do moderador. O autor pode contestar em /comentarios/<id>/contestar. |
-| C09 | Ícones 👍 e 👎 sempre visíveis, com números apenas nas reações recebidas. Uma reação por conta e comentário, com opção de trocar ou remover | Decidida. As reações aos comentários ficam para depois, na #212 |
-| C10 | Filtrar no servidor antes de publicar ou editar. Bloquear violações claras e deixar os casos incertos para a moderação, que atua mediante denúncia | Decidida quanto às regras (veja "Regras decididas (C10)" acima): rejeita sem salvar, com aviso para reescrever; sem IA. Issue de implementação: a confirmar |
-| C11 | Data em cada comentário. Ordenação por Mais recentes, Mais curtidos, Mais antigos ou Mais reações | Decidida. Por enquanto, mais recentes primeiro, com a data em cada comentário (#167). A #213 entrega também a ordem Mais antigos; as ordens por reação vêm junto com as reações |
+| C09 | Ícones 👍 e 👎 sempre visíveis, com números apenas nas reações recebidas. Uma reação por conta e comentário, com opção de trocar ou remover | Implementada na #212 |
+| C10 | Filtrar no servidor antes de publicar ou editar. Bloquear violações claras e deixar os casos incertos para a moderação, que atua mediante denúncia | Decidida e implementada (#214; veja "Regras decididas (C10)" acima): rejeita sem salvar, com aviso para reescrever; sem IA. Vale ao publicar e ao editar |
+| C11 | Data em cada comentário. Ordenação por Mais recentes, Mais curtidos, Mais antigos ou Mais reações | Decidida. Por enquanto, mais recentes primeiro, com a data em cada comentário (#167). As outras ordens (Mais antigos e as ordens por reação) ficam para a #213 |
 
 As decisões podem ser revisadas no PR ou na
 [issue #116](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/116).
@@ -279,8 +324,7 @@ acompanham estas regras.
 
 ## Critérios para a futura implementação
 
-- Visitantes consultam comentários, com nome de usuário até a implementação
-  da C05 (depois, sem identificação), e contagens de reações. Estar logado
+- Visitantes consultam comentários sem identificação do autor e contagens de reações. Estar logado
   (login pelo Google) é obrigatório para comentar,
   reagir ou denunciar; não se exige e-mail verificado.
 - «ok» passa pela validação de tamanho. Campo vazio, texto com menos de
@@ -308,9 +352,10 @@ acompanham estas regras.
   curtidas, e Mais antigos inverte a ordem por data. A edição preserva
   a posição nas duas ordens por data.
 - O filtro barra uma ofensa inequívoca e a exposição de um telefone, deixa
-  passar uma crítica respeitosa e encaminha um caso ambíguo sem publicar.
-- O filtro também cobre edições. Falhas deixam o texto disponível para tentar
-  de novo, e edições bloqueadas preservam a última versão aprovada.
+  passar uma crítica respeitosa e deixa passar um caso ambíguo, que segue para
+  a moderação se for denunciado.
+- O filtro também cobre edições. Edições bloqueadas devolvem o texto digitado
+  para revisão e preservam a versão anterior do comentário.
 - Uma conta autorizada a usar as duas ações consegue enviar só estrelas,
   publicar só um comentário ou fazer os dois em qualquer ordem.
 - A mesma conta pode avaliar com estrelas Cálculo 1 e Cálculo 2 com o mesmo
@@ -320,12 +365,11 @@ acompanham estas regras.
 - As telas cobrem vazio, envio, erro, edição, confirmação de exclusão e ocultação.
 - As permissões de backend e banco seguem o modelo aprovado, com testes de
   autorização. A tabela `comentarios` vem da migração `002_comentarios.sql`;
-  as demais tabelas propostas (reações, denúncias e moderação) ainda não têm
-  migração.
+  reações e denúncias têm migrações versionadas; moderação ainda não.
 
 Documentos relacionados: [modelo de dados](Modelo%20de%20Dados.md),
 [protótipos](TELAS_COMENTARIOS.md), [frontend](FRONTEND.md) e
 [cibersegurança](CIBERSEGURANCA.md). Os comentários (listar, filtrar por
 disciplina, publicar, editar e excluir) já estão ativos no perfil do professor
-desde a #167; reações, ordenação, filtro automático, denúncia e moderação
-dependem de decisões registradas em issue/PR e das issues #212 a #217.
+desde a #167 e o filtro automático desde a #214; reações (#212) e denúncia (#215) também
+estão implementadas. Ordenação e moderação ficam nas demais issues.

@@ -1,5 +1,24 @@
 # Funcionalidades e regras de consulta
 
+## Atalhos para gerenciar comentários (#260)
+
+No próprio comentário, **Editar** e **Excluir** ficam juntos, como botões
+em contorno com área de toque mínima de 44 px. Só o autor autenticado recebe
+essas ações. Editar abre o texto e a disciplina já preenchidos; salvar ou
+cancelar retorna aos comentários do professor, mantendo o filtro de comentários,
+a disciplina das médias e o destino de volta à busca. Excluir continua exigindo
+confirmação.
+
+O perfil pessoal (`/perfil`) também oferece **Meus comentários**, com os 50
+relatos publicados mais recentes da própria conta, professor, disciplina, data
+e os mesmos atalhos. Havendo mais, a seção avisa e orienta a gerenciar os demais
+no perfil de cada professor. Ações iniciadas no perfil pessoal retornam à sua
+seção de comentários. Uma falha dessa consulta mostra um aviso sem impedir
+as avaliações e os favoritos. Comentários ocultados não entram nessa listagem.
+
+Não há alteração no formato JSON de `/perfil`, nas regras de autoria ou no banco.
+A retirada da identificação pública segue separadamente na #258 / PR #259.
+
 Este guia detalha as funcionalidades já disponíveis na `main`. O resumo das
 entregas e do planejamento fica no
 [README](https://github.com/unb-mds/2026-2-AvaliaUnB#funcionalidades-e-releases).
@@ -16,6 +35,9 @@ depois da normalização.
 A normalização ignora acentos, maiúsculas e espaços extras. A lista é ordenada
 pela quantidade de avaliações, com desempate por nome e identificador.
 Essa ordenação é diferente do ranking, que usa a média das notas.
+Os nomes de professores, disciplinas e departamentos são armazenados em grafia
+comum (por exemplo, "Ana de Souza"); a ordenação por nome também ignora caixa e
+acento.
 
 O seletor **Departamento** é preenchido com os departamentos distintos do
 catálogo completo, em ordem alfabética. Substitui os atalhos fixos de áreas.
@@ -97,7 +119,7 @@ professor e disciplina, com notas inteiras de um a cinco para os cinco critério
 - Em **Médias Consolidadas**, o padrão **Todos** é a média de todas as avaliações
   da disciplina escolhida. Os botões de semestre (parâmetro `semestre=2026-2`)
   mostram só as avaliações daquela turma; o resumo indica o recorte
-  ("CÁLCULO 1 · 2025/2 · 3 avaliações"). Semestre inválido volta para Todos. Os
+  ("Cálculo 1 · 2025/2 · 3 avaliações"). Semestre inválido volta para Todos. Os
   botões só aparecem quando a disciplina tem mais de uma turma.
 - O botão **Avaliar este Professor** leva o semestre filtrado para o formulário.
 
@@ -139,21 +161,29 @@ O perfil do professor tem uma seção **Comentários**, separada das notas.
 - **Filtro:** o parâmetro `comentarios_disciplina` filtra por disciplina. Vazio ou
   inválido volta a "Todas as disciplinas", sem erro. Ele é independente do
   `disciplina_id`, que escolhe as médias.
-- **Exibição:** cada comentário mostra o nome de usuário do autor (nunca o
-  e-mail), a disciplina, a data em dd/mm/aaaa no horário de Brasília e
+- **Exibição:** não há nome, avatar, identificação do autor ou rótulo substituto.
+  O comentário mostra o texto, a disciplina, a data em dd/mm/aaaa no horário de Brasília e
   "(editado)" quando a atualização é posterior à criação. O texto é simples,
   escapado, com as quebras de linha preservadas.
 - **Publicar:** exige login (basta a conta Google; não se exige e-mail
   verificado). Texto de 2 a 1.000 caracteres e uma disciplina ministrada pelo
   professor. O autor vem da sessão. Há um limite de 10 comentários por hora por
   usuário, separado do das avaliações.
+- **Filtro automático:** ao publicar e ao editar, o texto é verificado no
+  servidor, depois da validação de tamanho. Dados pessoais (e-mail, telefone,
+  CPF e matrícula), links e palavrões ou ofensas são recusados com HTTP 400, o
+  texto digitado é preservado e a mensagem junto ao campo informa só a
+  categoria. Na edição, o comentário original não muda. Veja a
+  [especificação](COMENTARIOS.md).
 - **Editar e excluir:** só o autor, nas páginas `/comentarios/<id>/editar` e
   `/comentarios/<id>/excluir` (a exclusão passa por uma confirmação). O
   comentário de outra pessoa, ou inexistente, responde HTTP 404.
 - Comentários não alteram notas, médias, comparação nem ranking.
+- A autoria permanece privada no backend. A proteção da leitura direta da Data API
+  exige aplicar a [migração de privacidade](migrations/20261122155752_anonimato_comentarios.sql)
+  depois das migrações existentes. Login e permissões do autor continuam necessários.
 
-Reações, denúncia, moderação, ocultação e filtro automático não fazem parte
-desta entrega; veja as [regras dos comentários](COMENTARIOS.md).
+Reações, denúncia, moderação e ocultação não fazem parte desta entrega; veja as [regras dos comentários](COMENTARIOS.md).
 
 ## Perfil do usuário
 
@@ -234,12 +264,12 @@ catálogo. Se ninguém atingir o mínimo, a página informa esse estado.
 ## Funcionalidades planejadas
 
 Filtros por faixa de nota e volume de avaliações, outros gráficos,
-reações, ordenação de comentários escolhida pela pessoa, filtro automático,
-denúncias e moderação ainda não têm fluxo implementado.
+ordenação de comentários escolhida pela pessoa e moderação ainda não têm fluxo
+implementado. Reações e denúncias já estão disponíveis.
 
 A [proposta de banco para comentários](Modelo%20de%20Dados.md#6-proposta-tabela-comentarios)
-já está publicada. A [especificação](COMENTARIOS.md) reúne nome de usuário
-visível, reações, filtro e denúncias; o que ainda é proposta está indicado nela.
+já está publicada. A [especificação](COMENTARIOS.md) reúne anonimato,
+reações, filtro e denúncias; o que ainda é proposta está indicado nela.
 A proposta começou na
 [issue #116](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/116).
 

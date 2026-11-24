@@ -107,6 +107,8 @@ saída. `DECANATO DE PÓS-GRADUAÇÃO / DPG` **não** é ignorado, porque a regr
 
 - Saída `0`: nenhuma unidade falhou (unidade sem turmas é só aviso).
 - Saída `1`: alguma unidade foi pulada por erro técnico, ou a lista de unidades não carregou.
+- Saída `2`: a trava de conversão interrompeu a gravação, e nada foi gravado (veja
+  [Nomes em grafia comum](#nomes-em-grafia-comum)).
 
 ### Pasta `debug/`
 
@@ -122,7 +124,7 @@ página atual, então avise a equipe.
 
 ## 4. Manutenção do banco
 
-O script `scraper/manutencao_banco.py` usa o mesmo `.env` do scraper e tem dois
+O script `scraper/manutencao_banco.py` usa o mesmo `.env` do scraper e tem três
 subcomandos. Rode-os da raiz do repositório.
 
 ### Verificar duplicatas
@@ -137,7 +139,7 @@ Só faz leitura. Compara nomes sem diferenciar acentos, caixa ou espaços e list
 - disciplinas com o mesmo código;
 - disciplinas com o mesmo nome e códigos diferentes. Esse grupo é só informativo:
   são ofertas distintas de cada unidade (ex.: `FCE0006` e `FAR0248`, ambas
-  HEMATOLOGIA CLÍNICA) e não contam como duplicata.
+  Hematologia Clínica) e não contam como duplicata.
 
 Sai com código `0` quando não há duplicatas e `1` quando há.
 
@@ -159,6 +161,84 @@ formato do *Export to CSV* do Supabase. Só o catálogo público entra no backup
 Avaliações, comentários, perfis e e-mails verificados têm dados de usuários (LGPD) e
 não vão para o repositório. Para restaurar, importe os CSVs pelo painel do Supabase
 (*Table editor → Import data from CSV*), na ordem professores, disciplinas e turmas.
+
+### Nomes em grafia comum
+
+O SIGAA entrega nomes em CAIXA ALTA. Desde a issue #236, professores, disciplinas e
+departamentos são gravados em grafia comum, por exemplo `Maria da Costa`,
+`Introdução à Física II` e `Campus UnB Gama: Faculdade de Ciências e Tecnologias em
+Engenharia - Brasília`.
+
+**Regra (`grafia_comum` em `scraper/texto_sigaa.py`).**
+
+- Converte professor, disciplina e departamento, e mantém os acentos que vieram da fonte.
+- Só converte texto 100% em caixa alta (ignorando dígitos e pontuação). Se houver
+  qualquer letra minúscula, devolve o texto como veio, então aplicar de novo não muda nada.
+- Cada palavra fica com a primeira letra maiúscula. Preposições e partículas (`de`,
+  `da`, `do`, `e`, `em`, `para`, `com` etc.) ficam em minúsculo, exceto no início do
+  texto, depois de `:` e depois de ` - `.
+- Siglas ficam em maiúsculas (por exemplo `TCC`, `TV`, `LGBT`, `EJA`, `EDF`, `DPG`) e
+  `UNB` vira `UnB`, só em disciplina e departamento. Em departamento, a sigla depois de
+  `/` também fica em maiúsculas. Algarismos romanos (`I`, `II`, `IV`...) ficam em
+  maiúsculas só em disciplina; em nome de professor nunca (`Ivi`).
+- As listas `PARTICULAS` e `SIGLAS` ficam no topo de `scraper/texto_sigaa.py` e podem
+  ser editadas.
+- O importador converte **uma única vez**, na extração. O mesmo texto convertido vale
+  para o dicionário de professores, as turmas, o filtro `in_("nome")` e o upsert. A
+  seleção da unidade no formulário do SIGAA continua usando o texto cru.
+
+**Converter os nomes já gravados.**
+
+```bash
+python scraper/manutencao_banco.py converter-nomes            # simulação (padrão)
+python scraper/manutencao_banco.py converter-nomes --gravar   # aplica
+```
+
+- A simulação não grava nada. Mostra, para `professores.nome`, `professores.departamento`
+  e `disciplinas.nome`, o total de registros, quantos mudariam, quantos já estão corretos
+  e 10 exemplos de antes e depois.
+- Com `--gravar`, atualiza por `id`, um registro por vez, só os campos que mudam. É
+  idempotente: rodar de novo não altera nada.
+- Se algum nome de professor ficaria igual a outro (comparando exato e sem acento ou
+  caixa, antes e depois da conversão), lista os pares com os `id`s e **aborta sem gravar
+  nada**, mesmo com `--gravar`.
+- Não é atômico: não há transação entre as atualizações. Se uma falhar, o comando para e
+  informa quantas já foram gravadas; reexecutar é seguro. São cerca de 5 mil requisições,
+  então leva alguns minutos.
+- Registros que mudaram no banco entre a leitura e a gravação são pulados e reavaliados
+  na execução seguinte.
+
+**Trava do importador.** No modo `gravar`, antes de escrever qualquer coisa, o importador
+lê os professores do banco. Se existir um nome ainda em CAIXA ALTA que é diferente do nome
+que seria gravado, mas igual a ele sem acento e sem diferença de caixa, o importador para
+com `Importação interrompida: N conflito(s) ...`, mostra até 5 exemplos (`nome no banco ->
+nome que seria gravado`) e a instrução de rodar `converter-nomes --gravar`. Sai com código
+`2` e **nada é gravado** (nem professores, nem disciplinas, nem turmas). Não há opção para
+ignorar a trava. O `--dry-run` não consulta o banco e não é afetado.
+
+**Passo a passo operacional.**
+
+1. Gerar o backup: `python scraper/manutencao_banco.py backup`.
+2. Rodar a simulação: `python scraper/manutencao_banco.py converter-nomes`. Se houver
+   colisões, resolva-as antes de continuar.
+3. Aplicar: `python scraper/manutencao_banco.py converter-nomes --gravar`.
+4. Regenerar `docs/backup` com `python scraper/manutencao_banco.py backup` e versionar os CSVs.
+5. Aguardar até 5 minutos: o catálogo do app fica em cache por esse tempo.
+6. Só então disparar o workflow de atualização com `modo` = `gravar`.
+
+Se as listas `PARTICULAS` ou `SIGLAS` mudarem depois, rode `converter-nomes --gravar` de
+novo antes do próximo importador; senão o banco e o importador passam a gravar textos
+diferentes para o mesmo nome.
+
+**Limitações.**
+
+- Nomes sem acento na fonte continuam sem acento (`Estagio Supervisionado`).
+- Pares de disciplinas que só diferem por acento (como `Mecanica 1` e `Mecânica 1`) já
+  existiam, com códigos diferentes. O comando só os informa e não bloqueia.
+- Nomes escritos de forma diferente entre semestres (acento a mais, abreviação) não são
+  detectados pela trava.
+- A trava só confere no fim da coleta, depois de ler todas as unidades. Converta o banco
+  antes de disparar o workflow, para não perder a coleta.
 
 ## 5. Atualizar os dados a cada semestre (GitHub Actions)
 
@@ -248,6 +328,9 @@ clicar em **Review deployments → Approve and deploy**. Depois de aprovada, ela
 4. se o backup mudou, abre um PR `dados: backup do catálogo após coleta do SIGAA
    <ano>/<período>` a partir de uma branch `dados/sigaa-<ano>-<período>-<id>`.
 
+Antes do primeiro `gravar` com o importador que converte nomes, converta o banco (veja
+[Nomes em grafia comum](#nomes-em-grafia-comum)); senão a trava interrompe a gravação.
+
 **4. Revisar e mesclar o PR do backup.**
 
 O banco já foi atualizado no passo 3; o PR só versiona os CSVs. PRs abertos pelo
@@ -260,6 +343,7 @@ reabra o PR para dispará-los.
 | Sintoma | O que fazer |
 |---|---|
 | Execução vermelha com "unidades puladas por erro" | As unidades lidas **já foram gravadas**. Rode `gravar` de novo só com as unidades que falharam. |
+| Execução vermelha com "Importação interrompida: N conflito(s)" (saída `2`) | Nada foi gravado. Rode `python scraper/manutencao_banco.py converter-nomes --gravar` e dispare o workflow de novo. |
 | `SessionNotCreatedException` / versão do ChromeDriver | O workflow já define `CHROME_BINARY` e `CHROME_VERSION_MAIN` com o Google Chrome do runner (que também tem Chromium). Confira no passo "Apontar o scraper para o Google Chrome do runner" qual versão foi detectada e abra uma issue com o log. |
 | Nenhuma turma em nenhuma unidade | Confira `ano`/`periodo`. O SIGAA pode ainda não ter publicado o período, ou o layout mudou (veja os HTMLs em `debug/` no artifact). |
 | Passo "Abrir PR com o backup" falha | Falta a permissão do item 3 da [configuração única](#configuracao-unica-administrador-do-repositorio). Os dados já estão no banco. Rode o backup localmente (seção 4) ou ajuste a permissão e rode `gravar` de novo. |
