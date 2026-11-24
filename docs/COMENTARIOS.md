@@ -69,9 +69,8 @@ disponíveis na sua sessão.
 
 ## Reações
 
-Os ícones **👍** e **👎** ficam sempre visíveis em cada comentário para
-qualquer visitante. Cada ícone exibe seu total quando houver reações
-daquele tipo. Os nomes das ações ficam disponíveis para leitores de tela.
+Os botões de curtir e descurtir (polegares em SVG, #270) ficam sempre visíveis em
+cada comentário para qualquer visitante, cada um com seu total, inclusive 0. Os nomes das ações ficam disponíveis para leitores de tela.
 Para reagir a um comentário de outra pessoa, é preciso entrar na conta.
 Cada conta tem uma reação por comentário e pode trocar de opção ou tocar
 novamente para removê-la. O servidor
