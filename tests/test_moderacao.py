@@ -293,19 +293,27 @@ class TestModeracaoRepository(unittest.TestCase):
         decisoes = self.cliente.table('moderacoes_comentarios').select('*').eq('comentario_id', cid).execute().data
         self.assertEqual(decisoes, [])
 
-    def test_recusa_ocultar_ou_manter_comentario_ja_ocultado(self):
+    def test_comentario_ocultado_recusa_ocultar_novamente_mas_permite_manter_contestacao(self):
         cid = self.comentarios.criar(self.autor_id, 1, 10, 'Comentário que será ocultado.')
         self.moderacao.registrar_decisao(cid, self.moderador_id, 'ocultar', 'Ofensa comprovada.')
+        self.moderacao.criar_contestacao(cid, self.autor_id, 'Peço reavaliação.')
+        self.assertEqual([item['comentario_id'] for item in self.moderacao.listar_fila()], [cid])
 
         with self.assertRaises(ValueError):
             self.moderacao.registrar_decisao(cid, self.moderador_id, 'ocultar', 'Ocultar de novo.')
 
-        with self.assertRaises(ValueError):
-            self.moderacao.registrar_decisao(cid, self.moderador_id, 'manter', 'Manter oculto.')
-
+        # "manter" em comentário oculto nega a contestação, mantém oculto e esvazia a fila
+        self.assertTrue(
+            self.moderacao.registrar_decisao(
+                cid, self.moderador_id, 'manter', 'Contestação indeferida: ofensa mantida.'
+            )
+        )
+        self.assertEqual(self.moderacao.listar_fila(), [])
+        comentario = self.cliente.table('comentarios').select('*').eq('id', cid).execute().data[0]
+        self.assertIsNotNone(comentario['ocultado_em'])
+        self.assertIsNone(self.moderacao.buscar_contestacao_ativa(cid))
         decisoes = self.cliente.table('moderacoes_comentarios').select('*').eq('comentario_id', cid).execute().data
-        self.assertEqual(len(decisoes), 1)
-        self.assertEqual(decisoes[0]['acao'], 'ocultar')
+        self.assertEqual([d['acao'] for d in decisoes], ['ocultar', 'manter'])
     
 
 class TestOcultacaoERepublicacao(unittest.TestCase):
@@ -475,7 +483,7 @@ class TestRotasModeracao(unittest.TestCase):
         )
         self.assertEqual(resp_ok.status_code, 303)
 
-        # Comentário oculto não pode ser ocultado nem mantido
+        # Comentário oculto não pode ser ocultado de novo
         resp_ocultar_dup = self.web.post(
             f'/moderacao/comentarios/{c_denunciado}/decidir',
             data={'acao': 'ocultar', 'justificativa': 'Tentativa duplicada.'},
@@ -484,13 +492,14 @@ class TestRotasModeracao(unittest.TestCase):
         self.assertEqual(resp_ocultar_dup.status_code, 400)
         self.assertIn('acao', resp_ocultar_dup.get_json()['erros'])
 
+        # Comentário oculto pode receber "manter" (ex.: negar contestação mantendo oculto)
         resp_manter_oculto = self.web.post(
             f'/moderacao/comentarios/{c_denunciado}/decidir',
-            data={'acao': 'manter', 'justificativa': 'Tentativa em oculto.'},
+            data={'acao': 'manter', 'justificativa': 'Mantido oculto após revisão.'},
             headers={'Accept': 'application/json'},
         )
-        self.assertEqual(resp_manter_oculto.status_code, 400)
-        self.assertIn('acao', resp_manter_oculto.get_json()['erros'])
+        self.assertEqual(resp_manter_oculto.status_code, 200)
+        self.assertEqual(resp_manter_oculto.get_json()['acao'], 'manter')
 
     def test_fila_autorizacao_cobre_visitante_comum_e_moderador(self):
         _, c_denunciado = self._criar_comentario_denunciado()

@@ -1069,8 +1069,8 @@ class ModeracaoRepository:
         esta_oculto = existente[0].get('ocultado_em') is not None
         if acao == 'restaurar' and not esta_oculto:
             raise ValueError('Só é possível restaurar comentários que estejam ocultados.')
-        if acao in ('ocultar', 'manter') and esta_oculto:
-            raise ValueError('Só é possível ocultar ou manter comentários publicados.')
+        if acao == 'ocultar' and esta_oculto:
+            raise ValueError('Só é possível ocultar comentários publicados.')
 
         agora = datetime.now(timezone.utc).isoformat()
         self.cliente.table('moderacoes_comentarios').insert({

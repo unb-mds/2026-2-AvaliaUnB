@@ -83,6 +83,7 @@
                     <label for="acao-{{ item.comentario_id }}">Decisão</label>
                     <select id="acao-{{ item.comentario_id }}" name="acao" required>
                         {% if item.ocultado %}
+                        <option value="manter">Manter ocultado</option>
                         <option value="restaurar" selected>Restaurar comentário</option>
                         {% else %}
                         <option value="manter">Manter publicado</option>
