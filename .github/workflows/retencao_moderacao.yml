@@ -9,6 +9,7 @@ on:
 jobs:
   descartar-registros-expirados:
     runs-on: ubuntu-latest
+    environment: producao
     steps:
       - name: Checkout do repositório
         uses: actions/checkout@v4

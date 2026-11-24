@@ -199,6 +199,7 @@ class TestRotinaAgendadaRetencao(unittest.TestCase):
     def test_workflow_github_actions_agendado_diariamente(self):
         self.assertTrue(self.WORKFLOW.exists(), f'Workflow {self.WORKFLOW} deve existir.')
         conteudo = self.WORKFLOW.read_text(encoding='utf-8')
+        self.assertIn('environment: producao', conteudo)
         self.assertIn('schedule:', conteudo)
         self.assertIn('cron:', conteudo)
         self.assertIn('workflow_dispatch:', conteudo)
