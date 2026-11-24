@@ -82,9 +82,12 @@
 
                     <label for="acao-{{ item.comentario_id }}">Decisão</label>
                     <select id="acao-{{ item.comentario_id }}" name="acao" required>
+                        {% if item.ocultado %}
+                        <option value="restaurar" selected>Restaurar comentário</option>
+                        {% else %}
                         <option value="manter">Manter publicado</option>
-                        <option value="ocultar" {% if not item.ocultado %}selected{% endif %}>Ocultar da visão pública</option>
-                        <option value="restaurar" {% if item.ocultado %}selected{% endif %}>Restaurar comentário</option>
+                        <option value="ocultar" selected>Ocultar da visão pública</option>
+                        {% endif %}
                     </select>
 
                     <label for="justificativa-{{ item.comentario_id }}">Justificativa obrigatória</label>

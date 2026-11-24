@@ -31,6 +31,12 @@ def decidir(comentario_id):
     usuario = obter_usuario_atual()
     quer_json = request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html
     acao, justificativa, erros = controller.validar_decisao(request.form)
+    if not erros:
+        try:
+            controller.decidir(comentario_id, usuario, acao, justificativa)
+        except ValueError as erro:
+            erros = {'acao': str(erro)}
+
     if erros:
         if quer_json:
             return jsonify({'erros': erros}), 400
@@ -45,7 +51,6 @@ def decidir(comentario_id):
             dados_form=request.form,
         ), 400
 
-    controller.decidir(comentario_id, usuario, acao, justificativa)
     if quer_json:
         return jsonify({'mensagem': 'Decisão registrada com sucesso.', 'acao': acao}), 200
     return redirect(url_for('moderacao.fila'), code=303)

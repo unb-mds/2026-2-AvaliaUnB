@@ -990,7 +990,8 @@ class ModeracaoRepository:
     def registrar_decisao(self, comentario_id, moderador_id, acao, justificativa):
         """Registra decisão (manter/ocultar/restaurar) com justificativa e atualiza o comentário.
 
-        False se o comentário não existir; ValueError se ação ou justificativa forem inválidas.
+        False se o comentário não existir; ValueError se ação, justificativa ou transição
+        de estado forem inválidas.
         """
         acao, justificativa, erros = validar_decisao_moderacao(acao, justificativa)
         if erros:
@@ -998,7 +999,7 @@ class ModeracaoRepository:
 
         existente = (
             self.cliente.table('comentarios')
-            .select('id')
+            .select('id,ocultado_em')
             .eq('id', comentario_id)
             .limit(1)
             .execute()
@@ -1006,6 +1007,12 @@ class ModeracaoRepository:
         )
         if not existente:
             return False
+
+        esta_oculto = existente[0].get('ocultado_em') is not None
+        if acao == 'restaurar' and not esta_oculto:
+            raise ValueError('Só é possível restaurar comentários que estejam ocultados.')
+        if acao in ('ocultar', 'manter') and esta_oculto:
+            raise ValueError('Só é possível ocultar ou manter comentários publicados.')
 
         agora = datetime.now(timezone.utc).isoformat()
         self.cliente.table('moderacoes_comentarios').insert({

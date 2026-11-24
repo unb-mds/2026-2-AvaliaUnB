@@ -281,6 +281,28 @@ class TestModeracaoRepository(unittest.TestCase):
             [item['comentario_id'] for item in fila],
             [c_contestacao_antiga, c_denuncia_media, c_recente],
         )
+
+    def test_recusa_restaurar_comentario_publicado(self):
+        cid = self.comentarios.criar(self.autor_id, 1, 10, 'Comentário publicado.')
+        with self.assertRaises(ValueError):
+            self.moderacao.registrar_decisao(cid, self.moderador_id, 'restaurar', 'Tentativa inválida.')
+
+        decisoes = self.cliente.table('moderacoes_comentarios').select('*').eq('comentario_id', cid).execute().data
+        self.assertEqual(decisoes, [])
+
+    def test_recusa_ocultar_ou_manter_comentario_ja_ocultado(self):
+        cid = self.comentarios.criar(self.autor_id, 1, 10, 'Comentário que será ocultado.')
+        self.moderacao.registrar_decisao(cid, self.moderador_id, 'ocultar', 'Ofensa comprovada.')
+
+        with self.assertRaises(ValueError):
+            self.moderacao.registrar_decisao(cid, self.moderador_id, 'ocultar', 'Ocultar de novo.')
+
+        with self.assertRaises(ValueError):
+            self.moderacao.registrar_decisao(cid, self.moderador_id, 'manter', 'Manter oculto.')
+
+        decisoes = self.cliente.table('moderacoes_comentarios').select('*').eq('comentario_id', cid).execute().data
+        self.assertEqual(len(decisoes), 1)
+        self.assertEqual(decisoes[0]['acao'], 'ocultar')
     
 
 class TestOcultacaoERepublicacao(unittest.TestCase):
@@ -432,6 +454,41 @@ class TestRotasModeracao(unittest.TestCase):
         linha = self.cliente.table('comentarios').select('*').eq('id', c_denunciado).execute().data[0]
         self.assertIsNotNone(linha.get('ocultado_em'))
 
+    def test_post_decidir_recusa_acao_incompativel_com_estado_com_400(self):
+        _, c_denunciado = self._criar_comentario_denunciado()
+        self._logar('mod@gmail.com', 'moderadora', moderador=True)
+
+        # Comentário publicado não pode ser restaurado
+        resp_rest = self.web.post(
+            f'/moderacao/comentarios/{c_denunciado}/decidir',
+            data={'acao': 'restaurar', 'justificativa': 'Tentativa em publicado.'},
+        )
+        self.assertEqual(resp_rest.status_code, 400)
+
+        # Oculta o comentário (transição válida)
+        resp_ok = self.web.post(
+            f'/moderacao/comentarios/{c_denunciado}/decidir',
+            data={'acao': 'ocultar', 'justificativa': 'Ofensa comprovada.'},
+        )
+        self.assertEqual(resp_ok.status_code, 303)
+
+        # Comentário oculto não pode ser ocultado nem mantido
+        resp_ocultar_dup = self.web.post(
+            f'/moderacao/comentarios/{c_denunciado}/decidir',
+            data={'acao': 'ocultar', 'justificativa': 'Tentativa duplicada.'},
+            headers={'Accept': 'application/json'},
+        )
+        self.assertEqual(resp_ocultar_dup.status_code, 400)
+        self.assertIn('acao', resp_ocultar_dup.get_json()['erros'])
+
+        resp_manter_oculto = self.web.post(
+            f'/moderacao/comentarios/{c_denunciado}/decidir',
+            data={'acao': 'manter', 'justificativa': 'Tentativa em oculto.'},
+            headers={'Accept': 'application/json'},
+        )
+        self.assertEqual(resp_manter_oculto.status_code, 400)
+        self.assertIn('acao', resp_manter_oculto.get_json()['erros'])
+    
 
 class TestContestacaoAutor(unittest.TestCase):
     def setUp(self):
