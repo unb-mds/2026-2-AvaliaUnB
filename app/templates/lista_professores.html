@@ -30,10 +30,10 @@
     {% include '_topo.html' %}
 
     <main class="shell view page" id="conteudo">
-        <header><div class="eyebrow">Conheça melhor seus professores</div><h1 class="page-title">Explorar professores<span class="accent">.</span></h1><p class="page-lead">Encontre avaliações de estudantes da UnB. Use a pesquisa para filtrar por nome, disciplina ou departamento.</p></header>
+       <header><div class="eyebrow">Conheça melhor seus professores</div><h1 class="page-title">Explorar professores<span class="accent">.</span></h1><p class="page-lead">Encontre avaliações de estudantes da UnB. Use a pesquisa e os filtros para refinar por nome, disciplina, departamento, nota ou volume de avaliações.</p></header>
 
         <form method="get" action="{{ url_for('professores.listar') }}" class="search psearch busca-unificada" role="search">
-            {% for campo in ('nome', 'disciplina', 'departamento') %}{% if filtros[campo] %}
+            {% for campo in ('nome', 'disciplina', 'departamento', 'nota_min', 'nota_max', 'avaliacoes_min') %}{% if filtros[campo] %}
             <input type="hidden" name="{{ campo }}" value="{{ filtros[campo] }}">
             {% endif %}{% endfor %}
             <div class="campo campo-sugestoes" data-sugestoes="{{ url_for('professores.sugestoes') }}" data-contexto="consulta">
@@ -44,8 +44,15 @@
             <button type="submit" class="botao botao-primario">Buscar</button>
         </form>
 
-        {# Filtros vindos da home (nome) ou das sugestões (disciplina/departamento) #}
-        {% set ativos = [('Professor', filtros.nome), ('Disciplina', filtros.disciplina), ('Departamento', filtros.departamento)]|selectattr(1)|list %}
+        {# Filtros ativos na URL #}
+        {% set ativos = [
+            ('Professor', filtros.nome),
+            ('Disciplina', filtros.disciplina),
+            ('Departamento', filtros.departamento),
+            ('Nota mínima', filtros.nota_min),
+            ('Nota máxima', filtros.nota_max),
+            ('Mínimo de avaliações', filtros.avaliacoes_min),
+        ]|selectattr(1)|list %}
         {% if ativos or filtros.q %}
         <p class="filtros-ativos" role="status">
             Filtrando {% if ativos %}por {% for rotulo, valor in ativos %}{{ rotulo|lower }} “{{ valor }}”{% if not loop.last %} e {% endif %}{% endfor %}{% endif %}{% if filtros.q %}{% if ativos %} e {% endif %}pela busca “{{ filtros.q }}”{% endif %}.
@@ -53,11 +60,11 @@
         </p>
         {% endif %}
 
-        <form method="get" action="{{ url_for('professores.listar') }}" class="filtros filtro-departamento-consulta" aria-label="Filtrar por departamento">
+        <form method="get" action="{{ url_for('professores.listar') }}" class="filtros filtro-departamento-consulta filtro-avancado-consulta" aria-label="Filtrar professores">
             {% for campo in ('q', 'nome', 'disciplina') %}{% if filtros[campo] %}
             <input type="hidden" name="{{ campo }}" value="{{ filtros[campo] }}">
             {% endif %}{% endfor %}
-            <div class="campo">
+            <div class="campo campo-departamento">
                 <label for="departamento-consulta">Departamento</label>
                 <select id="departamento-consulta" name="departamento">
                     <option value=""{% if not filtros.departamento %} selected{% endif %}>Todos os departamentos</option>
@@ -69,7 +76,19 @@
                     {% endfor %}
                 </select>
             </div>
-            <button type="submit" class="botao botao-primario">Filtrar departamento</button>
+            <div class="campo campo-numero">
+                <label for="nota-min-consulta">Nota mínima</label>
+                <input type="number" id="nota-min-consulta" name="nota_min" value="{{ filtros.nota_min }}" min="0" max="5" step="0.1" inputmode="decimal" placeholder="Ex.: 4.0">
+            </div>
+            <div class="campo campo-numero">
+                <label for="nota-max-consulta">Nota máxima</label>
+                <input type="number" id="nota-max-consulta" name="nota_max" value="{{ filtros.nota_max }}" min="0" max="5" step="0.1" inputmode="decimal" placeholder="Ex.: 5.0">
+            </div>
+            <div class="campo campo-numero">
+                <label for="avaliacoes-min-consulta">Mínimo de avaliações</label>
+                <input type="number" id="avaliacoes-min-consulta" name="avaliacoes_min" value="{{ filtros.avaliacoes_min }}" min="1" step="1" inputmode="numeric" placeholder="Ex.: 5">
+            </div>
+            <button type="submit" class="botao botao-primario">Filtrar</button>
         </form>
         <div class="results">{{ catalogo|length }} {{ 'professor encontrado' if catalogo|length == 1 else 'professores encontrados' }} · Ordenados pela quantidade de avaliações.</div>
         {% if catalogo %}
@@ -142,22 +161,22 @@
             {% endfor %}
         </ul>
 
-        {% if total_paginas > 1 %}
+       {% if total_paginas > 1 %}
         <nav class="paginacao" aria-label="Paginação">
             {% if pagina > 1 %}
-            <a class="botao botao-secundario" rel="prev" href="{{ url_for('professores.listar', nome=filtros.nome, disciplina=filtros.disciplina, departamento=filtros.departamento, q=filtros.q, pagina=pagina - 1) }}">Anterior</a>
+            <a class="botao botao-secundario" rel="prev" href="{{ url_for('professores.listar', nome=filtros.nome, disciplina=filtros.disciplina, departamento=filtros.departamento, q=filtros.q, nota_min=filtros.nota_min or None, nota_max=filtros.nota_max or None, avaliacoes_min=filtros.avaliacoes_min or None, pagina=pagina - 1) }}">Anterior</a>
             {% else %}
             <span class="botao botao-secundario" aria-disabled="true">Anterior</span>
             {% endif %}
             <span class="paginacao-posicao" aria-current="page">Página {{ pagina }} de {{ total_paginas }}</span>
             {% if pagina < total_paginas %}
-            <a class="botao botao-secundario" rel="next" href="{{ url_for('professores.listar', nome=filtros.nome, disciplina=filtros.disciplina, departamento=filtros.departamento, q=filtros.q, pagina=pagina + 1) }}">Próxima</a>
+            <a class="botao botao-secundario" rel="next" href="{{ url_for('professores.listar', nome=filtros.nome, disciplina=filtros.disciplina, departamento=filtros.departamento, q=filtros.q, nota_min=filtros.nota_min or None, nota_max=filtros.nota_max or None, avaliacoes_min=filtros.avaliacoes_min or None, pagina=pagina + 1) }}">Próxima</a>
             {% else %}
             <span class="botao botao-secundario" aria-disabled="true">Próxima</span>
             {% endif %}
         </nav>
         {% endif %}
-        {% elif filtros.nome or filtros.disciplina or filtros.departamento or filtros.q %}
+        {% elif ativos or filtros.q %}
         <p class="mensagem" role="status">Nenhum professor encontrado para os filtros informados.
             <a href="{{ url_for('professores.listar') }}">Limpar filtros</a></p>
         {% else %}
