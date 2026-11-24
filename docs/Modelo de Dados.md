@@ -103,6 +103,16 @@ Vínculo entre professor e disciplina em um semestre. Alimentada pelo scraper.
 
 - **Unicidade:** `uq_turmas_prof_disc_ano_periodo` em `(professor_id, disciplina_id, ano, periodo)`. É a chave usada pelo scraper para não duplicar turmas.
 
+- **Histórico:** coletas de períodos diferentes acrescentam vínculos e não
+  substituem os anteriores. Reexecutar a coleta do mesmo período reaproveita a
+  chave composta. Professores e disciplinas de períodos antigos continuam
+  disponíveis e os vínculos das avaliações são preservados.
+- **Decisão #242 (proposta C):** manter esse esquema; o período ativo deverá ser
+  uma configuração explícita validada após a coleta, não uma exclusão de turmas
+  nem o maior par presente no banco. A configuração ainda não existe no SQL
+  versionado. O modelo e a validação dessa configuração ficam para a futura
+  implementação da [decisão](DECISAO_HISTORICO_SEMESTRES.md).
+
 ### 2.4 `perfis`
 
 Dados públicos do usuário, ligados ao Supabase Auth.
@@ -138,6 +148,12 @@ Avaliação por critérios objetivos, com notas inteiras de 1 a 5.
 - **Unicidade:** `uq_avaliacoes_usuario_prof_disc_semestre` em `(usuario_id, professor_id, disciplina_id, ano, periodo)`, desde a migração [`007_avaliacao_por_semestre.sql`](migrations/007_avaliacao_por_semestre.sql) (issue #252). Cada usuário avalia uma vez cada **turma cursada** (professor + disciplina + semestre). Antes dela, a chave era `uq_avaliacoes_usuario_prof_disc` em `(usuario_id, professor_id, disciplina_id)`, sem o semestre.
 - **Semestre:** `ano`/`periodo` é a turma escolhida no formulário. O backend confere que existe uma linha em `turmas` para o professor, a disciplina e o semestre (não há FK composta). Avaliações anteriores à #252 têm o semestre da turma mais recente do par na época.
 - **Índice:** `idx_avaliacoes_professor_semestre (professor_id, ano, periodo)` atende o filtro de semestre das médias e o gráfico de evolução.
+
+- **Retenção por semestre:** o período de oferta ativo não altera a chave,
+  o semestre cursado ou a visibilidade de avaliações antigas. Não é necessária
+  uma nova migração de avaliações para a opção C: a #252 já cobre a unicidade.
+  Comentários permanecem vinculados ao professor e à disciplina, sem coluna de
+  semestre cursado; a data de publicação não é equivalente à turma cursada.
 
 ### 2.6 View `vw_professor_disciplina`
 

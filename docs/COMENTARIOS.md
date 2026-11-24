@@ -109,10 +109,16 @@ e comentar depois. Cada ação tem seu próprio formulário e envio.
 
 - Criar, editar ou excluir comentário não altera notas, médias ou ranking.
 - Editar ou excluir uma avaliação não remove o comentário.
-- Cada estudante pode registrar uma avaliação por estrelas para cada par
-  de professor e disciplina. Pode avaliar o mesmo professor em Cálculo 1
-  e Cálculo 2. Para mudar a nota de Cálculo 1, edita a avaliação existente.
+- Desde a #252, cada estudante pode registrar uma avaliação por estrelas para
+  cada professor, disciplina e semestre cursado. Pode avaliar Cálculo 1 com o
+  mesmo professor em dois semestres distintos. Para mudar a nota de uma turma,
+  edita a avaliação correspondente.
   A pessoa pode publicar vários comentários para a mesma disciplina.
+
+Na [opção híbrida da #242](DECISAO_HISTORICO_SEMESTRES.md), os comentários
+históricos permanecem acessíveis, conforme as regras de moderação e exclusão.
+O filtro de oferta do catálogo não filtra nem apaga comentários. A data da
+publicação não representa necessariamente o semestre cursado.
 
 ## Fluxos para as telas da #112
 
@@ -308,7 +314,7 @@ rotina de descarte fica para a implementação após revisão do grupo.
 | C01 | Leitura pública e participação com conta comum, bastando estar logado (login só pelo Google), sem exigir e-mail verificado. Sem espaço ou perfil exclusivo para professores | Decidida; implementada na #167. Basta estar logado pelo Google, sem exigir e-mail verificado |
 | C02 | Disciplina obrigatória. A pessoa pode comentar quantas vezes quiser para o mesmo professor e disciplina | Decidida; já implementada. Pode comentar mais de uma vez no mesmo professor e disciplina, com limite de 10 por hora por usuário |
 | C03 | Texto simples de 2 a 1.000 caracteres após remover espaços em branco das extremidades | Decidida; já implementada e verificada. Texto de 2 a 1.000 caracteres, contados após remover espaços nas pontas e normalizar quebras de linha |
-| C04 | Estrelas e comentários são independentes e podem ser enviados em qualquer ordem. Uma avaliação por estrelas por estudante, professor e disciplina | Decidida; já implementada e verificada. Comentar não exige avaliar e avaliar não exige comentar; editar ou excluir um não altera o outro |
+| C04 | Estrelas e comentários são independentes e podem ser enviados em qualquer ordem. Uma avaliação por estrelas por estudante, professor, disciplina e semestre cursado (regra atualizada pela #252) | Decidida; já implementada e verificada. Comentar não exige avaliar e avaliar não exige comentar; editar ou excluir um não altera o outro |
 | C05 | Comentários anônimos para o público: sem identificação ou rótulo substituto. O vínculo com a conta permanece interno para os limites de participação, edição, exclusão e apuração de abusos | Decidida em reunião da equipe (revisa a #167). Implementação na #258; proteção da leitura direta depende da migração de privacidade |
 | C06 | Denúncia privada e moderação por responsáveis autorizados | Decidida. A denúncia já funciona (#215). A moderação é feita só por moderadores autorizados, sem acesso por padrão, em uma página restrita. Implementação da página na #216 |
 | C07 | Ocultação motivada, sem republicação automática por edição | Decidida. Comentário ocultado por moderação não volta por edição do autor; só um moderador restaura, com justificativa registrada. Implementação na #216 |
@@ -359,7 +365,8 @@ acompanham estas regras.
 - Uma conta autorizada a usar as duas ações consegue enviar só estrelas,
   publicar só um comentário ou fazer os dois em qualquer ordem.
 - A mesma conta pode avaliar com estrelas Cálculo 1 e Cálculo 2 com o mesmo
-  professor. Uma segunda avaliação por estrelas em Cálculo 1 é recusada.
+  professor. Uma segunda avaliação de Cálculo 1 no mesmo semestre é recusada;
+  uma avaliação de outro semestre cursado é permitida (#252).
 - As notas e os resultados de ranking e comparação não mudam por um comentário.
 - A identidade do denunciante e os dados privados não aparecem na listagem pública.
 - As telas cobrem vazio, envio, erro, edição, confirmação de exclusão e ocultação.
