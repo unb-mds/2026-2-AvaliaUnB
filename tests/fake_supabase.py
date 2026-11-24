@@ -61,6 +61,11 @@ class Consulta:
         self.filtros.append((coluna, _Predicado(lambda v: v is None)))
         return self
 
+    def lt(self, coluna, valor):
+        """Como o PostgREST: lt(col, valor) filtra col < valor (ignora None)."""
+        self.filtros.append((coluna, _Predicado(lambda v: v is not None and v < valor)))
+        return self
+
     def order(self, coluna, desc=False):
         self.ordem.append(coluna)
         if desc:
@@ -270,6 +275,50 @@ class ClienteFalso:
     def table(self, nome):
         return Consulta(self.tabelas, nome, self.upserts)
 
+    def rpc(self, nome_funcao, params=None):
+        if nome_funcao != 'descartar_registros_moderacao_expirados':
+            raise NotImplementedError(f'RPC não suportada no fake: {nome_funcao}')
+        params = params or {}
+        dias = params.get('dias_retencao', 90)
+        if not isinstance(dias, int) or isinstance(dias, bool) or dias < 1:
+            raise ValueError('dias_retencao deve ser um inteiro positivo')
+        limite = (datetime.now(timezone.utc) - timedelta(days=dias)).isoformat()
+
+        ocultos = {
+            c['id']
+            for c in self.tabelas.get('comentarios', [])
+            if c.get('ocultado_em') is not None
+        }
+
+        def _descartar(tabela, coluna_data):
+            linhas = self.tabelas[tabela]
+            removidas = [
+                l for l in linhas
+                if l.get(coluna_data) is not None
+                and l.get(coluna_data) < limite
+                and l.get('comentario_id') not in ocultos
+            ]
+            ids_removidos = {id(l) for l in removidas}
+            linhas[:] = [l for l in linhas if id(l) not in ids_removidos]
+            return len(removidas)
+
+        qtd_denuncias = _descartar('denuncias_comentarios', 'resolvida_em')
+        qtd_moderacoes = _descartar('moderacoes_comentarios', 'criado_em')
+        qtd_contestacoes = _descartar('contestacoes_comentarios', 'resolvida_em')
+
+        class _ChamadaRpc:
+            def __init__(self, dados):
+                self._dados = dados
+
+            def execute(self):
+                return Resposta(self._dados)
+
+        return _ChamadaRpc({
+            'denuncias_removidas': qtd_denuncias,
+            'moderacoes_removidas': qtd_moderacoes,
+            'contestacoes_removidas': qtd_contestacoes,
+            'limite_utc': limite,
+        })
 
 VERIFICADOR_TESTE = 'verificador-de-teste'
 

@@ -1270,6 +1270,28 @@ class ModeracaoRepository:
             raise
         return True
 
+    def descartar_registros_expirados(self, dias_retencao=90):
+        """Descarta registros encerrados há mais de `dias_retencao` dias via função SQL.
+
+        Delega a regra para `descartar_registros_moderacao_expirados` (migração 009),
+        mantendo uma única implementação para o expurgo LGPD (issue #217).
+        """
+        if not isinstance(dias_retencao, int) or isinstance(dias_retencao, bool) or dias_retencao < 1:
+            raise ValueError('dias_retencao deve ser um inteiro positivo.')
+
+        resultado = (
+            self.cliente.rpc(
+                'descartar_registros_moderacao_expirados',
+                {'dias_retencao': dias_retencao},
+            )
+            .execute()
+            .data
+        )
+        return {
+            'dias_retencao': dias_retencao,
+            **(resultado or {}),
+        }
+    
     
 class FavoritoRepository:
     """Professores favoritos de cada usuário (tabela favoritos, issue #223).

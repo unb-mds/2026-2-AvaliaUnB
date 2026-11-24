@@ -1,0 +1,29 @@
+name: Retenção LGPD - Moderação (90 dias)
+
+on:
+  schedule:
+    # Executa diariamente às 06:00 UTC (03:00 horário de Brasília)
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  descartar-registros-expirados:
+    runs-on: ubuntu-latest
+    environment: producao
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Executar descarte de registros encerrados há mais de 90 dias
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python scripts/descartar_moderacao_90_dias.py --dias 90
