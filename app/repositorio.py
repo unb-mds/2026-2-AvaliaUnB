@@ -673,21 +673,66 @@ class ComentarioRepository:
         except TypeError:      # uma com fuso e outra sem
             return False
 
-    def listar_por_professor(self, professor_id, disciplina_id=None, usuario_atual_id=None):
-        """(comentarios, ha_mais): os LIMITE_COMENTARIOS mais recentes não ocultados.
-
-        disciplina_id=None lista todas as disciplinas. `ha_mais` é True quando existem
-        comentários além do limite (busca-se um a mais só para saber isso).
-        """
-        consulta = (self.cliente.table('comentarios')
-                    .select('id,usuario_id,disciplina_id,texto,criado_em,atualizado_em')
+    def _consulta_visiveis(self, colunas, professor_id, disciplina_id):
+        consulta = (self.cliente.table('comentarios').select(colunas)
                     .eq('professor_id', professor_id).is_('ocultado_em', 'null'))
         if disciplina_id is not None:
             consulta = consulta.eq('disciplina_id', disciplina_id)
-        linhas = (consulta.order('criado_em', desc=True).order('id', desc=True)
-                  .limit(LIMITE_COMENTARIOS + 1).execute().data)
-        ha_mais = len(linhas) > LIMITE_COMENTARIOS
-        linhas = linhas[:LIMITE_COMENTARIOS]
+        return consulta
+
+    def _linhas_por_reacao(self, professor_id, disciplina_id, ordem):
+        """(linhas, ha_mais) dos LIMITE_COMENTARIOS primeiros nas ordens 'curtidos' e 'reacoes'.
+
+        O corte vem depois da ordem, então busca todos os candidatos (só id, mais recentes
+        primeiro), conta as reações e ordena em Python. O sort é estável: em empate de
+        contagem vale a ordem por data e id decrescentes da consulta.
+        """
+        candidatos, inicio = [], 0
+        while True:
+            pagina = (self._consulta_visiveis('id', professor_id, disciplina_id)
+                      .order('criado_em', desc=True).order('id', desc=True)
+                      .range(inicio, inicio + TAMANHO_PAGINA - 1).execute().data)
+            candidatos += [l['id'] for l in pagina]
+            if len(pagina) < TAMANHO_PAGINA:
+                break
+            inicio += TAMANHO_PAGINA
+        resumo = ReacaoRepository(self.cliente).resumo(candidatos)
+
+        def pontos(comentario_id):
+            r = resumo[comentario_id]
+            return r['curtidas'] if ordem == 'curtidos' else r['curtidas'] + r['descurtidas']
+
+        candidatos.sort(key=pontos, reverse=True)
+        ha_mais = len(candidatos) > LIMITE_COMENTARIOS
+        escolhidos = candidatos[:LIMITE_COMENTARIOS]
+        if not escolhidos:
+            return [], False
+        linhas = {l['id']: l for l in
+                  self._consulta_visiveis('id,usuario_id,disciplina_id,texto,criado_em,atualizado_em',
+                                          professor_id, disciplina_id)
+                  .in_('id', escolhidos).execute().data}
+        return [linhas[i] for i in escolhidos if i in linhas], ha_mais
+
+    def listar_por_professor(self, professor_id, disciplina_id=None, usuario_atual_id=None,
+                             ordem='recentes'):
+        """(comentarios, ha_mais): os LIMITE_COMENTARIOS primeiros não ocultados na ordem pedida.
+
+        ordem: 'recentes' (padrão; qualquer valor desconhecido também), 'antigos', 'curtidos'
+        (mais 👍) ou 'reacoes' (mais 👍 + 👎). Empate nas ordens por reação: mais recentes
+        primeiro. disciplina_id=None lista todas as disciplinas. `ha_mais` é True quando
+        existem comentários além do limite (busca-se um a mais só para saber isso).
+        """
+        if ordem in ('curtidos', 'reacoes'):
+            linhas, ha_mais = self._linhas_por_reacao(professor_id, disciplina_id, ordem)
+        else:
+            decrescente = ordem != 'antigos'
+            linhas = (self._consulta_visiveis(
+                          'id,usuario_id,disciplina_id,texto,criado_em,atualizado_em',
+                          professor_id, disciplina_id)
+                      .order('criado_em', desc=decrescente).order('id', desc=decrescente)
+                      .limit(LIMITE_COMENTARIOS + 1).execute().data)
+            ha_mais = len(linhas) > LIMITE_COMENTARIOS
+            linhas = linhas[:LIMITE_COMENTARIOS]
         if not linhas:
             return [], False
 

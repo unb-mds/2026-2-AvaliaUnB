@@ -2,8 +2,7 @@
 
 **Protótipos da #112. As telas de listar, escrever, editar e apagar já existem
 no perfil do professor (issue #167), com as diferenças indicadas abaixo.**
-Reações, seletor de ordenação, denúncia e ocultação continuam sendo
-protótipos, assim como os estados **Verificando** e **Em revisão** dos
+Ocultação continua sendo protótipo, assim como os estados **Verificando** e **Em revisão** dos
 desenhos de escrever e editar. O filtro automático já existe (issue #214): na
 implementação, ele responde com um aviso de erro junto ao campo e o texto
 preservado, ou publica direto.
@@ -33,11 +32,11 @@ O seletor **Ordenar por** abre em **Mais recentes**. Também oferece
 **Mais curtidos**, **Mais antigos** e **Mais reações**, que soma curtidas
 e descurtidas.
 
-Na implementação, a lista tem ordem fixa, dos mais recentes para os mais
-antigos, e o seletor fica para a issue #213. No lugar dele há o filtro
-**Disciplina**, com "Todas as disciplinas" por padrão. A lista mostra os 50
-comentários mais recentes e, quando há mais, a frase "Mostrando os 50
-comentários mais recentes." A data aparece em dd/mm/aaaa, no horário de
+Na implementação (issue #213), o seletor fica ao lado do filtro
+**Disciplina**, com "Todas as disciplinas" por padrão, e usa o parâmetro
+`ordem`; um valor desconhecido abre em **Mais recentes**. A lista mostra os 50
+primeiros comentários na ordem escolhida e, quando há mais, a frase "Mostrando
+os 50 primeiros comentários." A data aparece em dd/mm/aaaa, no horário de
 Brasília, com "(editado)" nos comentários alterados, e a ação da própria conta
 se chama **Excluir**.
 

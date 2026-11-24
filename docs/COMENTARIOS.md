@@ -5,8 +5,8 @@ documento descreve o comportamento dos comentários, das reações e da
 moderação. A primeira parte já está implementada no perfil do professor
 (issue #167): listar, filtrar por disciplina, publicar, editar e excluir o
 próprio comentário. A denúncia está implementada na issue #215, o filtro automático
-na issue #214 e as reações na #212. Ordenação escolhida pela pessoa, moderação e ocultação
-continuam sendo planos futuros (issues #213, #216 e #217). As decisões C01 a C11,
+na issue #214, as reações na #212 e a ordenação escolhida pela pessoa na #213.
+Moderação e ocultação continuam sendo planos futuros (issues #216 e #217). As decisões C01 a C11,
 na [tabela do final do documento](#decisoes-para-o-grupo-revisar), foram
 decididas pela equipe; os pontos ainda a confirmar estão indicados nelas.
 
@@ -50,8 +50,8 @@ Uma conta de comentários não concede acesso à moderação.
 | Tamanho | De 2 a 1.000 caracteres após remover espaços, tabulações e quebras de linha das extremidades |
 | Formato | Texto simples; HTML e Markdown não são interpretados |
 | Identificação pública | Sem nome de usuário, nome completo, e-mail, avatar ou rótulo substituto. O vínculo com a conta permanece privado no backend. A leitura direta pela API exige a migração de privacidade da #258 |
-| Ordem da lista | Mais recentes primeiro, em ordem fixa. As demais ordens ficam para a issue #213 |
-| Quantidade exibida | Os 50 comentários mais recentes, com o filtro de disciplina já aplicado. A página avisa quando há mais; o "ver mais" fica para depois |
+| Ordem da lista | Mais recentes (padrão), Mais antigos, Mais curtidos ou Mais reações, escolhida pela pessoa com o parâmetro `ordem` (#213) |
+| Quantidade exibida | Os 50 primeiros comentários na ordem escolhida, com o filtro de disciplina já aplicado. A página avisa quando há mais ("Mostrando os 50 primeiros comentários."); não há paginação e o "ver mais" fica para depois |
 | Filtro | Por disciplina, no perfil do professor. "Todas as disciplinas" é o padrão e um valor inválido volta a "todas" |
 | Datas | Exibir a data da primeira publicação em cada comentário, em dd/mm/aaaa no horário de Brasília, e indicar com "(editado)" quando a atualização for posterior à criação |
 
@@ -79,14 +79,17 @@ confere a sessão, impede votos no próprio texto e grava a reação com unicida
 por conta e comentário. A lista mostra as contagens, sem revelar quem reagiu.
 O formulário envia POST com CSRF para `/comentarios/<id>/reacao`: `valor=1`
 para curtir, `-1` para descurtir e `0` para retirar. A página retorna ao perfil
-preservando o filtro. O autor vê os totais sem controles de voto; visitantes
-são encaminhados ao login. As notas e o ranking são independentes. A ordenação
-por reação fica para a #213.
+preservando o filtro e a ordem. O autor vê os totais sem controles de voto; visitantes
+são encaminhados ao login. As notas e o ranking são independentes. As ordens
+por reação (#213) usam essas contagens.
 
 ## Ordenação dos comentários
 
-Hoje a lista usa só a ordem Mais recentes, fixa. A escolha da ordem pela
-pessoa fica para a issue #213, inclusive as ordens por reação.
+A pessoa escolhe a ordem no seletor **Ordenar por**, ao lado do filtro de
+disciplina (issue #213). A escolha vai no parâmetro de consulta `ordem`, com os
+valores `recentes`, `antigos`, `curtidos` e `reacoes`; qualquer outro valor, ou
+a ausência dele, usa Mais recentes, sem erro. A ordenação é feita no servidor e
+combina com o filtro de disciplina.
 
 | Opção | Como a lista é ordenada |
 |---|---|
@@ -99,6 +102,15 @@ Em empate por curtidas ou reações, o comentário mais recente vem primeiro.
 Se dois comentários tiverem a mesma data e hora de publicação, o
 identificador desempata na mesma direção da ordenação por data. Editar um comentário
 preserva sua data original.
+
+Mais curtidos conta só as curtidas (👍); Mais reações soma curtidas e
+descurtidas (👍 + 👎). Comentários sem reação vêm depois dos que têm, também
+do mais recente para o mais antigo. Não há paginação: cada ordem mostra os 50
+primeiros comentários, escolhidos depois de ordenar todos os comentários
+publicados do professor (e da disciplina filtrada). Quando há mais de 50, a
+página avisa "Mostrando os 50 primeiros comentários." Comentários ocultados
+ficam fora da lista e da contagem. Publicar, editar, excluir, denunciar e
+reagir voltam ao perfil com a mesma ordem e o mesmo filtro.
 
 ## Estrelas e comentários
 
@@ -132,9 +144,10 @@ Cada relato exibe sua disciplina. Quem já comentou pode editar os próprios
 textos e escrever outro relato para a mesma disciplina ou para outra
 ministrada pelo professor.
 
-A lista mostra os 50 comentários mais recentes e tem um filtro **Disciplina**,
-com "Todas as disciplinas" por padrão. Quando há mais de 50, a página avisa
-"Mostrando os 50 comentários mais recentes."
+A lista mostra os 50 primeiros comentários na ordem escolhida e tem um filtro
+**Disciplina**, com "Todas as disciplinas" por padrão, e o seletor **Ordenar
+por**, que abre em Mais recentes. Quando há mais de 50, a página avisa
+"Mostrando os 50 primeiros comentários."
 
 O formulário informa: "Sua identificação não aparece junto do comentário.
 Evite incluir dados pessoais no texto." A listagem não mostra identificação
@@ -321,7 +334,7 @@ rotina de descarte fica para a implementação após revisão do grupo.
 | C08 | Comentários publicados na hora. A tela de moderação mostra somente os denunciados, e o moderador pode manter, ocultar da visão pública ou restaurar, sempre com justificativa. Todos os integrantes da equipe têm acesso, e toda ação registra quem a fez e a justificativa. Primeira análise em até três dias úteis, formulário privado de contestação e retenção de até 90 dias após o encerramento | Decidida e implementada (#216; retenção na #217). Comentários são publicados na hora; a tela /moderacao mostra somente os denunciados e permite manter, ocultar ou restaurar com justificativa e registro do moderador. O autor pode contestar em /comentarios/<id>/contestar. |
 | C09 | Ícones 👍 e 👎 sempre visíveis, com números apenas nas reações recebidas. Uma reação por conta e comentário, com opção de trocar ou remover | Implementada na #212 |
 | C10 | Filtrar no servidor antes de publicar ou editar. Bloquear violações claras e deixar os casos incertos para a moderação, que atua mediante denúncia | Decidida e implementada (#214; veja "Regras decididas (C10)" acima): rejeita sem salvar, com aviso para reescrever; sem IA. Vale ao publicar e ao editar |
-| C11 | Data em cada comentário. Ordenação por Mais recentes, Mais curtidos, Mais antigos ou Mais reações | Decidida. Por enquanto, mais recentes primeiro, com a data em cada comentário (#167). As outras ordens (Mais antigos e as ordens por reação) ficam para a #213 |
+| C11 | Data em cada comentário. Ordenação por Mais recentes, Mais curtidos, Mais antigos ou Mais reações | Decidida e implementada: data em cada comentário (#167) e as quatro ordens (#213). Mais recentes é o padrão |
 
 As decisões podem ser revisadas no PR ou na
 [issue #116](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/116).
@@ -378,5 +391,5 @@ Documentos relacionados: [modelo de dados](Modelo%20de%20Dados.md),
 [protótipos](TELAS_COMENTARIOS.md), [frontend](FRONTEND.md) e
 [cibersegurança](CIBERSEGURANCA.md). Os comentários (listar, filtrar por
 disciplina, publicar, editar e excluir) já estão ativos no perfil do professor
-desde a #167 e o filtro automático desde a #214; reações (#212) e denúncia (#215) também
-estão implementadas. Ordenação e moderação ficam nas demais issues.
+desde a #167 e o filtro automático desde a #214; reações (#212), denúncia (#215) e
+ordenação (#213) também estão implementadas. A moderação fica nas demais issues.

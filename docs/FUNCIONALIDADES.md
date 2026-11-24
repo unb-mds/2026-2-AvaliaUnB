@@ -6,7 +6,7 @@ No próprio comentário, **Editar** e **Excluir** ficam juntos, como botões
 em contorno com área de toque mínima de 44 px. Só o autor autenticado recebe
 essas ações. Editar abre o texto e a disciplina já preenchidos; salvar ou
 cancelar retorna aos comentários do professor, mantendo o filtro de comentários,
-a disciplina das médias e o destino de volta à busca. Excluir continua exigindo
+a ordem, a disciplina das médias e o destino de volta à busca. Excluir continua exigindo
 confirmação.
 
 O perfil pessoal (`/perfil`) também oferece **Meus comentários**, com os 50
@@ -170,9 +170,14 @@ avaliações de produção até 21/11/2026 estão em 2026/2).
 
 O perfil do professor tem uma seção **Comentários**, separada das notas.
 
-- **Listagem:** mostra os 50 comentários mais recentes (ordem fixa: mais
-  recentes primeiro) e avisa "Mostrando os 50 comentários mais recentes." quando
-  há mais. O "ver mais" e a escolha da ordem (issue #213) ficam para depois.
+- **Listagem:** mostra os 50 primeiros comentários na ordem escolhida e avisa
+  "Mostrando os 50 primeiros comentários." quando há mais. Não há paginação; o
+  "ver mais" fica para depois.
+- **Ordem:** o parâmetro `ordem` aceita `recentes` (padrão), `antigos`, `curtidos`
+  (maior número de 👍) e `reacoes` (maior total de 👍 + 👎). Em empate, o mais
+  recente vem primeiro; em `antigos`, o mais antigo. Valor inválido volta a
+  `recentes`, sem erro. Combina com `comentarios_disciplina` e é mantida ao
+  publicar, editar, excluir, denunciar e reagir (issue #213).
 - **Filtro:** o parâmetro `comentarios_disciplina` filtra por disciplina. Vazio ou
   inválido volta a "Todas as disciplinas", sem erro. Ele é independente do
   `disciplina_id`, que escolhe as médias.
@@ -278,9 +283,9 @@ catálogo. Se ninguém atingir o mínimo, a página informa esse estado.
 
 ## Funcionalidades planejadas
 
-Filtros por faixa de nota e volume de avaliações, outros gráficos,
-ordenação de comentários escolhida pela pessoa e moderação ainda não têm fluxo
-implementado. Reações e denúncias já estão disponíveis.
+Filtros por faixa de nota e volume de avaliações, outros gráficos
+e moderação ainda não têm fluxo implementado. Reações, denúncias e a
+ordenação de comentários escolhida pela pessoa já estão disponíveis.
 
 A [proposta de banco para comentários](Modelo%20de%20Dados.md#6-proposta-tabela-comentarios)
 já está publicada. A [especificação](COMENTARIOS.md) reúne anonimato,

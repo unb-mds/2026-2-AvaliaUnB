@@ -445,6 +445,14 @@ def filtro_de_comentarios(bruto, disciplinas):
     return disciplina_id if any(d['id'] == disciplina_id for d in disciplinas) else None
 
 
+ORDENS_COMENTARIOS = ('recentes', 'antigos', 'curtidos', 'reacoes')
+
+
+def ordem_de_comentarios(bruto):
+    """Ordem da lista de comentários: o valor se for conhecido, senão 'recentes' (sem erro)."""
+    return bruto if bruto in ORDENS_COMENTARIOS else 'recentes'
+
+
 def disciplina_das_medias(disciplinas, bruto):
     """Disciplina das médias a mostrar depois de um POST: a informada se for do professor,
     senão a primeira (sem 404, ao contrário de carregar_perfil)."""
@@ -558,15 +566,17 @@ def definir_reacao(comentario_id, usuario, valor):
     return comentario['professor_id']
 
 
-def carregar_comentarios(professor_id, disciplinas, filtro_bruto, usuario):
+def carregar_comentarios(professor_id, disciplinas, filtro_bruto, usuario, ordem_bruta=None):
     """Contexto da seção de comentários do perfil. Nunca levanta: se a consulta falhar,
     registra o erro e devolve erro_comentarios=True para o resto do perfil continuar."""
     filtro = filtro_de_comentarios(filtro_bruto, disciplinas)
+    ordem = ordem_de_comentarios(ordem_bruta)
     contexto = dict(comentarios=[], ha_mais=False, filtro_comentarios=filtro,
+                    ordem_comentarios=ordem,
                     erro_comentarios=False, limite_comentarios=LIMITE_COMENTARIOS)
     try:
         comentarios, ha_mais = repositorios().comentarios.listar_por_professor(
-            professor_id, filtro, usuario['id'] if usuario else None)
+            professor_id, filtro, usuario['id'] if usuario else None, ordem)
         resumo = repositorios().reacoes.resumo([c['id'] for c in comentarios],
                                               usuario['id'] if usuario else None)
         for comentario in comentarios:
