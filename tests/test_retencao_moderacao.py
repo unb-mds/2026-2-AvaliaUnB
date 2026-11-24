@@ -35,6 +35,10 @@ class TestMigracaoRetencaoModeracao(unittest.TestCase):
         self.assertIn('idx_moderacoes_criado_retencao', sql)
         self.assertIn('idx_contestacoes_resolvidas_retencao', sql)
 
+    def test_preserva_registros_enquanto_comentario_estiver_oculto(self):
+        sql = self._ler_sql()
+        self.assertIn('ocultado_em is not null', sql)
+        self.assertGreaterEqual(sql.count('ocultado_em is not null'), 3)
 
 class TestClienteFalsoRetencao(unittest.TestCase):
     def test_suporta_lt_e_rpc_descarte_90_dias(self):
@@ -228,6 +232,66 @@ class TestCriteriosAceiteRetencao(unittest.TestCase):
         self.assertEqual(resp.data['moderacoes_removidas'], 1)
         self.assertEqual(len(cliente.tabelas['comentarios']), 1)
 
+    def test_rpc_preserva_registros_com_mais_de_90_dias_enquanto_comentario_estiver_oculto(self):
+        from datetime import datetime, timedelta, timezone
+        from tests.fake_supabase import ClienteFalso
+
+        cliente = ClienteFalso()
+        ha_100_dias = (datetime.now(timezone.utc) - timedelta(days=100)).isoformat()
+
+        # Comentário 1: continua oculto há 100 dias (registros DEVEM ser preservados)
+        # Comentário 2: publicado há 100 dias (registros DEVEM ser descartados)
+        cliente.tabelas['comentarios'].extend([
+            {
+                'id': 1, 'usuario_id': 'u1', 'professor_id': 1, 'disciplina_id': 10,
+                'texto': 'Comentário ainda oculto', 'criado_em': ha_100_dias, 'ocultado_em': ha_100_dias,
+            },
+            {
+                'id': 2, 'usuario_id': 'u2', 'professor_id': 1, 'disciplina_id': 10,
+                'texto': 'Comentário publicado', 'criado_em': ha_100_dias, 'ocultado_em': None,
+            },
+        ])
+        cliente.tabelas['denuncias_comentarios'].extend([
+            {
+                'id': 10, 'comentario_id': 1, 'usuario_id': 'u3', 'motivo': 'ofensa',
+                'criado_em': ha_100_dias, 'resolvida_em': ha_100_dias,
+            },
+            {
+                'id': 11, 'comentario_id': 2, 'usuario_id': 'u3', 'motivo': 'spam',
+                'criado_em': ha_100_dias, 'resolvida_em': ha_100_dias,
+            },
+        ])
+        cliente.tabelas['moderacoes_comentarios'].extend([
+            {
+                'id': 20, 'comentario_id': 1, 'moderador_id': 'm1', 'acao': 'ocultar',
+                'justificativa': 'Ofensa grave', 'criado_em': ha_100_dias,
+            },
+            {
+                'id': 21, 'comentario_id': 2, 'moderador_id': 'm1', 'acao': 'manter',
+                'justificativa': 'Improcedente', 'criado_em': ha_100_dias,
+            },
+        ])
+        cliente.tabelas['contestacoes_comentarios'].extend([
+            {
+                'id': 30, 'comentario_id': 1, 'usuario_id': 'u1', 'justificativa': 'Contestação antiga',
+                'criado_em': ha_100_dias, 'resolvida_em': ha_100_dias,
+            },
+            {
+                'id': 31, 'comentario_id': 2, 'usuario_id': 'u2', 'justificativa': 'Contestação antiga',
+                'criado_em': ha_100_dias, 'resolvida_em': ha_100_dias,
+            },
+        ])
+
+        resp = cliente.rpc('descartar_registros_moderacao_expirados', {'dias_retencao': 90}).execute()
+        self.assertEqual(resp.data['denuncias_removidas'], 1)
+        self.assertEqual(resp.data['moderacoes_removidas'], 1)
+        self.assertEqual(resp.data['contestacoes_removidas'], 1)
+
+        # Todos os registros do comentário oculto (id=1) permanecem intactos
+        self.assertEqual([d['id'] for d in cliente.tabelas['denuncias_comentarios']], [10])
+        self.assertEqual([m['id'] for m in cliente.tabelas['moderacoes_comentarios']], [20])
+        self.assertEqual([c['id'] for c in cliente.tabelas['contestacoes_comentarios']], [30])
+        
 
 class TestPoliticaPrivacidadeRetencao(unittest.TestCase):
     def test_pagina_privacidade_documenta_retencao_de_90_dias(self):

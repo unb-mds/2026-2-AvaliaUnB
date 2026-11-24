@@ -280,12 +280,31 @@ class ClienteFalso:
             raise NotImplementedError(f'RPC não suportada no fake: {nome_funcao}')
         params = params or {}
         dias = params.get('dias_retencao', 90)
-        if not isinstance(dias, int) or dias < 1:
+        if not isinstance(dias, int) or isinstance(dias, bool) or dias < 1:
             raise ValueError('dias_retencao deve ser um inteiro positivo')
         limite = (datetime.now(timezone.utc) - timedelta(days=dias)).isoformat()
-        denuncias = self.table('denuncias_comentarios').delete().lt('resolvida_em', limite).execute().data
-        moderacoes = self.table('moderacoes_comentarios').delete().lt('criado_em', limite).execute().data
-        contestacoes = self.table('contestacoes_comentarios').delete().lt('resolvida_em', limite).execute().data
+
+        ocultos = {
+            c['id']
+            for c in self.tabelas.get('comentarios', [])
+            if c.get('ocultado_em') is not None
+        }
+
+        def _descartar(tabela, coluna_data):
+            linhas = self.tabelas[tabela]
+            removidas = [
+                l for l in linhas
+                if l.get(coluna_data) is not None
+                and l.get(coluna_data) < limite
+                and l.get('comentario_id') not in ocultos
+            ]
+            ids_removidos = {id(l) for l in removidas}
+            linhas[:] = [l for l in linhas if id(l) not in ids_removidos]
+            return len(removidas)
+
+        qtd_denuncias = _descartar('denuncias_comentarios', 'resolvida_em')
+        qtd_moderacoes = _descartar('moderacoes_comentarios', 'criado_em')
+        qtd_contestacoes = _descartar('contestacoes_comentarios', 'resolvida_em')
 
         class _ChamadaRpc:
             def __init__(self, dados):
@@ -295,9 +314,9 @@ class ClienteFalso:
                 return Resposta(self._dados)
 
         return _ChamadaRpc({
-            'denuncias_removidas': len(denuncias),
-            'moderacoes_removidas': len(moderacoes),
-            'contestacoes_removidas': len(contestacoes),
+            'denuncias_removidas': qtd_denuncias,
+            'moderacoes_removidas': qtd_moderacoes,
+            'contestacoes_removidas': qtd_contestacoes,
             'limite_utc': limite,
         })
 

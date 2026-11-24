@@ -44,18 +44,36 @@ BEGIN
 
     limite := NOW() - make_interval(days => dias_retencao);
 
-    DELETE FROM denuncias_comentarios
-    WHERE resolvida_em IS NOT NULL
-      AND resolvida_em < limite;
+    DELETE FROM denuncias_comentarios d
+    WHERE d.resolvida_em IS NOT NULL
+      AND d.resolvida_em < limite
+      AND NOT EXISTS (
+          SELECT 1
+          FROM comentarios c
+          WHERE c.id = d.comentario_id
+            AND c.ocultado_em IS NOT NULL
+      );
     GET DIAGNOSTICS qtd_denuncias = ROW_COUNT;
 
-    DELETE FROM moderacoes_comentarios
-    WHERE criado_em < limite;
+    DELETE FROM moderacoes_comentarios m
+    WHERE m.criado_em < limite
+      AND NOT EXISTS (
+          SELECT 1
+          FROM comentarios c
+          WHERE c.id = m.comentario_id
+            AND c.ocultado_em IS NOT NULL
+      );
     GET DIAGNOSTICS qtd_moderacoes = ROW_COUNT;
 
-    DELETE FROM contestacoes_comentarios
-    WHERE resolvida_em IS NOT NULL
-      AND resolvida_em < limite;
+    DELETE FROM contestacoes_comentarios ct
+    WHERE ct.resolvida_em IS NOT NULL
+      AND ct.resolvida_em < limite
+      AND NOT EXISTS (
+          SELECT 1
+          FROM comentarios c
+          WHERE c.id = ct.comentario_id
+            AND c.ocultado_em IS NOT NULL
+      );
     GET DIAGNOSTICS qtd_contestacoes = ROW_COUNT;
 
     RETURN jsonb_build_object(
