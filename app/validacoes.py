@@ -53,6 +53,46 @@ def validar_denuncia(motivo, explicacao):
                                f'{EXPLICACAO_DENUNCIA_MAXIMO} caracteres.')
     return motivo, limpa or None, erros
 
+ACOES_MODERACAO = ('manter', 'ocultar', 'restaurar')
+JUSTIFICATIVA_MODERACAO_MINIMO = 2
+JUSTIFICATIVA_MODERACAO_MAXIMO = 1000
+
+
+def _limpar_justificativa(texto):
+    return (texto or '').replace('\r\n', '\n').replace('\r', '\n').strip()
+
+
+def validar_decisao_moderacao(acao, justificativa):
+    """Valida ação (manter/ocultar/restaurar) e justificativa obrigatória."""
+    erros = {}
+    acao_limpa = (acao or '').strip().lower()
+    if acao_limpa not in ACOES_MODERACAO:
+        erros['acao'] = 'Escolha uma ação válida: manter, ocultar ou restaurar.'
+    limpa = _limpar_justificativa(justificativa)
+    if len(limpa) < JUSTIFICATIVA_MODERACAO_MINIMO:
+        erros['justificativa'] = (
+            f'Informe uma justificativa com pelo menos {JUSTIFICATIVA_MODERACAO_MINIMO} caracteres.'
+        )
+    elif len(limpa) > JUSTIFICATIVA_MODERACAO_MAXIMO:
+        erros['justificativa'] = (
+            f'A justificativa pode ter no máximo {JUSTIFICATIVA_MODERACAO_MAXIMO} caracteres.'
+        )
+    return acao_limpa, limpa, erros
+
+
+def validar_contestacao(justificativa):
+    """Valida a justificativa do pedido privado de revisão (contestação)."""
+    erros = {}
+    limpa = _limpar_justificativa(justificativa)
+    if len(limpa) < JUSTIFICATIVA_MODERACAO_MINIMO:
+        erros['justificativa'] = (
+            f'Informe o motivo da contestação com pelo menos {JUSTIFICATIVA_MODERACAO_MINIMO} caracteres.'
+        )
+    elif len(limpa) > JUSTIFICATIVA_MODERACAO_MAXIMO:
+        erros['justificativa'] = (
+            f'A contestação pode ter no máximo {JUSTIFICATIVA_MODERACAO_MAXIMO} caracteres.'
+        )
+    return limpa, erros
 
 def validar_avaliacao(dados, criterios=CRITERIOS):
     notas, erros = {}, {}

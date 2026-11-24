@@ -119,6 +119,31 @@
             <p class="mensagem" role="status">Você ainda não realizou nenhuma avaliação.</p>
             <a class="botao botao-primario" href="{{ url_for('professores.listar') }}">Consultar professores</a>
         {% endif %}
+        {% if comentarios_ocultados %}
+        <h2>Comentários ocultados <span class="contador">{{ comentarios_ocultados|length }}</span></h2>
+        {% for item in comentarios_ocultados %}
+        <article class="card avaliacao-card">
+            <div class="avaliacao-cabecalho">
+                <h3>{{ item.professor_nome }}</h3>
+                <p class="ajuda">
+                    {% if item.disciplina_codigo %}{{ item.disciplina_codigo }} — {% endif %}{{ item.disciplina_nome }}
+                </p>
+            </div>
+            <blockquote>{{ item.texto }}</blockquote>
+            {% if item.justificativa_moderacao %}
+            <p><strong>Motivo da moderação:</strong> {{ item.justificativa_moderacao }}</p>
+            {% endif %}
+            {% if item.contestacao_ativa %}
+            <p class="ajuda" role="status">Contestação enviada e em análise pela moderação.</p>
+            {% endif %}
+            <div class="acoes">
+                <a class="botao botao-secundario" href="{{ url_for('moderacao.contestar_comentario', comentario_id=item.id) }}">
+                    {{ 'Acompanhar contestação' if item.contestacao_ativa else 'Contestar' }}
+                </a>
+            </div>
+        </article>
+        {% endfor %}
+        {% endif %}
     </main>
     {% include '_rodape.html' %}
 </body>

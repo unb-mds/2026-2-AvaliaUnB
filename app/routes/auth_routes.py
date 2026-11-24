@@ -7,6 +7,7 @@ from flask import (Blueprint, abort, jsonify, make_response, redirect, render_te
 
 from app import verificacao_email
 from app.controllers import auth_controller, professor_controller
+from app.controllers import moderacao_controller
 from app.controllers.session_controller import (
     criar_sessao,
     encerrar_sessao,
@@ -102,6 +103,7 @@ def perfil():
     usuario_logado = obter_usuario_atual()
     avaliacoes = professor_controller.listar_avaliacoes_usuario(usuario_logado)
     favoritos = professor_controller.listar_favoritos_usuario(usuario_logado)
+    comentarios_ocultados = moderacao_controller.listar_ocultados_do_usuario(usuario_logado)
     if request.accept_mimetypes.accept_html:
         comentarios = professor_controller.carregar_comentarios_usuario(usuario_logado)
         return render_template(
@@ -109,6 +111,7 @@ def perfil():
             usuario=usuario_logado,
             avaliacoes=avaliacoes,
             favoritos=favoritos,
+            comentarios_ocultados=comentarios_ocultados,
             criterios=professor_controller.criterios(),
             verificacao_disponivel=verificacao_email.disponivel(),
             email_verificado=verificacao_email.email_verificado(usuario_logado),
@@ -118,6 +121,7 @@ def perfil():
         **{k: usuario_logado[k] for k in ("id", "nome", "email", "username")},
         "avaliacoes": avaliacoes,
         "favoritos": favoritos,
+        "comentarios_ocultados": comentarios_ocultados,
     })
 
 
