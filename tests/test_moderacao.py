@@ -27,11 +27,14 @@ class TestMigracaoModeracao(unittest.TestCase):
         sql = self._ler_sql()
         self.assertRegex(
             sql,
-            r"check\s*\(\s*acao\s+in\s*\(\s*'manter'\s*,\s*'ocultar'\s*,\s*'restaurar'\s*\)\s*\)",
+            r'moderador_id\s+uuid\s+references\s+perfis\(id\)\s+on\s+delete\s+set\s+null',
         )
         self.assertIn('ck_moderacoes_justificativa_tamanho', sql)
         self.assertIn('ck_contestacoes_justificativa_tamanho', sql)
-        self.assertRegex(sql, r'moderador_id\s+uuid\s+not\s+null\s+references\s+perfis\(id\)')
+        self.assertRegex(
+            sql,
+            r'moderador_id\s+uuid\s+references\s+perfis\(id\)\s+on\s+delete\s+set\s+null',
+        )
 
     def test_indices_fila_historico_e_contestacao_ativa_unica(self):
         sql = self._ler_sql()
@@ -580,7 +583,7 @@ class TestRotasModeracao(unittest.TestCase):
         )
         self.assertEqual(resp_mod.status_code, 200)
         self.assertEqual(resp_mod.get_json()['acao'], 'ocultar')
-        
+
 
 class TestContestacaoAutor(unittest.TestCase):
     def setUp(self):

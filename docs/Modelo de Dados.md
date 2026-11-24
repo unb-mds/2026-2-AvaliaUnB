@@ -424,12 +424,31 @@ REVOKE ALL ON comentarios_reacoes FROM PUBLIC, anon, authenticated;
 
 - **Migração:** `docs/migrations/008_moderacao_comentarios.sql`
 - **Tabelas privadas (RLS sem políticas para `anon`/`authenticated`; acesso exclusivo via `service_role`):**
-  - `moderadores`: lista explícita de `usuario_id` com permissão de moderação (nenhum usuário tem acesso por padrão).
-  - `moderacoes_comentarios`: histórico de decisões (`manter`, `ocultar`, `restaurar`), sempre com `moderador_id` e `justificativa` obrigatória (2 a 1.000 caracteres).
+  - `moderadores`: lista explícita de `usuario_id` com permissão de moderação (nasce vazia; nenhum usuário tem acesso por padrão).
+  - `moderacoes_comentarios`: histórico de decisões (`manter`, `ocultar`, `restaurar`), sempre com `moderador_id` (`ON DELETE SET NULL` para preservar o histórico caso o moderador exclua a conta) e `justificativa` obrigatória (2 a 1.000 caracteres).
   - `contestacoes_comentarios`: pedidos privados de revisão enviados pelo autor de um comentário ocultado (uma contestação ativa por comentário).
 - **Rotas e permissões:**
   - `GET /moderacao` e `POST /moderacao/comentarios/<id>/decidir`: protegidas por `@moderador_required` (visitante recebe 302/401; usuário comum recebe 403).
   - `GET/POST /comentarios/<id>/contestar`: protegida por `@login_required` e restrita ao próprio autor de um comentário ocultado (terceiros recebem 404).
+
+### Como cadastrar moderadores (SQL Editor do Supabase)
+
+A tabela `moderadores` nasce vazia. Para conceder acesso à equipe no SQL Editor do Supabase, insira os perfis desejados pelo `username`:
+
+```sql
+INSERT INTO moderadores (usuario_id)
+SELECT id
+FROM perfis
+WHERE username IN ('username_membro_1', 'username_membro_2')
+ON CONFLICT (usuario_id) DO NOTHING;
+```
+
+Para revogar o acesso de um moderador sem apagar o histórico de decisões já registradas:
+
+```sql
+DELETE FROM moderadores
+WHERE usuario_id = (SELECT id FROM perfis WHERE username = 'username_membro');
+```
 
   
 ## 8. Professores favoritos (`favoritos`)
