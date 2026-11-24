@@ -12,6 +12,7 @@ from app.routes.main_routes import main_bp
 from app.routes.professor_routes import professor_bp
 from app.routes.moderacao_routes import moderacao_bp
 from app.seguranca import configurar_seguranca
+from app.utils import iniciais
 
 
 def create_app(config=None) -> Flask:
@@ -29,6 +30,7 @@ def create_app(config=None) -> Flask:
     if not app.config['SECRET_KEY'] or not app.config['SECRET_KEY'].strip():
         raise RuntimeError('Defina a variável de ambiente SECRET_KEY antes de iniciar a aplicação.')
 
+    app.add_template_filter(iniciais, 'iniciais')
     configurar_repositorios(app)
     registrar_renovacao(app)
     configurar_seguranca(app)

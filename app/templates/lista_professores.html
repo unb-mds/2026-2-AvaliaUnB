@@ -87,7 +87,7 @@
             <li class="card card-interativo">
                 <article class="teacher">
                     <div class="teacher-head">
-                        <div class="avatar" aria-hidden="true">{% for parte in professor.nome.split()[:2] %}{{ parte[0] }}{% endfor %}</div>
+                        <div class="avatar" aria-hidden="true">{{ professor.nome|iniciais }}</div>
                         <p class="contagem">{{ professor.total_avaliacoes }} {{ 'avaliação' if professor.total_avaliacoes == 1 else 'avaliações' }}</p>
                     </div>
                     <h2><a href="{{ url_for('professores.perfil', professor_id=professor.id, next=request.full_path) }}">{{ professor.nome }}</a></h2>

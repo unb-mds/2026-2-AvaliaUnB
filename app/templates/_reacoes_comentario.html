@@ -1,0 +1,19 @@
+<div class="comentario-reacoes" role="group" aria-label="Reações ao comentário">
+    {% for valor, icone, nome, total in [(1, '👍', 'Curtir', c.curtidas), (-1, '👎', 'Descurtir', c.descurtidas)] %}
+        {% set selecionado = c.minha_reacao == valor %}
+        {% if c.e_meu %}
+            <span class="reacao" aria-label="{{ nome }}: {{ total }}"><span aria-hidden="true">{{ icone }}{% if total %} {{ total }}{% endif %}</span></span>
+        {% elif not usuario %}
+            <a class="reacao" href="{{ login_url }}" aria-label="Entrar para {{ nome|lower }} ({{ total }})"><span aria-hidden="true">{{ icone }}{% if total %} {{ total }}{% endif %}</span></a>
+        {% else %}
+            <form method="post" action="{{ url_for('professores.reagir_comentario', comentario_id=c.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="next" value="{{ next_url }}">
+                {% if filtro_comentarios %}<input type="hidden" name="comentarios_disciplina" value="{{ filtro_comentarios }}">{% endif %}
+                {% if ordem_comentarios and ordem_comentarios != 'recentes' %}<input type="hidden" name="ordem" value="{{ ordem_comentarios }}">{% endif %}
+                {% if disciplina %}<input type="hidden" name="disciplina_medias" value="{{ disciplina.id }}">{% endif %}
+                <button class="reacao" type="submit" name="valor" value="{{ 0 if selecionado else valor }}" aria-label="{{ nome }} ({{ total }})" aria-pressed="{{ 'true' if selecionado else 'false' }}"><span aria-hidden="true">{{ icone }}{% if total %} {{ total }}{% endif %}{% if selecionado %} ✓{% endif %}</span></button>
+            </form>
+        {% endif %}
+    {% endfor %}
+</div>

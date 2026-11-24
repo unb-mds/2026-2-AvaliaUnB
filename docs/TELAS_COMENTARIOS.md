@@ -2,9 +2,10 @@
 
 **Protótipos da #112. As telas de listar, escrever, editar e apagar já existem
 no perfil do professor (issue #167), com as diferenças indicadas abaixo.**
-Reações, seletor de ordenação, denúncia e ocultação continuam sendo
-protótipos, assim como o filtro automático e os estados **Verificando** e
-**Em revisão** dos desenhos de escrever e editar.
+Ocultação continua sendo protótipo, assim como os estados **Verificando** e **Em revisão** dos
+desenhos de escrever e editar. O filtro automático já existe (issue #214): na
+implementação, ele responde com um aviso de erro junto ao campo e o texto
+preservado, ou publica direto.
 
 Protótipos da #112 para revisar a experiência em uma tela estreita. Os fluxos
 seguem a [especificação da #116](COMENTARIOS.md) e os componentes do
@@ -16,12 +17,11 @@ pessoa pode voltar ao perfil e encerrar ou escolher a outra.
 
 ## Listar
 
-![Perfil com seletor de ordenação, datas, curtidas e descurtidas e um e-mail expandido](mockups/comentarios/listar.svg)
+![Perfil com seletor de ordenação, datas, curtidas e descurtidas, sem identificação dos autores](mockups/comentarios/listar.svg)
 
-Visitantes leem os comentários com o nome de usuário do autor, disciplina,
-data da primeira publicação e as contagens de reações recebidas. O nome de
-usuário é só texto: o e-mail de cadastro do autor nunca é exibido, então o
-e-mail expandido do desenho não faz parte da implementação. A área convida a
+Visitantes leem o texto, a disciplina, a data da primeira publicação e as
+contagens de reações recebidas. Não há nome, avatar, e-mail ou rótulo substituto
+acima do comentário, conforme a C05 e a #258. A área convida a
 entrar com o Google (**Entrar para comentar**) para escrever ou reagir.
 A pessoa logada pode usar **Escrever comentário** mesmo que já tenha
 comentado naquele perfil. Cada relato da própria conta tem as ações
@@ -32,16 +32,16 @@ O seletor **Ordenar por** abre em **Mais recentes**. Também oferece
 **Mais curtidos**, **Mais antigos** e **Mais reações**, que soma curtidas
 e descurtidas.
 
-Na implementação, a lista tem ordem fixa, dos mais recentes para os mais
-antigos, e o seletor fica para a issue #213. No lugar dele há o filtro
-**Disciplina**, com "Todas as disciplinas" por padrão. A lista mostra os 50
-comentários mais recentes e, quando há mais, a frase "Mostrando os 50
-comentários mais recentes." A data aparece em dd/mm/aaaa, no horário de
+Na implementação (issue #213), o seletor fica ao lado do filtro
+**Disciplina**, com "Todas as disciplinas" por padrão, e usa o parâmetro
+`ordem`; um valor desconhecido abre em **Mais recentes**. A lista mostra os 50
+primeiros comentários na ordem escolhida e, quando há mais, a frase "Mostrando
+os 50 primeiros comentários." A data aparece em dd/mm/aaaa, no horário de
 Brasília, com "(editado)" nos comentários alterados, e a ação da própria conta
 se chama **Excluir**.
 
 Os ícones **👍** e **👎** aparecem direto em todos os comentários, mesmo
-com o e-mail recolhido e sem login. Cada ícone mostra um número apenas
+sem identificação do autor e sem login. Cada ícone mostra um número apenas
 quando recebeu reações. No próprio comentário, os ícones só informam as
 contagens. Nos comentários de outras pessoas, são botões com nomes
 acessíveis para leitores de tela. A reação selecionada tem cor e marca de
@@ -56,14 +56,19 @@ Para publicar, a pessoa precisa escolher uma disciplina ministrada pelo
 professor. O exemplo mostra um novo comentário em Cálculo 1, disciplina
 em que a pessoa já comentou.
 
-O formulário avisa que o nome de usuário fica público: "Seu nome de usuário
-aparece junto do comentário." O e-mail não é exibido. A pessoa envia o texto para
+O formulário avisa: "Sua identificação não aparece junto do comentário.
+Evite incluir dados pessoais no texto." A listagem não mostra nome, avatar
+ou rótulo substituto. A pessoa envia o texto para
 verificação ao clicar em **Publicar**. O campo mostra o limite de 2 a
 1.000 caracteres. Durante o envio, o botão mostra
 **Verificando**. Se o filtro bloquear o texto, a mensagem junto ao campo
 explica o que precisa ser revisto e preserva o que foi digitado. Se a análise
 precisar de moderação, a confirmação informa **Em revisão** e o texto fica
 privado até a decisão.
+
+Na implementação da #214, não há **Verificando** nem **Em revisão**: o filtro
+responde na hora com o aviso de bloqueio junto ao campo (HTTP 400, texto
+preservado) ou publica o comentário.
 
 ## Editar
 

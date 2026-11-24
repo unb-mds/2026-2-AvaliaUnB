@@ -1,0 +1,155 @@
+# Palavrões e ofensas claramente inadequados (issue #214).
+# Um termo por linha. Linhas vazias e linhas iniciadas por # são ignoradas.
+# A comparação é por palavra inteira, sem diferenciar maiúsculas, minúsculas nem acentos,
+# e letras repetidas em excesso são reduzidas (o arquivo pode ser escrito de forma natural).
+# Expressões com mais de uma palavra são aceitas. O plural com "s" já é coberto.
+# Palavras ambíguas ou que servem de crítica legítima não devem entrar aqui:
+# casos duvidosos ficam para a moderação por denúncia.
+
+# Xingamentos pesados
+foda
+fodas
+puto
+putos
+putas
+burro
+burra
+burros
+burras
+caralho
+caralhu
+carai
+karalho
+karai
+krl
+porra
+merda
+merdinha
+merdao
+merdoso
+bosta
+bostinha
+bostao
+buceta
+bucetinha
+boceta
+xoxota
+xereca
+piroca
+pirocao
+punheta
+punheteiro
+cu
+cuzao
+cuzinho
+cuzudo
+cusao
+puta
+putinha
+putona
+putaria
+putiane
+putaquepariu
+puta que pariu
+puta merda
+puta que o pariu
+puta que te pariu
+fdp
+filho da puta
+filha da puta
+filhodaputa
+filhadaputa
+filho de uma puta
+filha de uma puta
+fiho da puta
+vtnc
+vsf
+pqp
+foder
+fodase
+foda se
+foda-se
+vai se foder
+va se foder
+vai te foder
+vai tomar no cu
+vai toma no cu
+tomar no cu
+toma no cu
+tomanocu
+enfia no cu
+enfia isso no cu
+vai a merda
+vai pra merda
+fodido
+fodida
+arrombado
+arrombada
+arombado
+desgracado
+desgracada
+escroto
+escrota
+babaca
+babacao
+idiota
+imbecil
+cretino
+cretina
+otario
+otaria
+canalha
+vagabunda
+vadia
+piranha nojenta
+lixo humano
+verme nojento
+corno manso
+pau no cu
+pau no seu cu
+chupa meu pau
+chupa minha rola
+chupa meu pinto
+chupa pica
+mama minha rola
+mama no meu pau
+rabuda
+
+# Ofensas discriminatórias
+viado
+viadinho
+viadao
+viadagem
+viadu
+bicha nojenta
+bichona
+sapatao
+sapatona
+traveco
+travecao
+retardado
+retardada
+mongol
+mongoloide
+mongolide
+crioulo
+crioula
+criolo
+neguinho safado
+negro imundo
+preto imundo
+preta imunda
+negra imunda
+macaco imundo
+macaca imunda
+nego safado
+judeu nojento
+judia nojenta
+nordestino burro
+nordestina burra
+gordo nojento
+gorda nojenta
+gorda baleia
+baleia gorda
+aleijado de merda
+down de merda

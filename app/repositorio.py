@@ -223,7 +223,7 @@ class ProfessorRepository:
         # A view traz uma linha por turma (ano/período); o perfil usa uma por disciplina.
         unicas = {l['disciplina_id']: {'id': l['disciplina_id'], 'nome': l['disciplina'],
                                        'codigo': l['codigo_disciplina']} for l in linhas}
-        return sorted(unicas.values(), key=lambda d: (d['nome'] or '', d['id']))
+        return sorted(unicas.values(), key=lambda d: (normalizar_busca(d['nome']), d['id']))
 
     def invalidar_cache(self):
         self._catalogo = None
@@ -286,7 +286,8 @@ class ProfessorRepository:
                                 or _alguma_disciplina_casa(termo_n, disciplinas)):
                 continue
             resultado.append((professor, disciplinas))
-        return sorted(resultado, key=lambda i: (-i[0]['total_avaliacoes'], i[0]['nome'] or '', i[0]['id']))
+        return sorted(resultado, key=lambda i: (-i[0]['total_avaliacoes'], normalizar_busca(i[0]['nome']),
+                                                i[0]['id']))
 
     def sugerir(self, termo, limite=LIMITE_SUGESTOES, tipos=TIPOS_SUGESTAO):
         """Sugestões da busca unificada: [{tipo, id, texto, detalhe}].
@@ -618,7 +619,8 @@ class ComentarioRepository:
 
     O backend usa a service key, que ignora RLS: toda regra de autoria e de vínculo
     entre professor e disciplina é conferida aqui. O e-mail e o id da conta do autor
-    nunca saem deste repositório; só o username público.
+    não são incluídos na listagem pública. A autoria permanece privada para as
+    verificações do backend e não depende da identificação mostrada na tela.
     """
 
     def __init__(self, cliente):
@@ -671,28 +673,69 @@ class ComentarioRepository:
         except TypeError:      # uma com fuso e outra sem
             return False
 
-    def listar_por_professor(self, professor_id, disciplina_id=None, usuario_atual_id=None):
-        """(comentarios, ha_mais): os LIMITE_COMENTARIOS mais recentes não ocultados.
-
-        disciplina_id=None lista todas as disciplinas. `ha_mais` é True quando existem
-        comentários além do limite (busca-se um a mais só para saber isso).
-        """
-        consulta = (self.cliente.table('comentarios')
-                    .select('id,usuario_id,disciplina_id,texto,criado_em,atualizado_em')
+    def _consulta_visiveis(self, colunas, professor_id, disciplina_id):
+        consulta = (self.cliente.table('comentarios').select(colunas)
                     .eq('professor_id', professor_id).is_('ocultado_em', 'null'))
         if disciplina_id is not None:
             consulta = consulta.eq('disciplina_id', disciplina_id)
-        linhas = (consulta.order('criado_em', desc=True).order('id', desc=True)
-                  .limit(LIMITE_COMENTARIOS + 1).execute().data)
-        ha_mais = len(linhas) > LIMITE_COMENTARIOS
-        linhas = linhas[:LIMITE_COMENTARIOS]
+        return consulta
+
+    def _linhas_por_reacao(self, professor_id, disciplina_id, ordem):
+        """(linhas, ha_mais) dos LIMITE_COMENTARIOS primeiros nas ordens 'curtidos' e 'reacoes'.
+
+        O corte vem depois da ordem, então busca todos os candidatos (só id, mais recentes
+        primeiro), conta as reações e ordena em Python. O sort é estável: em empate de
+        contagem vale a ordem por data e id decrescentes da consulta.
+        """
+        candidatos, inicio = [], 0
+        while True:
+            pagina = (self._consulta_visiveis('id', professor_id, disciplina_id)
+                      .order('criado_em', desc=True).order('id', desc=True)
+                      .range(inicio, inicio + TAMANHO_PAGINA - 1).execute().data)
+            candidatos += [l['id'] for l in pagina]
+            if len(pagina) < TAMANHO_PAGINA:
+                break
+            inicio += TAMANHO_PAGINA
+        resumo = ReacaoRepository(self.cliente).resumo(candidatos)
+
+        def pontos(comentario_id):
+            r = resumo[comentario_id]
+            return r['curtidas'] if ordem == 'curtidos' else r['curtidas'] + r['descurtidas']
+
+        candidatos.sort(key=pontos, reverse=True)
+        ha_mais = len(candidatos) > LIMITE_COMENTARIOS
+        escolhidos = candidatos[:LIMITE_COMENTARIOS]
+        if not escolhidos:
+            return [], False
+        linhas = {l['id']: l for l in
+                  self._consulta_visiveis('id,usuario_id,disciplina_id,texto,criado_em,atualizado_em',
+                                          professor_id, disciplina_id)
+                  .in_('id', escolhidos).execute().data}
+        return [linhas[i] for i in escolhidos if i in linhas], ha_mais
+
+    def listar_por_professor(self, professor_id, disciplina_id=None, usuario_atual_id=None,
+                             ordem='recentes'):
+        """(comentarios, ha_mais): os LIMITE_COMENTARIOS primeiros não ocultados na ordem pedida.
+
+        ordem: 'recentes' (padrão; qualquer valor desconhecido também), 'antigos', 'curtidos'
+        (mais 👍) ou 'reacoes' (mais 👍 + 👎). Empate nas ordens por reação: mais recentes
+        primeiro. disciplina_id=None lista todas as disciplinas. `ha_mais` é True quando
+        existem comentários além do limite (busca-se um a mais só para saber isso).
+        """
+        if ordem in ('curtidos', 'reacoes'):
+            linhas, ha_mais = self._linhas_por_reacao(professor_id, disciplina_id, ordem)
+        else:
+            decrescente = ordem != 'antigos'
+            linhas = (self._consulta_visiveis(
+                          'id,usuario_id,disciplina_id,texto,criado_em,atualizado_em',
+                          professor_id, disciplina_id)
+                      .order('criado_em', desc=decrescente).order('id', desc=decrescente)
+                      .limit(LIMITE_COMENTARIOS + 1).execute().data)
+            ha_mais = len(linhas) > LIMITE_COMENTARIOS
+            linhas = linhas[:LIMITE_COMENTARIOS]
         if not linhas:
             return [], False
 
-        ids_autores = sorted({l['usuario_id'] for l in linhas})
-        autores = {p['id']: p['username'] for p in
-                   self.cliente.table('perfis').select('id,username')
-                   .in_('id', ids_autores).execute().data}
         disciplinas = self._disciplinas_do_professor(professor_id)
         comentarios = []
         for l in linhas:
@@ -700,7 +743,6 @@ class ComentarioRepository:
             comentarios.append({
                 'id': l['id'],
                 'texto': l['texto'],
-                'username': autores.get(l['usuario_id'], ''),
                 'disciplina_nome': nome,
                 'disciplina_codigo': codigo,
                 'criado_em': l['criado_em'],
@@ -708,6 +750,30 @@ class ComentarioRepository:
                 'e_meu': usuario_atual_id is not None and l['usuario_id'] == usuario_atual_id,
             })
         return comentarios, ha_mais
+
+    def listar_do_usuario(self, usuario_id):
+        """Relatos visíveis da própria conta, sem dados de identidade no resultado."""
+        linhas = (self.cliente.table('comentarios')
+                  .select('id,professor_id,disciplina_id,texto,criado_em,atualizado_em')
+                  .eq('usuario_id', usuario_id).is_('ocultado_em', 'null')
+                  .order('criado_em', desc=True).order('id', desc=True)
+                  .limit(LIMITE_COMENTARIOS + 1).execute().data)
+        ha_mais = len(linhas) > LIMITE_COMENTARIOS
+        linhas = linhas[:LIMITE_COMENTARIOS]
+        if not linhas:
+            return [], False
+        professores = {p['id']: p['nome'] for p in self.cliente.table('professores')
+                       .select('id,nome').in_('id', sorted({l['professor_id'] for l in linhas}))
+                       .execute().data}
+        disciplinas = {d['id']: d for d in self.cliente.table('disciplinas')
+                       .select('id,nome,codigo').in_('id', sorted({l['disciplina_id'] for l in linhas}))
+                       .execute().data}
+        return [{**{c: l[c] for c in ('id', 'professor_id', 'disciplina_id', 'texto', 'criado_em')},
+                 'professor_nome': professores.get(l['professor_id'], 'Professor'),
+                 'disciplina_nome': disciplinas.get(l['disciplina_id'], {}).get('nome', ''),
+                 'disciplina_codigo': disciplinas.get(l['disciplina_id'], {}).get('codigo', ''),
+                 'data': self.formatar_data(l['criado_em']), 'editado': self._foi_editado(l)}
+                for l in linhas], ha_mais
 
     def buscar_do_usuario(self, comentario_id, usuario_id):
         """Comentário se pertencer ao usuário, senão None (a rota responde 404)."""
@@ -784,6 +850,43 @@ class ComentarioRepository:
         return bool(apagadas)
 
 
+class ReacaoRepository:
+    """Uma reação por conta/comentário; identidade nunca sai da listagem."""
+
+    def __init__(self, cliente):
+        self.cliente = cliente
+
+    def definir(self, comentario_id, usuario_id, valor):
+        if valor not in (-1, 0, 1):
+            raise ValueError('Reação inválida.')
+        tabela = self.cliente.table('comentarios_reacoes')
+        if valor == 0:
+            tabela.delete().eq('comentario_id', comentario_id).eq('usuario_id', usuario_id).execute()
+        else:
+            tabela.upsert([{'comentario_id': comentario_id, 'usuario_id': usuario_id,
+                            'valor': valor}], on_conflict='comentario_id,usuario_id').execute()
+
+    def resumo(self, ids, usuario_id=None):
+        resultado = {i: {'curtidas': 0, 'descurtidas': 0, 'minha_reacao': 0} for i in ids}
+        if not ids:
+            return resultado
+        inicio = 0
+        while True:
+            linhas = (self.cliente.table('comentarios_reacoes')
+                      .select('comentario_id,usuario_id,valor').in_('comentario_id', ids)
+                      .order('comentario_id').order('usuario_id')
+                      .range(inicio, inicio + 999).execute().data)
+            for linha in linhas:
+                resumo = resultado[linha['comentario_id']]
+                valor = linha['valor']
+                resumo['curtidas' if valor == 1 else 'descurtidas'] += 1
+                if usuario_id is not None and linha['usuario_id'] == usuario_id:
+                    resumo['minha_reacao'] = valor
+            if len(linhas) < 1000:
+                return resultado
+            inicio += 1000
+
+
 class DenunciaRepository:
     """Denúncias de comentários (tabela denuncias_comentarios, issue #215).
 
@@ -842,28 +945,40 @@ class ModeracaoRepository:
         )
 
     def listar_fila(self):
-        """Lista somente comentários que possuem denúncias (mais antigas em aberto primeiro).
+        """Lista comentários com denúncia ou contestação em aberto, mais antigos primeiro.
 
-        Agrupa as denúncias por comentário e anexa histórico de decisões e contestações.
+        Agrupa denúncias, histórico de decisões e contestações de cada comentário pendente.
         """
-        denuncias = (
+        denuncias_abertas = (
             self.cliente.table('denuncias_comentarios')
             .select('id,comentario_id,motivo,explicacao,criado_em,resolvida_em')
+            .is_('resolvida_em', 'null')
             .order('criado_em')
             .execute()
             .data
         )
-        if not denuncias:
+        contestacoes_abertas = (
+            self.cliente.table('contestacoes_comentarios')
+            .select('id,comentario_id,justificativa,criado_em,resolvida_em')
+            .is_('resolvida_em', 'null')
+            .order('criado_em')
+            .execute()
+            .data
+        )
+        if not denuncias_abertas and not contestacoes_abertas:
             return []
 
-        ids_comentarios = []
-        por_comentario = {}
-        for d in denuncias:
-            cid = d['comentario_id']
-            if cid not in por_comentario:
-                ids_comentarios.append(cid)
-                por_comentario[cid] = []
-            por_comentario[cid].append(d)
+        pendencia_mais_antiga = {}
+        for registro in (*denuncias_abertas, *contestacoes_abertas):
+            cid = registro['comentario_id']
+            criado = registro.get('criado_em') or ''
+            if cid not in pendencia_mais_antiga or criado < pendencia_mais_antiga[cid]:
+                pendencia_mais_antiga[cid] = criado
+
+        ids_comentarios = sorted(
+            pendencia_mais_antiga,
+            key=lambda cid: (pendencia_mais_antiga[cid], cid),
+        )
 
         comentarios = {
             c['id']: c
@@ -875,6 +990,18 @@ class ModeracaoRepository:
         }
         if not comentarios:
             return []
+
+        denuncias_todas = (
+            self.cliente.table('denuncias_comentarios')
+            .select('id,comentario_id,motivo,explicacao,criado_em,resolvida_em')
+            .in_('comentario_id', ids_comentarios)
+            .order('criado_em')
+            .execute()
+            .data
+        )
+        por_comentario = {}
+        for d in denuncias_todas:
+            por_comentario.setdefault(d['comentario_id'], []).append(d)
 
         prof_ids = sorted({c['professor_id'] for c in comentarios.values()})
         professores = {
@@ -905,7 +1032,7 @@ class ModeracaoRepository:
             .execute()
             .data
         )
-        mod_ids = sorted({d['moderador_id'] for d in decisoes_raw})
+        mod_ids = sorted({d['moderador_id'] for d in decisoes_raw if d.get('moderador_id')})
         moderadores = (
             {
                 p['id']: p['username']
@@ -943,7 +1070,7 @@ class ModeracaoRepository:
             if not c:
                 continue
             disc_nome, disc_codigo = disciplinas.get((c['professor_id'], c['disciplina_id']), ('', ''))
-            lista_den = por_comentario[cid]
+            lista_den = por_comentario.get(cid, [])
             abertas = [d for d in lista_den if d.get('resolvida_em') is None]
             fila.append({
                 'comentario_id': cid,
@@ -966,7 +1093,8 @@ class ModeracaoRepository:
     def registrar_decisao(self, comentario_id, moderador_id, acao, justificativa):
         """Registra decisão (manter/ocultar/restaurar) com justificativa e atualiza o comentário.
 
-        False se o comentário não existir; ValueError se ação ou justificativa forem inválidas.
+        False se o comentário não existir; ValueError se ação, justificativa ou transição
+        de estado forem inválidas.
         """
         acao, justificativa, erros = validar_decisao_moderacao(acao, justificativa)
         if erros:
@@ -974,7 +1102,7 @@ class ModeracaoRepository:
 
         existente = (
             self.cliente.table('comentarios')
-            .select('id')
+            .select('id,ocultado_em')
             .eq('id', comentario_id)
             .limit(1)
             .execute()
@@ -982,6 +1110,12 @@ class ModeracaoRepository:
         )
         if not existente:
             return False
+
+        esta_oculto = existente[0].get('ocultado_em') is not None
+        if acao == 'restaurar' and not esta_oculto:
+            raise ValueError('Só é possível restaurar comentários que estejam ocultados.')
+        if acao == 'ocultar' and esta_oculto:
+            raise ValueError('Só é possível ocultar comentários publicados.')
 
         agora = datetime.now(timezone.utc).isoformat()
         self.cliente.table('moderacoes_comentarios').insert({
@@ -1219,13 +1353,14 @@ class FavoritoRepository:
 
 class Repositorios:
     def __init__(self, usuarios, professores, avaliacoes, comentarios=None, denuncias=None,
-                 favoritos=None, moderacao=None):
+                 favoritos=None, reacoes=None, moderacao=None):
         self.usuarios = usuarios
         self.professores = professores
         self.avaliacoes = avaliacoes
         self.comentarios = comentarios
         self.denuncias = denuncias
         self.favoritos = favoritos
+        self.reacoes = reacoes
         self.moderacao = moderacao
 
 
@@ -1238,7 +1373,7 @@ def configurar_repositorios(app):
         UsuarioRepository(cliente, fabrica), ProfessorRepository(cliente),
         AvaliacaoRepository(cliente), ComentarioRepository(cliente),
         DenunciaRepository(cliente), FavoritoRepository(cliente),
-        ModeracaoRepository(cliente))
+        ReacaoRepository(cliente), ModeracaoRepository(cliente))
 
 
 def repositorios() -> Repositorios:

@@ -52,3 +52,8 @@ def registrar_contestacao(comentario_id, usuario, justificativa):
     return repositorios().moderacao.criar_contestacao(
         comentario_id, usuario['id'], justificativa
     )
+
+
+def listar_ocultados_do_usuario(usuario):
+    """Lista os comentários ocultados do próprio autor com justificativa e status de contestação."""
+    return repositorios().moderacao.listar_ocultados_do_usuario(usuario['id'])

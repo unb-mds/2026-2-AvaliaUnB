@@ -20,19 +20,21 @@ from selenium.common.exceptions import (
 
 from cli_sigaa import montar_parser, opcoes_chrome
 from persistencia_sigaa import (
-    salvar_disciplinas,
-    salvar_professores,
-    salvar_turmas,
+    CODIGO_SAIDA_CONVERSAO_PENDENTE,
+    ConversaoPendenteError,
+    gravar_catalogo,
 )
 from resumo_sigaa import Resumo
 from texto_sigaa import (
     UnidadeInvalidaError,
     contar_a_definir,
-    extrair_docentes,
+    departamento_da_unidade,
+    disciplina_do_titulo,
+    docentes_em_grafia_comum,
     professores_em_varias_unidades,
     validar_unidade,
 )
-from turmas_sigaa import montar_payload_turmas
+from turmas_sigaa import montar_payload_turmas, registrar_docentes_da_linha
 from unidades_sigaa import escolher_unidades
 
 log = logging.getLogger(__name__)
@@ -299,7 +301,8 @@ class SigaaScraper:
             lambda d: self._select_depto().first_selected_option.get_attribute("value")
             == unidade_value
         )
-        departamento = validar_unidade(self._select_depto().first_selected_option.text)
+        # Só o valor armazenado vai em grafia comum; a seleção acima usou o texto cru.
+        departamento = departamento_da_unidade(self._select_depto().first_selected_option.text)
         print(f"[*] Departamento (unidade selecionada): {departamento}")
 
         # 3. Ano e período
@@ -393,12 +396,9 @@ class SigaaScraper:
                 try:
                     span = linha.find_element(By.CSS_SELECTOR, "span.tituloDisciplina")
                     texto = span.text.strip()
-                    if " - " in texto:
-                        codigo, nome = texto.split(" - ", 1)
-                        disciplina_atual = {
-                            "codigo": codigo.strip(),
-                            "nome": nome.strip(),
-                        }
+                    novo = disciplina_do_titulo(texto)
+                    if novo:
+                        disciplina_atual = novo
                         disciplinas_dict[disciplina_atual["codigo"]] = disciplina_atual
                 except (NoSuchElementException, StaleElementReferenceException):
                     disciplina_atual = None
@@ -418,31 +418,17 @@ class SigaaScraper:
                 # não gera professor nem turma (a disciplina já foi registrada).
                 docentes_brutos = tds[2].text
                 resumo.a_definir_ignorados += contar_a_definir(docentes_brutos)
-                docentes = extrair_docentes(docentes_brutos)
+                docentes = docentes_em_grafia_comum(docentes_brutos)
                 if not docentes:
                     continue
 
                 if not disciplina_atual:
                     resumo.registrar_linha_pulada("sem_disciplina")
 
-                for nome_prof in docentes:
-                    chave_prof = (nome_prof, departamento)
-                    if chave_prof not in professores_dict:
-                        professores_dict[chave_prof] = {
-                            "nome": nome_prof,
-                            "departamento": departamento,
-                        }
-
-                    if disciplina_atual:
-                        turmas_list.append(
-                            {
-                                "disciplina_codigo": disciplina_atual["codigo"],
-                                "professor_nome": nome_prof,
-                                "ano": int(ano),
-                                "periodo": int(periodo),
-                                "docentes_brutos": docentes_brutos,
-                            }
-                        )
+                registrar_docentes_da_linha(
+                    docentes, departamento, disciplina_atual, ano, periodo,
+                    docentes_brutos, professores_dict, turmas_list,
+                )
             except StaleElementReferenceException:
                 resumo.registrar_linha_pulada("stale")
                 continue
@@ -572,9 +558,13 @@ def main(
         if dry_run:
             imprimir_dry_run(professores, disciplinas, turmas, resumo.a_definir_ignorados)
         elif professores and disciplinas:
-            mapa_prof = salvar_professores(professores)
-            mapa_disc = salvar_disciplinas(disciplinas)
-            salvar_turmas(turmas, mapa_prof, mapa_disc)
+            try:
+                # Confere a trava de conversão antes da primeira escrita no banco.
+                gravar_catalogo(professores, disciplinas, turmas)
+            except ConversaoPendenteError as erro:
+                print(f"\n[!] {erro}")
+                resumo.imprimir()
+                return CODIGO_SAIDA_CONVERSAO_PENDENTE
         else:
             print("[!] Nada para subir (lista vazia).")
 

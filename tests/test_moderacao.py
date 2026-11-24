@@ -27,11 +27,14 @@ class TestMigracaoModeracao(unittest.TestCase):
         sql = self._ler_sql()
         self.assertRegex(
             sql,
-            r"check\s*\(\s*acao\s+in\s*\(\s*'manter'\s*,\s*'ocultar'\s*,\s*'restaurar'\s*\)\s*\)",
+            r'moderador_id\s+uuid\s+references\s+perfis\(id\)\s+on\s+delete\s+set\s+null',
         )
         self.assertIn('ck_moderacoes_justificativa_tamanho', sql)
         self.assertIn('ck_contestacoes_justificativa_tamanho', sql)
-        self.assertRegex(sql, r'moderador_id\s+uuid\s+not\s+null\s+references\s+perfis\(id\)')
+        self.assertRegex(
+            sql,
+            r'moderador_id\s+uuid\s+references\s+perfis\(id\)\s+on\s+delete\s+set\s+null',
+        )
 
     def test_indices_fila_historico_e_contestacao_ativa_unica(self):
         sql = self._ler_sql()
@@ -214,6 +217,104 @@ class TestModeracaoRepository(unittest.TestCase):
             self.moderacao.registrar_decisao(99999, self.moderador_id, 'ocultar', 'Não existe.')
         )
 
+    def test_fila_esvazia_apos_decisao_e_mantem_apenas_pendentes(self):
+        c1 = self.comentarios.criar(self.autor_id, 1, 10, 'Comentário que será decidido.')
+        c2 = self.comentarios.criar(self.autor_id, 1, 10, 'Comentário ainda pendente.')
+        self.denuncias.criar(c1, self.denunciante_id, 'ofensa', 'Ofensa.')
+        self.denuncias.criar(c2, self.denunciante_id, 'spam', 'Spam.')
+
+        self.moderacao.registrar_decisao(c1, self.moderador_id, 'manter', 'Sem violação.')
+
+        fila = self.moderacao.listar_fila()
+        self.assertEqual([item['comentario_id'] for item in fila], [c2])
+
+        # Decidindo o segundo, a fila esvazia completamente
+        self.moderacao.registrar_decisao(c2, self.moderador_id, 'ocultar', 'Spam confirmado.')
+        self.assertEqual(self.moderacao.listar_fila(), [])
+
+    def test_fila_inclui_contestacao_aberta_sem_nenhuma_denuncia(self):
+        cid = self.comentarios.criar(self.autor_id, 1, 10, 'Comentário ocultado sem denúncia.')
+        self.moderacao.registrar_decisao(cid, self.moderador_id, 'ocultar', 'Ocultação administrativa.')
+        self.assertEqual(self.moderacao.listar_fila(), [])
+
+        self.moderacao.criar_contestacao(cid, self.autor_id, 'Peço revisão do comentário.')
+
+        fila = self.moderacao.listar_fila()
+        self.assertEqual([item['comentario_id'] for item in fila], [cid])
+        self.assertEqual(fila[0]['denuncias'], [])
+        self.assertEqual(fila[0]['denuncias_abertas'], 0)
+        self.assertEqual(len(fila[0]['contestacoes']), 1)
+
+    def test_fila_ordena_pela_pendencia_aberta_mais_antiga(self):
+        c_recente = self.comentarios.criar(self.autor_id, 1, 10, 'Denúncia mais recente.')
+        c_contestacao_antiga = self.comentarios.criar(self.autor_id, 1, 10, 'Contestação mais antiga.')
+        c_denuncia_media = self.comentarios.criar(self.autor_id, 1, 10, 'Denúncia intermediária.')
+
+        self.cliente.tabelas['denuncias_comentarios'].extend([
+            {
+                'id': 901,
+                'comentario_id': c_recente,
+                'usuario_id': self.denunciante_id,
+                'motivo': 'spam',
+                'explicacao': None,
+                'criado_em': '2026-05-03T10:00:00+00:00',
+                'resolvida_em': None,
+            },
+            {
+                'id': 902,
+                'comentario_id': c_denuncia_media,
+                'usuario_id': self.denunciante_id,
+                'motivo': 'ofensa',
+                'explicacao': None,
+                'criado_em': '2026-05-02T10:00:00+00:00',
+                'resolvida_em': None,
+            },
+        ])
+        self.cliente.tabelas['contestacoes_comentarios'].append({
+            'id': 903,
+            'comentario_id': c_contestacao_antiga,
+            'usuario_id': self.autor_id,
+            'justificativa': 'Solicito reavaliação.',
+            'criado_em': '2026-05-01T10:00:00+00:00',
+            'resolvida_em': None,
+        })
+
+        fila = self.moderacao.listar_fila()
+        self.assertEqual(
+            [item['comentario_id'] for item in fila],
+            [c_contestacao_antiga, c_denuncia_media, c_recente],
+        )
+
+    def test_recusa_restaurar_comentario_publicado(self):
+        cid = self.comentarios.criar(self.autor_id, 1, 10, 'Comentário publicado.')
+        with self.assertRaises(ValueError):
+            self.moderacao.registrar_decisao(cid, self.moderador_id, 'restaurar', 'Tentativa inválida.')
+
+        decisoes = self.cliente.table('moderacoes_comentarios').select('*').eq('comentario_id', cid).execute().data
+        self.assertEqual(decisoes, [])
+
+    def test_comentario_ocultado_recusa_ocultar_novamente_mas_permite_manter_contestacao(self):
+        cid = self.comentarios.criar(self.autor_id, 1, 10, 'Comentário que será ocultado.')
+        self.moderacao.registrar_decisao(cid, self.moderador_id, 'ocultar', 'Ofensa comprovada.')
+        self.moderacao.criar_contestacao(cid, self.autor_id, 'Peço reavaliação.')
+        self.assertEqual([item['comentario_id'] for item in self.moderacao.listar_fila()], [cid])
+
+        with self.assertRaises(ValueError):
+            self.moderacao.registrar_decisao(cid, self.moderador_id, 'ocultar', 'Ocultar de novo.')
+
+        # "manter" em comentário oculto nega a contestação, mantém oculto e esvazia a fila
+        self.assertTrue(
+            self.moderacao.registrar_decisao(
+                cid, self.moderador_id, 'manter', 'Contestação indeferida: ofensa mantida.'
+            )
+        )
+        self.assertEqual(self.moderacao.listar_fila(), [])
+        comentario = self.cliente.table('comentarios').select('*').eq('id', cid).execute().data[0]
+        self.assertIsNotNone(comentario['ocultado_em'])
+        self.assertIsNone(self.moderacao.buscar_contestacao_ativa(cid))
+        decisoes = self.cliente.table('moderacoes_comentarios').select('*').eq('comentario_id', cid).execute().data
+        self.assertEqual([d['acao'] for d in decisoes], ['ocultar', 'manter'])
+    
 
 class TestOcultacaoERepublicacao(unittest.TestCase):
     def setUp(self):
@@ -364,6 +465,134 @@ class TestRotasModeracao(unittest.TestCase):
         linha = self.cliente.table('comentarios').select('*').eq('id', c_denunciado).execute().data[0]
         self.assertIsNotNone(linha.get('ocultado_em'))
 
+    def test_post_decidir_recusa_acao_incompativel_com_estado_com_400(self):
+        _, c_denunciado = self._criar_comentario_denunciado()
+        self._logar('mod@gmail.com', 'moderadora', moderador=True)
+
+        # Comentário publicado não pode ser restaurado
+        resp_rest = self.web.post(
+            f'/moderacao/comentarios/{c_denunciado}/decidir',
+            data={'acao': 'restaurar', 'justificativa': 'Tentativa em publicado.'},
+        )
+        self.assertEqual(resp_rest.status_code, 400)
+
+        # Oculta o comentário (transição válida)
+        resp_ok = self.web.post(
+            f'/moderacao/comentarios/{c_denunciado}/decidir',
+            data={'acao': 'ocultar', 'justificativa': 'Ofensa comprovada.'},
+        )
+        self.assertEqual(resp_ok.status_code, 303)
+
+        # Comentário oculto não pode ser ocultado de novo
+        resp_ocultar_dup = self.web.post(
+            f'/moderacao/comentarios/{c_denunciado}/decidir',
+            data={'acao': 'ocultar', 'justificativa': 'Tentativa duplicada.'},
+            headers={'Accept': 'application/json'},
+        )
+        self.assertEqual(resp_ocultar_dup.status_code, 400)
+        self.assertIn('acao', resp_ocultar_dup.get_json()['erros'])
+
+        # Comentário oculto pode receber "manter" (ex.: negar contestação mantendo oculto)
+        resp_manter_oculto = self.web.post(
+            f'/moderacao/comentarios/{c_denunciado}/decidir',
+            data={'acao': 'manter', 'justificativa': 'Mantido oculto após revisão.'},
+            headers={'Accept': 'application/json'},
+        )
+        self.assertEqual(resp_manter_oculto.status_code, 200)
+        self.assertEqual(resp_manter_oculto.get_json()['acao'], 'manter')
+
+    def test_fila_autorizacao_cobre_visitante_comum_e_moderador(self):
+        _, c_denunciado = self._criar_comentario_denunciado()
+
+        # 1. Visitante (sem login): 302 para /login em HTML e 401 em JSON
+        resp_vis_html = self.web.get('/moderacao', headers={'Accept': 'text/html'})
+        self.assertEqual(resp_vis_html.status_code, 302)
+        self.assertIn('/login', resp_vis_html.headers['Location'])
+
+        resp_vis_json = self.web.get('/moderacao', headers={'Accept': 'application/json'})
+        self.assertEqual(resp_vis_json.status_code, 401)
+
+        # 2. Usuário comum: 403 em HTML e JSON
+        self._logar('comum@gmail.com', 'comum', moderador=False)
+        self.assertEqual(
+            self.web.get('/moderacao', headers={'Accept': 'text/html'}).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.web.get('/moderacao', headers={'Accept': 'application/json'}).status_code,
+            403,
+        )
+
+        # 3. Moderador: 200 em HTML e JSON com o comentário denunciado
+        self._logar('mod@gmail.com', 'moderadora', moderador=True)
+        resp_mod_html = self.web.get('/moderacao', headers={'Accept': 'text/html'})
+        self.assertEqual(resp_mod_html.status_code, 200)
+        self.assertIn('Comentário ofensivo denunciado.', resp_mod_html.get_data(as_text=True))
+
+        resp_mod_json = self.web.get('/moderacao', headers={'Accept': 'application/json'})
+        self.assertEqual(resp_mod_json.status_code, 200)
+        ids_fila = [item['comentario_id'] for item in resp_mod_json.get_json()['fila']]
+        self.assertEqual(ids_fila, [c_denunciado])
+
+    def test_decidir_autorizacao_cobre_visitante_comum_e_moderador(self):
+        _, c_denunciado = self._criar_comentario_denunciado()
+        payload = {'acao': 'ocultar', 'justificativa': 'Ofensa pessoal comprovada.'}
+
+        # 1. Visitante (sem login): 302 para /login em HTML e 401 em JSON
+        resp_vis_html = self.web.post(
+            f'/moderacao/comentarios/{c_denunciado}/decidir',
+            data=payload,
+            headers={'Accept': 'text/html'},
+        )
+        self.assertEqual(resp_vis_html.status_code, 302)
+        self.assertIn('/login', resp_vis_html.headers['Location'])
+
+        resp_vis_json = self.web.post(
+            f'/moderacao/comentarios/{c_denunciado}/decidir',
+            data=payload,
+            headers={'Accept': 'application/json'},
+        )
+        self.assertEqual(resp_vis_json.status_code, 401)
+
+        # 2. Usuário comum: 403 em HTML e JSON
+        self._logar('comum@gmail.com', 'comum', moderador=False)
+        self.assertEqual(
+            self.web.post(
+                f'/moderacao/comentarios/{c_denunciado}/decidir',
+                data=payload,
+                headers={'Accept': 'text/html'},
+            ).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.web.post(
+                f'/moderacao/comentarios/{c_denunciado}/decidir',
+                data=payload,
+                headers={'Accept': 'application/json'},
+            ).status_code,
+            403,
+        )
+
+        # Nenhuma decisão foi gravada por visitante ou usuário comum
+        decisoes_antes = (
+            self.cliente.table('moderacoes_comentarios')
+            .select('*')
+            .eq('comentario_id', c_denunciado)
+            .execute()
+            .data
+        )
+        self.assertEqual(decisoes_antes, [])
+
+        # 3. Moderador: registra a decisão com sucesso (200 em JSON)
+        self._logar('mod@gmail.com', 'moderadora', moderador=True)
+        resp_mod = self.web.post(
+            f'/moderacao/comentarios/{c_denunciado}/decidir',
+            data=payload,
+            headers={'Accept': 'application/json'},
+        )
+        self.assertEqual(resp_mod.status_code, 200)
+        self.assertEqual(resp_mod.get_json()['acao'], 'ocultar')
+
 
 class TestContestacaoAutor(unittest.TestCase):
     def setUp(self):
@@ -458,6 +687,36 @@ class TestContestacaoAutor(unittest.TestCase):
         self._logar('mod@gmail.com', 'moderadora', moderador=True)
         html_fila = self.web.get('/moderacao').get_data(as_text=True)
         self.assertIn('Não houve ofensa, apenas relato pedagógico.', html_fila)
+
+    def test_perfil_exibe_comentarios_ocultados_com_link_contestar_somente_para_o_autor(self):
+        cid = self._preparar_comentario_ocultado()
+
+        # Autor acessa /perfil em HTML
+        self._logar('autor@gmail.com', 'autor', moderador=False)
+        resp_html = self.web.get('/perfil', headers={'Accept': 'text/html'})
+        self.assertEqual(resp_html.status_code, 200)
+        html = resp_html.get_data(as_text=True)
+        self.assertIn('Comentários ocultados', html)
+        self.assertIn('Comentário crítico sobre a didática.', html)
+        self.assertIn('Linguagem considerada inadequada.', html)
+        self.assertIn(f'/comentarios/{cid}/contestar', html)
+        self.assertIn('Contestar', html)
+
+        # Autor acessa /perfil em JSON
+        resp_json = self.web.get('/perfil', headers={'Accept': 'application/json'})
+        self.assertEqual(resp_json.status_code, 200)
+        ocultados = resp_json.get_json()['comentarios_ocultados']
+        self.assertEqual(len(ocultados), 1)
+        self.assertEqual(ocultados[0]['id'], cid)
+
+        # Outro usuário não vê comentários ocultados do autor
+        self._logar('outro@gmail.com', 'outro', moderador=False)
+        resp_outro = self.web.get('/perfil', headers={'Accept': 'text/html'})
+        self.assertEqual(resp_outro.status_code, 200)
+        html_outro = resp_outro.get_data(as_text=True)
+        self.assertNotIn('Comentários ocultados', html_outro)
+        self.assertNotIn(f'/comentarios/{cid}/contestar', html_outro)
+
 
 class TestFluxoCompletoModeracao(unittest.TestCase):
     def setUp(self):

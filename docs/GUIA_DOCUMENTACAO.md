@@ -12,11 +12,12 @@ os detalhes. **Descrição do estado atual não equivale a funcionalidade planej
 | Visão técnica e diagramas | [Arquitetura](ARQUITETURA.md) | [Backend](BACKEND.md), [Frontend](FRONTEND.md) |
 | Tabelas, relacionamentos e políticas | [Modelo de dados](Modelo%20de%20Dados.md) | [SQL versionado](migrations/001_initial_schema.sql) |
 | Coleta e atualização do SIGAA | [Guia do scraper](COMO_USAR_SCRAPER.md) | [Modelo de dados](Modelo%20de%20Dados.md) |
+| Decisão sobre histórico semestral (#242) | [Registro da decisão](DECISAO_HISTORICO_SEMESTRES.md) | [Funcionalidades](FUNCIONALIDADES.md), [Pipeline](pipeline.md) |
 | Rotas e autenticação | [Backend](BACKEND.md) | [Cibersegurança](CIBERSEGURANCA.md) |
 | Templates e componentes | [Frontend](FRONTEND.md) | [Design system](DESIGN_SYSTEM.md) |
 | CI, checks e publicação | [Pipeline](pipeline.md) | [Hospedagem](HOSPEDAGEM.md) |
 | Auditoria e plano de correção | [Auditoria de segurança](AUDITORIA_SEGURANCA.md) | [Cibersegurança](CIBERSEGURANCA.md) |
-| Comentários (parte implementada na #167; reações e moderação ainda futuras) | [Especificação](COMENTARIOS.md) | [Mockups](TELAS_COMENTARIOS.md) |
+| Comentários (#167), reações (#212) e denúncias (#215); moderação futura | [Especificação](COMENTARIOS.md) | [Mockups](TELAS_COMENTARIOS.md) |
 | Pronto para começar/concluído | [Critérios de contribuição](PROCESSO_CONTRIBUICAO.md) | Templates de issue/PR em `.github/` |
 
 ## Inventário da revisão (issue #136)

@@ -34,6 +34,16 @@ parâmetros e regras de autorização estão no [guia do backend](BACKEND.md).
 
 ## Componentes e estados existentes
 
+### Período de oferta (planejamento #242)
+
+A [decisão híbrida](DECISAO_HISTORICO_SEMESTRES.md) prevê um seletor de período
+no catálogo: ativo por padrão, períodos anteriores e Todos. A lista de
+professores e as sugestões devem respeitar o recorte, com estado vazio e opção
+de voltar ao histórico. Os links, filtros combinados e paginação preservam a
+seleção. O perfil continua acessível mesmo sem oferta vigente. A interface deve
+identificar o período da oferta sem confundi-lo com o filtro de médias ou a
+turma escolhida para avaliar. O seletor ainda não faz parte dos templates atuais.
+
 O arquivo `base.css` concentra os tokens do [design system](DESIGN_SYSTEM.md)
 como variáveis em `:root` (`--cor-*`, `--espaco-*`, `--raio`, `--altura-controle`,
 larguras e margens) e os componentes reutilizáveis: `.botao` com `-primario`,
@@ -64,6 +74,11 @@ editar. A confirmação de exclusão usa `.botao-destrutivo` (cor `--cor-erro`) 
 deixa o "Cancelar" em destaque. Em telas de até 600 px, a seção usa coluna única
 e botões em largura total. A confirmação de exclusão do comentário é uma página
 própria, sem JavaScript.
+
+Na listagem pública não há nome de usuário, avatar ou rótulo substituto acima
+do comentário. A disciplina, a data e o texto continuam visíveis. Os avisos de
+publicação e edição informam que a identificação da conta não aparece. Edição,
+exclusão e denúncia continuam exigindo as permissões da conta autenticada (#258).
 
 O catálogo mostra mensagens diferentes para ausência de dados e ausência de
 resultados dos filtros e exibe a média
@@ -146,4 +161,6 @@ são propostas.
 A conferência de contraste e o inventário de estados de carregamento continuam
 no escopo da #112. A aprovação das regras de comentários é uma etapa do grupo
 na #116; a interface de listar, publicar, editar e excluir comentários está
-implementada, e a de reações, ordenação, denúncia e moderação ainda não.
+implementada, assim como reações (#212) e denúncia (#215). Ordenação e moderação
+continuam planejadas. Os controles de reação usam os tokens de ambos os temas,
+`aria-pressed`, marca de seleção, foco visível e alvos de toque de 44 px.

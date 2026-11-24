@@ -31,6 +31,7 @@
 
                 <blockquote>{{ item.texto }}</blockquote>
 
+                {% if item.denuncias %}
                 <h3>Denúncias recebidas</h3>
                 <ul>
                     {% for d in item.denuncias %}
@@ -41,6 +42,7 @@
                     </li>
                     {% endfor %}
                 </ul>
+                {% endif %}
 
                 {% if item.contestacoes %}
                 <h3>Contestações do autor</h3>
@@ -80,9 +82,13 @@
 
                     <label for="acao-{{ item.comentario_id }}">Decisão</label>
                     <select id="acao-{{ item.comentario_id }}" name="acao" required>
+                        {% if item.ocultado %}
+                        <option value="manter">Manter ocultado</option>
+                        <option value="restaurar" selected>Restaurar comentário</option>
+                        {% else %}
                         <option value="manter">Manter publicado</option>
-                        <option value="ocultar" {% if not item.ocultado %}selected{% endif %}>Ocultar da visão pública</option>
-                        <option value="restaurar" {% if item.ocultado %}selected{% endif %}>Restaurar comentário</option>
+                        <option value="ocultar" selected>Ocultar da visão pública</option>
+                        {% endif %}
                     </select>
 
                     <label for="justificativa-{{ item.comentario_id }}">Justificativa obrigatória</label>

@@ -44,7 +44,9 @@ anteriores podem conter apenas parte delas.
 | R1 — fluxo essencial | Cadastro, login, busca de professores e disciplinas, perfil do professor, avaliação por cinco critérios e consulta de médias | Implementado |
 | R2 — consulta e gestão de avaliações | Ranking, comparação entre dois professores, filtro por departamento, busca que ignora acentos e espaços extras e perfil do usuário com edição e exclusão das próprias avaliações | Implementado |
 | Evolução dos filtros | Faixa de nota e volume de avaliações | Pendente |
-| Comentários | Listar os 50 mais recentes, filtrar por disciplina, publicar, editar e excluir o próprio comentário, com nome de usuário (sem e-mail) | Implementado ([regras](docs/COMENTARIOS.md)) |
+| Histórico de semestres | Preservação das turmas, avaliação por turma cursada e evolução de notas | Implementado (#225, #252, #224) |
+| Consulta por oferta | Priorizar o semestre ativo e permitir outros períodos | [Proposta híbrida (#242)](docs/DECISAO_HISTORICO_SEMESTRES.md); implementação futura |
+| Comentários | Listar os 50 mais recentes, filtrar por disciplina, publicar, editar e excluir o próprio comentário anonimamente; reagir com 👍 ou 👎 e denunciar | Implementado ([regras](docs/COMENTARIOS.md)) |
 | Reações e moderação | Reações, ordenação escolhida pela pessoa, filtro automático, denúncia e moderação | [Proposta para revisão](docs/COMENTARIOS.md) |
 | Outras funcionalidades planejadas | Favoritos e gráficos de desempenho | Pendente |
 
@@ -161,6 +163,9 @@ docker compose up --build
 A aplicação será servida pelo Gunicorn em `http://localhost:8000`.
 O scraper é executado separadamente. A cada semestre, ele roda pelo workflow manual
 *Atualizar dados do SIGAA* no GitHub Actions; veja o [guia do scraper](docs/COMO_USAR_SCRAPER.md).
+As coletas acrescentam ofertas sem apagar o histórico. A opção híbrida da #242
+propõe definir o período de oferta ativo após validação da coleta e manter os
+anteriores consultáveis. A regra das avaliações por turma cursada permanece.
 
 ### Hospedagem
 
@@ -185,14 +190,14 @@ foi concluída na #111. O relatório registra um achado de prioridade alta,
 três de prioridade média e oito de prioridade baixa, sem achados críticos.
 O [PR #139](https://github.com/unb-mds/2026-2-AvaliaUnB/pull/139)
 versionou RLS e políticas no esquema inicial. A aplicação ainda usa a chave
-de serviço. As mudanças seguintes estão nas issues
+de serviço no servidor; a autorização depende do backend. A migração para a
+chave pública foi adiada para depois do lançamento após a reversão do PR #141
+no PR #157 por regressão em produção. As etapas adiadas são
 [#124](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/124),
-[#125](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/125),
-[#126](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/126),
-[#127](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/127),
 [#129](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/129) e
 [#130](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/130).
-A conclusão da auditoria não significa que essas correções já foram aplicadas.
+A revogação de sessão no logout (#126) foi entregue; os ajustes de baixa
+prioridade são acompanhados na #127.
 O [resumo de cibersegurança](docs/CIBERSEGURANCA.md) relaciona os mecanismos do
 código, a situação do RLS e os resultados da auditoria com cada correção.
 
@@ -201,11 +206,10 @@ baseada na #109, para revisão do grupo na
 [#116](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/116).
 Já estão implementados no perfil do professor (#167): listar os comentários
 (mais recentes primeiro, 50 por vez), filtrar por disciplina, publicar, editar e
-excluir o próprio comentário. O comentário mostra só o nome de usuário, nunca o
-e-mail, e basta estar logado para comentar, com limite de 10 comentários por
-hora por usuário. Reações, ordenação escolhida pela pessoa, filtro antes da
-publicação, denúncias e moderação continuam propostos e ainda não estão
-implementados.
+excluir o próprio comentário. A listagem não identifica o autor. Basta estar
+logado para comentar, com limite de 10 comentários por hora por usuário.
+Reações (#212) e denúncias (#215) estão implementadas; ordenação escolhida pela
+pessoa, filtro antes da publicação e moderação continuam planejados.
 
 ## Documentação
 

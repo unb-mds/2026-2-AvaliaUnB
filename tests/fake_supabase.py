@@ -108,7 +108,9 @@ class Consulta:
                 existente = next((l for l in tabela
                                   if all(l.get(c) == linha.get(c) for c in colunas)), None)
                 if existente is None:
-                    if self.nome == 'favoritos':   # chave composta, sem id; default do banco
+                    if self.nome == 'comentarios_reacoes':
+                        existente = {}
+                    elif self.nome == 'favoritos':   # chave composta, sem id; default do banco
                         existente = {'criado_em': _agora_comentarios()}
                     else:
                         existente = {'id': max((l['id'] for l in tabela), default=0) + 1}
@@ -262,6 +264,7 @@ class ClienteFalso:
             'avaliacoes': [],
             'perfis': [],
             'comentarios': [],
+            'comentarios_reacoes': [],
             'denuncias_comentarios': [],
             'favoritos': [],
             'moderadores': [],
