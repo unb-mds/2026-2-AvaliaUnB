@@ -34,6 +34,16 @@ parâmetros e regras de autorização estão no [guia do backend](BACKEND.md).
 
 ## Componentes e estados existentes
 
+### Período de oferta (planejamento #242)
+
+A [decisão híbrida](DECISAO_HISTORICO_SEMESTRES.md) prevê um seletor de período
+no catálogo: ativo por padrão, períodos anteriores e Todos. A lista de
+professores e as sugestões devem respeitar o recorte, com estado vazio e opção
+de voltar ao histórico. Os links, filtros combinados e paginação preservam a
+seleção. O perfil continua acessível mesmo sem oferta vigente. A interface deve
+identificar o período da oferta sem confundi-lo com o filtro de médias ou a
+turma escolhida para avaliar. O seletor ainda não faz parte dos templates atuais.
+
 O arquivo `base.css` concentra os tokens do [design system](DESIGN_SYSTEM.md)
 como variáveis em `:root` (`--cor-*`, `--espaco-*`, `--raio`, `--altura-controle`,
 larguras e margens) e os componentes reutilizáveis: `.botao` com `-primario`,

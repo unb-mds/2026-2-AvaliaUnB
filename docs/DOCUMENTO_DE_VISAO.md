@@ -129,6 +129,12 @@ Consulte [Funcionalidades](FUNCIONALIDADES.md) para saber o que já existe e
 | **RF11** | Favoritar Professores | Salvar professores na lista pessoal do usuário para acompanhamento rápido. | Baixa (R2) |
 | **RF12** | Gráficos de Desempenho | Apresentar gráficos visuais da evolução das notas do professor ao longo dos semestres. | Baixa (R2) |
 
+A [decisão #242](DECISAO_HISTORICO_SEMESTRES.md) propõe preservar o histórico
+necessário a RF04 e RF12 e priorizar o semestre de oferta ativo em RF03.
+O histórico permanece consultável; a apresentação por período não redefine
+as notas, as médias ou os critérios de ranking. A implementação da nova
+apresentação é uma etapa posterior à ratificação da decisão.
+
 ---
 
 Para o estado atual de arquitetura e tecnologia, veja [Arquitetura](ARQUITETURA.md),

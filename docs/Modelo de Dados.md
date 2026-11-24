@@ -103,6 +103,16 @@ Vínculo entre professor e disciplina em um semestre. Alimentada pelo scraper.
 
 - **Unicidade:** `uq_turmas_prof_disc_ano_periodo` em `(professor_id, disciplina_id, ano, periodo)`. É a chave usada pelo scraper para não duplicar turmas.
 
+- **Histórico:** coletas de períodos diferentes acrescentam vínculos e não
+  substituem os anteriores. Reexecutar a coleta do mesmo período reaproveita a
+  chave composta. Professores e disciplinas de períodos antigos continuam
+  disponíveis e os vínculos das avaliações são preservados.
+- **Decisão #242 (proposta C):** manter esse esquema; o período ativo deverá ser
+  uma configuração explícita validada após a coleta, não uma exclusão de turmas
+  nem o maior par presente no banco. A configuração ainda não existe no SQL
+  versionado. O modelo e a validação dessa configuração ficam para a futura
+  implementação da [decisão](DECISAO_HISTORICO_SEMESTRES.md).
+
 ### 2.4 `perfis`
 
 Dados públicos do usuário, ligados ao Supabase Auth.
@@ -138,6 +148,12 @@ Avaliação por critérios objetivos, com notas inteiras de 1 a 5.
 - **Unicidade:** `uq_avaliacoes_usuario_prof_disc_semestre` em `(usuario_id, professor_id, disciplina_id, ano, periodo)`, desde a migração [`007_avaliacao_por_semestre.sql`](migrations/007_avaliacao_por_semestre.sql) (issue #252). Cada usuário avalia uma vez cada **turma cursada** (professor + disciplina + semestre). Antes dela, a chave era `uq_avaliacoes_usuario_prof_disc` em `(usuario_id, professor_id, disciplina_id)`, sem o semestre.
 - **Semestre:** `ano`/`periodo` é a turma escolhida no formulário. O backend confere que existe uma linha em `turmas` para o professor, a disciplina e o semestre (não há FK composta). Avaliações anteriores à #252 têm o semestre da turma mais recente do par na época.
 - **Índice:** `idx_avaliacoes_professor_semestre (professor_id, ano, periodo)` atende o filtro de semestre das médias e o gráfico de evolução.
+
+- **Retenção por semestre:** o período de oferta ativo não altera a chave,
+  o semestre cursado ou a visibilidade de avaliações antigas. Não é necessária
+  uma nova migração de avaliações para a opção C: a #252 já cobre a unicidade.
+  Comentários permanecem vinculados ao professor e à disciplina, sem coluna de
+  semestre cursado; a data de publicação não é equivalente à turma cursada.
 
 ### 2.6 View `vw_professor_disciplina`
 
@@ -428,8 +444,39 @@ REVOKE ALL ON comentarios_reacoes FROM PUBLIC, anon, authenticated;
   comentário oculto, inexistente ou do próprio usuário, e usa o denunciante da
   sessão (um `usuario_id` enviado no formulário é ignorado).
 - **Retenção:** a proposta da C08 é apagar o registro até 90 dias após encerrar o
-  caso; a rotina de descarte fica para a moderação (#216).
+  caso; a rotina de descarte fica para a moderação (#217).
 
+## Área de moderação e contestações (Issue #216)
+
+- **Migração:** `docs/migrations/008_moderacao_comentarios.sql`
+- **Tabelas privadas (RLS sem políticas para `anon`/`authenticated`; acesso exclusivo via `service_role`):**
+  - `moderadores`: lista explícita de `usuario_id` com permissão de moderação (nasce vazia; nenhum usuário tem acesso por padrão).
+  - `moderacoes_comentarios`: histórico de decisões (`manter`, `ocultar`, `restaurar`), sempre com `moderador_id` (`ON DELETE SET NULL` para preservar o histórico caso o moderador exclua a conta) e `justificativa` obrigatória (2 a 1.000 caracteres).
+  - `contestacoes_comentarios`: pedidos privados de revisão enviados pelo autor de um comentário ocultado (uma contestação ativa por comentário).
+- **Rotas e permissões:**
+  - `GET /moderacao` e `POST /moderacao/comentarios/<id>/decidir`: protegidas por `@moderador_required` (visitante recebe 302/401; usuário comum recebe 403).
+  - `GET/POST /comentarios/<id>/contestar`: protegida por `@login_required` e restrita ao próprio autor de um comentário ocultado (terceiros recebem 404).
+
+### Como cadastrar moderadores (SQL Editor do Supabase)
+
+A tabela `moderadores` nasce vazia. Para conceder acesso à equipe no SQL Editor do Supabase, insira os perfis desejados pelo `username`:
+
+```sql
+INSERT INTO moderadores (usuario_id)
+SELECT id
+FROM perfis
+WHERE username IN ('username_membro_1', 'username_membro_2')
+ON CONFLICT (usuario_id) DO NOTHING;
+```
+
+Para revogar o acesso de um moderador sem apagar o histórico de decisões já registradas:
+
+```sql
+DELETE FROM moderadores
+WHERE usuario_id = (SELECT id FROM perfis WHERE username = 'username_membro');
+```
+
+  
 ## 8. Professores favoritos (`favoritos`)
 
 > Issue #223 (RF11). Versionada em [`006_favoritos.sql`](migrations/006_favoritos.sql).

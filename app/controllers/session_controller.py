@@ -14,7 +14,7 @@ from datetime import timedelta
 from functools import wraps
 from urllib.parse import urlsplit
 
-from flask import current_app, g, jsonify, redirect, request, url_for
+from flask import abort, current_app, g, jsonify, redirect, request, url_for
 
 from app.repositorio import repositorios
 
@@ -127,6 +127,37 @@ def login_required(view_func):
         return view_func(*args, **kwargs)
     return wrapper
 
+def usuario_eh_moderador(usuario=None):
+    """True se o usuário atual (ou informado) possuir papel de moderador. Cacheado em flask.g."""
+    alvo = usuario if usuario is not None else obter_usuario_atual()
+    if not alvo:
+        return False
+    if usuario is None and hasattr(g, "eh_moderador"):
+        return g.eh_moderador
+    moderacao = repositorios().moderacao
+    resultado = bool(moderacao and moderacao.eh_moderador(alvo["id"]))
+    if usuario is None:
+        g.eh_moderador = resultado
+    return resultado
+
+
+def moderador_required(view_func):
+    """Exige login e papel de moderador; retorna 403 para usuários comuns."""
+    @wraps(view_func)
+    def wrapper(*args, **kwargs):
+        if obter_usuario_atual() is None:
+            if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+                return jsonify({"erro": "Não autenticado"}), 401
+            destino = _origem_requisicao()
+            if destino:
+                return redirect(url_for("auth.login", next=destino))
+            return redirect(url_for("auth.login"))
+        if not usuario_eh_moderador():
+            if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+                return jsonify({"erro": "Acesso restrito a moderadores."}), 403
+            abort(403, description="Acesso restrito a moderadores.")
+        return view_func(*args, **kwargs)
+    return wrapper
 
 def encerrar_sessao(response):
     """Revoga a sessão no Supabase e apaga os cookies."""

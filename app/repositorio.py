@@ -18,7 +18,7 @@ from supabase_auth.helpers import generate_pkce_challenge, generate_pkce_verifie
 
 from app.supabase_db import get_supabase, novo_cliente
 from app.utils import normalizar_busca
-from app.validacoes import CRITERIOS, validar_comentario, validar_denuncia
+from app.validacoes import CRITERIOS, validar_comentario, validar_denuncia, validar_decisao_moderacao, validar_contestacao
 
 LIMITE_COMENTARIOS = 50        # comentários por listagem; o "ver mais" fica para depois
 COLUNAS_AVALIACAO = ','.join(('id', 'usuario_id', 'professor_id', 'disciplina_id',
@@ -778,7 +778,7 @@ class ComentarioRepository:
     def buscar_do_usuario(self, comentario_id, usuario_id):
         """Comentário se pertencer ao usuário, senão None (a rota responde 404)."""
         dados = (self.cliente.table('comentarios')
-                 .select('id,professor_id,disciplina_id,texto')
+                 .select('id,professor_id,disciplina_id,texto,ocultado_em')
                  .eq('id', comentario_id).eq('usuario_id', usuario_id).limit(1).execute().data)
         if not dados:
             return None
@@ -787,7 +787,9 @@ class ComentarioRepository:
             linha['disciplina_id'], ('', ''))
         return {'id': linha['id'], 'professor_id': linha['professor_id'],
                 'disciplina_id': linha['disciplina_id'], 'texto': linha['texto'],
-                'disciplina_nome': nome, 'disciplina_codigo': codigo}
+                'disciplina_nome': nome, 'disciplina_codigo': codigo,
+                'ocultado': linha.get('ocultado_em') is not None,
+                'ocultado_em': linha.get('ocultado_em')}
 
     def buscar_visivel(self, comentario_id):
         """Comentário publicado (não ocultado) de qualquer autor, ou None.
@@ -923,7 +925,352 @@ class DenunciaRepository:
             raise
         return True
 
+class ModeracaoRepository:
+    """Papel de moderador, fila de denúncias, decisões e contestações (issue #216)."""
 
+    def __init__(self, cliente):
+        self.cliente = cliente
+
+    def eh_moderador(self, usuario_id):
+        """True somente se o usuário estiver cadastrado explicitamente em `moderadores`."""
+        if not usuario_id:
+            return False
+        return bool(
+            self.cliente.table('moderadores')
+            .select('usuario_id')
+            .eq('usuario_id', usuario_id)
+            .limit(1)
+            .execute()
+            .data
+        )
+
+    def listar_fila(self):
+        """Lista comentários com denúncia ou contestação em aberto, mais antigos primeiro.
+
+        Agrupa denúncias, histórico de decisões e contestações de cada comentário pendente.
+        """
+        denuncias_abertas = (
+            self.cliente.table('denuncias_comentarios')
+            .select('id,comentario_id,motivo,explicacao,criado_em,resolvida_em')
+            .is_('resolvida_em', 'null')
+            .order('criado_em')
+            .execute()
+            .data
+        )
+        contestacoes_abertas = (
+            self.cliente.table('contestacoes_comentarios')
+            .select('id,comentario_id,justificativa,criado_em,resolvida_em')
+            .is_('resolvida_em', 'null')
+            .order('criado_em')
+            .execute()
+            .data
+        )
+        if not denuncias_abertas and not contestacoes_abertas:
+            return []
+
+        pendencia_mais_antiga = {}
+        for registro in (*denuncias_abertas, *contestacoes_abertas):
+            cid = registro['comentario_id']
+            criado = registro.get('criado_em') or ''
+            if cid not in pendencia_mais_antiga or criado < pendencia_mais_antiga[cid]:
+                pendencia_mais_antiga[cid] = criado
+
+        ids_comentarios = sorted(
+            pendencia_mais_antiga,
+            key=lambda cid: (pendencia_mais_antiga[cid], cid),
+        )
+
+        comentarios = {
+            c['id']: c
+            for c in self.cliente.table('comentarios')
+            .select('id,usuario_id,professor_id,disciplina_id,texto,criado_em,atualizado_em,ocultado_em')
+            .in_('id', ids_comentarios)
+            .execute()
+            .data
+        }
+        if not comentarios:
+            return []
+
+        denuncias_todas = (
+            self.cliente.table('denuncias_comentarios')
+            .select('id,comentario_id,motivo,explicacao,criado_em,resolvida_em')
+            .in_('comentario_id', ids_comentarios)
+            .order('criado_em')
+            .execute()
+            .data
+        )
+        por_comentario = {}
+        for d in denuncias_todas:
+            por_comentario.setdefault(d['comentario_id'], []).append(d)
+
+        prof_ids = sorted({c['professor_id'] for c in comentarios.values()})
+        professores = {
+            p['id']: p['nome']
+            for p in self.cliente.table('professores')
+            .select('id,nome')
+            .in_('id', prof_ids)
+            .execute()
+            .data
+        }
+        vinculos = (
+            self.cliente.table('vw_professor_disciplina')
+            .select('professor_id,disciplina_id,codigo_disciplina,disciplina')
+            .in_('professor_id', prof_ids)
+            .execute()
+            .data
+        )
+        disciplinas = {
+            (v['professor_id'], v['disciplina_id']): (v.get('disciplina', ''), v.get('codigo_disciplina', ''))
+            for v in vinculos
+        }
+
+        decisoes_raw = (
+            self.cliente.table('moderacoes_comentarios')
+            .select('id,comentario_id,moderador_id,acao,justificativa,criado_em')
+            .in_('comentario_id', ids_comentarios)
+            .order('criado_em', desc=True)
+            .execute()
+            .data
+        )
+        mod_ids = sorted({d['moderador_id'] for d in decisoes_raw if d.get('moderador_id')})
+        moderadores = (
+            {
+                p['id']: p['username']
+                for p in self.cliente.table('perfis')
+                .select('id,username')
+                .in_('id', mod_ids)
+                .execute()
+                .data
+            }
+            if mod_ids
+            else {}
+        )
+        decisoes_por_comentario = {}
+        for dec in decisoes_raw:
+            decisoes_por_comentario.setdefault(dec['comentario_id'], []).append({
+                **dec,
+                'moderador_username': moderadores.get(dec['moderador_id'], ''),
+            })
+
+        contestacoes_raw = (
+            self.cliente.table('contestacoes_comentarios')
+            .select('id,comentario_id,justificativa,criado_em,resolvida_em')
+            .in_('comentario_id', ids_comentarios)
+            .order('criado_em', desc=True)
+            .execute()
+            .data
+        )
+        contestacoes_por_comentario = {}
+        for cont in contestacoes_raw:
+            contestacoes_por_comentario.setdefault(cont['comentario_id'], []).append(cont)
+
+        fila = []
+        for cid in ids_comentarios:
+            c = comentarios.get(cid)
+            if not c:
+                continue
+            disc_nome, disc_codigo = disciplinas.get((c['professor_id'], c['disciplina_id']), ('', ''))
+            lista_den = por_comentario.get(cid, [])
+            abertas = [d for d in lista_den if d.get('resolvida_em') is None]
+            fila.append({
+                'comentario_id': cid,
+                'professor_id': c['professor_id'],
+                'professor_nome': professores.get(c['professor_id'], ''),
+                'disciplina_nome': disc_nome,
+                'disciplina_codigo': disc_codigo,
+                'texto': c['texto'],
+                'criado_em': c.get('criado_em'),
+                'ocultado': c.get('ocultado_em') is not None,
+                'ocultado_em': c.get('ocultado_em'),
+                'denuncias': lista_den,
+                'denuncias_abertas': len(abertas),
+                'total_denuncias': len(lista_den),
+                'decisoes': decisoes_por_comentario.get(cid, []),
+                'contestacoes': contestacoes_por_comentario.get(cid, []),
+            })
+        return fila
+
+    def registrar_decisao(self, comentario_id, moderador_id, acao, justificativa):
+        """Registra decisão (manter/ocultar/restaurar) com justificativa e atualiza o comentário.
+
+        False se o comentário não existir; ValueError se ação, justificativa ou transição
+        de estado forem inválidas.
+        """
+        acao, justificativa, erros = validar_decisao_moderacao(acao, justificativa)
+        if erros:
+            raise ValueError(next(iter(erros.values())))
+
+        existente = (
+            self.cliente.table('comentarios')
+            .select('id,ocultado_em')
+            .eq('id', comentario_id)
+            .limit(1)
+            .execute()
+            .data
+        )
+        if not existente:
+            return False
+
+        esta_oculto = existente[0].get('ocultado_em') is not None
+        if acao == 'restaurar' and not esta_oculto:
+            raise ValueError('Só é possível restaurar comentários que estejam ocultados.')
+        if acao == 'ocultar' and esta_oculto:
+            raise ValueError('Só é possível ocultar comentários publicados.')
+
+        agora = datetime.now(timezone.utc).isoformat()
+        self.cliente.table('moderacoes_comentarios').insert({
+            'comentario_id': comentario_id,
+            'moderador_id': moderador_id,
+            'acao': acao,
+            'justificativa': justificativa,
+            'criado_em': agora,
+        }).execute()
+
+        if acao == 'ocultar':
+            self.cliente.table('comentarios').update({'ocultado_em': agora}).eq('id', comentario_id).execute()
+        elif acao == 'restaurar':
+            self.cliente.table('comentarios').update({'ocultado_em': None}).eq('id', comentario_id).execute()
+
+        # Marca denúncias e contestações abertas daquele comentário como resolvidas
+        self.cliente.table('denuncias_comentarios').update({'resolvida_em': agora}).eq(
+            'comentario_id', comentario_id
+        ).is_('resolvida_em', 'null').execute()
+        self.cliente.table('contestacoes_comentarios').update({'resolvida_em': agora}).eq(
+            'comentario_id', comentario_id
+        ).is_('resolvida_em', 'null').execute()
+        return True
+
+    def listar_ocultados_do_usuario(self, usuario_id):
+        """Lista os comentários ocultados do próprio autor com a última justificativa."""
+        linhas = (
+            self.cliente.table('comentarios')
+            .select('id,professor_id,disciplina_id,texto,criado_em,ocultado_em')
+            .eq('usuario_id', usuario_id)
+            .order('ocultado_em', desc=True)
+            .execute()
+            .data
+        )
+        ocultados = [l for l in linhas if l.get('ocultado_em') is not None]
+        if not ocultados:
+            return []
+
+        ids = [l['id'] for l in ocultados]
+        prof_ids = sorted({l['professor_id'] for l in ocultados})
+        professores = {
+            p['id']: p['nome']
+            for p in self.cliente.table('professores')
+            .select('id,nome')
+            .in_('id', prof_ids)
+            .execute()
+            .data
+        }
+        vinculos = (
+            self.cliente.table('vw_professor_disciplina')
+            .select('professor_id,disciplina_id,codigo_disciplina,disciplina')
+            .in_('professor_id', prof_ids)
+            .execute()
+            .data
+        )
+        disciplinas = {
+            (v['professor_id'], v['disciplina_id']): (v.get('disciplina', ''), v.get('codigo_disciplina', ''))
+            for v in vinculos
+        }
+        decisoes = (
+            self.cliente.table('moderacoes_comentarios')
+            .select('comentario_id,acao,justificativa,criado_em')
+            .in_('comentario_id', ids)
+            .order('criado_em', desc=True)
+            .execute()
+            .data
+        )
+        ultima_justificativa = {}
+        for d in decisoes:
+            if d['comentario_id'] not in ultima_justificativa and d.get('acao') == 'ocultar':
+                ultima_justificativa[d['comentario_id']] = d.get('justificativa', '')
+
+        contestacoes = (
+            self.cliente.table('contestacoes_comentarios')
+            .select('comentario_id,justificativa,criado_em,resolvida_em')
+            .in_('comentario_id', ids)
+            .order('criado_em', desc=True)
+            .execute()
+            .data
+        )
+        contestacao_ativa = {}
+        for cont in contestacoes:
+            if cont.get('resolvida_em') is None and cont['comentario_id'] not in contestacao_ativa:
+                contestacao_ativa[cont['comentario_id']] = cont
+
+        resultado = []
+        for l in ocultados:
+            disc_nome, disc_codigo = disciplinas.get((l['professor_id'], l['disciplina_id']), ('', ''))
+            resultado.append({
+                'id': l['id'],
+                'professor_id': l['professor_id'],
+                'professor_nome': professores.get(l['professor_id'], ''),
+                'disciplina_nome': disc_nome,
+                'disciplina_codigo': disc_codigo,
+                'texto': l['texto'],
+                'ocultado_em': l.get('ocultado_em'),
+                'justificativa_moderacao': ultima_justificativa.get(l['id'], ''),
+                'contestacao_ativa': contestacao_ativa.get(l['id']),
+            })
+        return resultado
+
+    def buscar_contestacao_ativa(self, comentario_id):
+        """Retorna a contestação em aberto do comentário, ou None."""
+        dados = (
+            self.cliente.table('contestacoes_comentarios')
+            .select('id,comentario_id,usuario_id,justificativa,criado_em')
+            .eq('comentario_id', comentario_id)
+            .is_('resolvida_em', 'null')
+            .limit(1)
+            .execute()
+            .data
+        )
+        return dados[0] if dados else None
+
+    def ultima_justificativa_ocultacao(self, comentario_id):
+        """Retorna a justificativa da última decisão de ocultação do comentário."""
+        decisoes = (
+            self.cliente.table('moderacoes_comentarios')
+            .select('acao,justificativa,criado_em')
+            .eq('comentario_id', comentario_id)
+            .order('criado_em', desc=True)
+            .execute()
+            .data
+        )
+        for dec in decisoes:
+            if dec.get('acao') == 'ocultar':
+                return dec.get('justificativa', '')
+        return ''
+
+    def criar_contestacao(self, comentario_id, usuario_id, justificativa):
+        """Registra pedido privado de revisão pelo autor.
+
+        False se já houver uma contestação aberta; ValueError se justificativa for inválida.
+        """
+        limpa, erros = validar_contestacao(justificativa)
+        if erros:
+            raise ValueError(next(iter(erros.values())))
+        if self.buscar_contestacao_ativa(comentario_id):
+            return False
+        agora = datetime.now(timezone.utc).isoformat()
+        try:
+            self.cliente.table('contestacoes_comentarios').insert({
+                'comentario_id': comentario_id,
+                'usuario_id': usuario_id,
+                'justificativa': limpa,
+                'criado_em': agora,
+                'resolvida_em': None,
+            }).execute()
+        except Exception as erro:
+            if '23505' in str(erro) or 'duplicate key' in str(erro):
+                return False
+            raise
+        return True
+
+    
 class FavoritoRepository:
     """Professores favoritos de cada usuário (tabela favoritos, issue #223).
 
@@ -966,7 +1313,7 @@ class FavoritoRepository:
 
 class Repositorios:
     def __init__(self, usuarios, professores, avaliacoes, comentarios=None, denuncias=None,
-                 favoritos=None, reacoes=None):
+                 favoritos=None, reacoes=None, moderacao=None):
         self.usuarios = usuarios
         self.professores = professores
         self.avaliacoes = avaliacoes
@@ -974,6 +1321,7 @@ class Repositorios:
         self.denuncias = denuncias
         self.favoritos = favoritos
         self.reacoes = reacoes
+        self.moderacao = moderacao
 
 
 def configurar_repositorios(app):
@@ -984,7 +1332,8 @@ def configurar_repositorios(app):
     app.extensions['repositorios'] = Repositorios(
         UsuarioRepository(cliente, fabrica), ProfessorRepository(cliente),
         AvaliacaoRepository(cliente), ComentarioRepository(cliente),
-        DenunciaRepository(cliente), FavoritoRepository(cliente), ReacaoRepository(cliente))
+        DenunciaRepository(cliente), FavoritoRepository(cliente),
+        ReacaoRepository(cliente), ModeracaoRepository(cliente))
 
 
 def repositorios() -> Repositorios:

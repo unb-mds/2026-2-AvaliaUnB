@@ -32,6 +32,17 @@ pela URL. Eles podem ser usados juntos. Nome do professor e nome ou código da
 disciplina aceitam correspondência parcial; departamento exige igualdade
 depois da normalização.
 
+### Ofertas por semestre (proposta #242)
+
+Hoje a busca consulta todas as ofertas históricas. A opção híbrida propõe
+priorizar o semestre ativo na busca e no catálogo, com opções de outros
+períodos e de todos os semestres. Um professor sem oferta atual ainda pode ser
+consultado no histórico e pelo link de perfil. A seleção deve ser explícita,
+com estado vazio próprio, e não alterar as notas históricas do professor.
+O novo filtro de oferta ainda não está implementado; ele é independente do
+filtro de médias e do semestre cursado já existentes. Veja a
+[decisão #242](DECISAO_HISTORICO_SEMESTRES.md).
+
 A normalização ignora acentos, maiúsculas e espaços extras. A lista é ordenada
 pela quantidade de avaliações, com desempate por nome e identificador.
 Essa ordenação é diferente do ranking, que usa a média das notas.
@@ -111,6 +122,10 @@ professor e disciplina, com notas inteiras de um a cinco para os cinco critério
   antes: a avaliação vai para a turma mais recente.
 - **Edição:** mostra a turma ("Turma de 2026/1"), mas não permite trocá-la; para
   mudar o semestre, a pessoa exclui e avalia de novo.
+
+A [decisão #242](DECISAO_HISTORICO_SEMESTRES.md) preserva esse comportamento:
+o futuro padrão de oferta atual não limita a escolha da turma cursada. Não há
+remoção automática de avaliações ou comentários ao trocar o período de oferta.
 
 ### Médias: todos os semestres ou um semestre
 

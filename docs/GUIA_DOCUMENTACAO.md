@@ -12,6 +12,7 @@ os detalhes. **Descrição do estado atual não equivale a funcionalidade planej
 | Visão técnica e diagramas | [Arquitetura](ARQUITETURA.md) | [Backend](BACKEND.md), [Frontend](FRONTEND.md) |
 | Tabelas, relacionamentos e políticas | [Modelo de dados](Modelo%20de%20Dados.md) | [SQL versionado](migrations/001_initial_schema.sql) |
 | Coleta e atualização do SIGAA | [Guia do scraper](COMO_USAR_SCRAPER.md) | [Modelo de dados](Modelo%20de%20Dados.md) |
+| Decisão sobre histórico semestral (#242) | [Registro da decisão](DECISAO_HISTORICO_SEMESTRES.md) | [Funcionalidades](FUNCIONALIDADES.md), [Pipeline](pipeline.md) |
 | Rotas e autenticação | [Backend](BACKEND.md) | [Cibersegurança](CIBERSEGURANCA.md) |
 | Templates e componentes | [Frontend](FRONTEND.md) | [Design system](DESIGN_SYSTEM.md) |
 | CI, checks e publicação | [Pipeline](pipeline.md) | [Hospedagem](HOSPEDAGEM.md) |
