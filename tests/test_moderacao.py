@@ -214,6 +214,74 @@ class TestModeracaoRepository(unittest.TestCase):
             self.moderacao.registrar_decisao(99999, self.moderador_id, 'ocultar', 'Não existe.')
         )
 
+    def test_fila_esvazia_apos_decisao_e_mantem_apenas_pendentes(self):
+        c1 = self.comentarios.criar(self.autor_id, 1, 10, 'Comentário que será decidido.')
+        c2 = self.comentarios.criar(self.autor_id, 1, 10, 'Comentário ainda pendente.')
+        self.denuncias.criar(c1, self.denunciante_id, 'ofensa', 'Ofensa.')
+        self.denuncias.criar(c2, self.denunciante_id, 'spam', 'Spam.')
+
+        self.moderacao.registrar_decisao(c1, self.moderador_id, 'manter', 'Sem violação.')
+
+        fila = self.moderacao.listar_fila()
+        self.assertEqual([item['comentario_id'] for item in fila], [c2])
+
+        # Decidindo o segundo, a fila esvazia completamente
+        self.moderacao.registrar_decisao(c2, self.moderador_id, 'ocultar', 'Spam confirmado.')
+        self.assertEqual(self.moderacao.listar_fila(), [])
+
+    def test_fila_inclui_contestacao_aberta_sem_nenhuma_denuncia(self):
+        cid = self.comentarios.criar(self.autor_id, 1, 10, 'Comentário ocultado sem denúncia.')
+        self.moderacao.registrar_decisao(cid, self.moderador_id, 'ocultar', 'Ocultação administrativa.')
+        self.assertEqual(self.moderacao.listar_fila(), [])
+
+        self.moderacao.criar_contestacao(cid, self.autor_id, 'Peço revisão do comentário.')
+
+        fila = self.moderacao.listar_fila()
+        self.assertEqual([item['comentario_id'] for item in fila], [cid])
+        self.assertEqual(fila[0]['denuncias'], [])
+        self.assertEqual(fila[0]['denuncias_abertas'], 0)
+        self.assertEqual(len(fila[0]['contestacoes']), 1)
+
+    def test_fila_ordena_pela_pendencia_aberta_mais_antiga(self):
+        c_recente = self.comentarios.criar(self.autor_id, 1, 10, 'Denúncia mais recente.')
+        c_contestacao_antiga = self.comentarios.criar(self.autor_id, 1, 10, 'Contestação mais antiga.')
+        c_denuncia_media = self.comentarios.criar(self.autor_id, 1, 10, 'Denúncia intermediária.')
+
+        self.cliente.tabelas['denuncias_comentarios'].extend([
+            {
+                'id': 901,
+                'comentario_id': c_recente,
+                'usuario_id': self.denunciante_id,
+                'motivo': 'spam',
+                'explicacao': None,
+                'criado_em': '2026-05-03T10:00:00+00:00',
+                'resolvida_em': None,
+            },
+            {
+                'id': 902,
+                'comentario_id': c_denuncia_media,
+                'usuario_id': self.denunciante_id,
+                'motivo': 'ofensa',
+                'explicacao': None,
+                'criado_em': '2026-05-02T10:00:00+00:00',
+                'resolvida_em': None,
+            },
+        ])
+        self.cliente.tabelas['contestacoes_comentarios'].append({
+            'id': 903,
+            'comentario_id': c_contestacao_antiga,
+            'usuario_id': self.autor_id,
+            'justificativa': 'Solicito reavaliação.',
+            'criado_em': '2026-05-01T10:00:00+00:00',
+            'resolvida_em': None,
+        })
+
+        fila = self.moderacao.listar_fila()
+        self.assertEqual(
+            [item['comentario_id'] for item in fila],
+            [c_contestacao_antiga, c_denuncia_media, c_recente],
+        )
+    
 
 class TestOcultacaoERepublicacao(unittest.TestCase):
     def setUp(self):

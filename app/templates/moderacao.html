@@ -31,6 +31,7 @@
 
                 <blockquote>{{ item.texto }}</blockquote>
 
+                {% if item.denuncias %}
                 <h3>Denúncias recebidas</h3>
                 <ul>
                     {% for d in item.denuncias %}
@@ -41,6 +42,7 @@
                     </li>
                     {% endfor %}
                 </ul>
+                {% endif %}
 
                 {% if item.contestacoes %}
                 <h3>Contestações do autor</h3>

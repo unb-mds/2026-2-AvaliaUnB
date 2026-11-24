@@ -842,28 +842,40 @@ class ModeracaoRepository:
         )
 
     def listar_fila(self):
-        """Lista somente comentários que possuem denúncias (mais antigas em aberto primeiro).
+        """Lista comentários com denúncia ou contestação em aberto, mais antigos primeiro.
 
-        Agrupa as denúncias por comentário e anexa histórico de decisões e contestações.
+        Agrupa denúncias, histórico de decisões e contestações de cada comentário pendente.
         """
-        denuncias = (
+        denuncias_abertas = (
             self.cliente.table('denuncias_comentarios')
             .select('id,comentario_id,motivo,explicacao,criado_em,resolvida_em')
+            .is_('resolvida_em', 'null')
             .order('criado_em')
             .execute()
             .data
         )
-        if not denuncias:
+        contestacoes_abertas = (
+            self.cliente.table('contestacoes_comentarios')
+            .select('id,comentario_id,justificativa,criado_em,resolvida_em')
+            .is_('resolvida_em', 'null')
+            .order('criado_em')
+            .execute()
+            .data
+        )
+        if not denuncias_abertas and not contestacoes_abertas:
             return []
 
-        ids_comentarios = []
-        por_comentario = {}
-        for d in denuncias:
-            cid = d['comentario_id']
-            if cid not in por_comentario:
-                ids_comentarios.append(cid)
-                por_comentario[cid] = []
-            por_comentario[cid].append(d)
+        pendencia_mais_antiga = {}
+        for registro in (*denuncias_abertas, *contestacoes_abertas):
+            cid = registro['comentario_id']
+            criado = registro.get('criado_em') or ''
+            if cid not in pendencia_mais_antiga or criado < pendencia_mais_antiga[cid]:
+                pendencia_mais_antiga[cid] = criado
+
+        ids_comentarios = sorted(
+            pendencia_mais_antiga,
+            key=lambda cid: (pendencia_mais_antiga[cid], cid),
+        )
 
         comentarios = {
             c['id']: c
@@ -875,6 +887,18 @@ class ModeracaoRepository:
         }
         if not comentarios:
             return []
+
+        denuncias_todas = (
+            self.cliente.table('denuncias_comentarios')
+            .select('id,comentario_id,motivo,explicacao,criado_em,resolvida_em')
+            .in_('comentario_id', ids_comentarios)
+            .order('criado_em')
+            .execute()
+            .data
+        )
+        por_comentario = {}
+        for d in denuncias_todas:
+            por_comentario.setdefault(d['comentario_id'], []).append(d)
 
         prof_ids = sorted({c['professor_id'] for c in comentarios.values()})
         professores = {
@@ -905,7 +929,7 @@ class ModeracaoRepository:
             .execute()
             .data
         )
-        mod_ids = sorted({d['moderador_id'] for d in decisoes_raw})
+        mod_ids = sorted({d['moderador_id'] for d in decisoes_raw if d.get('moderador_id')})
         moderadores = (
             {
                 p['id']: p['username']
@@ -943,7 +967,7 @@ class ModeracaoRepository:
             if not c:
                 continue
             disc_nome, disc_codigo = disciplinas.get((c['professor_id'], c['disciplina_id']), ('', ''))
-            lista_den = por_comentario[cid]
+            lista_den = por_comentario.get(cid, [])
             abertas = [d for d in lista_den if d.get('resolvida_em') is None]
             fila.append({
                 'comentario_id': cid,
