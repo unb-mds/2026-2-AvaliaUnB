@@ -428,7 +428,7 @@ REVOKE ALL ON comentarios_reacoes FROM PUBLIC, anon, authenticated;
   comentário oculto, inexistente ou do próprio usuário, e usa o denunciante da
   sessão (um `usuario_id` enviado no formulário é ignorado).
 - **Retenção:** a proposta da C08 é apagar o registro até 90 dias após encerrar o
-  caso; a rotina de descarte fica para a moderação (#216).
+  caso; a rotina de descarte fica para a moderação (#217).
 
 ## Área de moderação e contestações (Issue #216)
 

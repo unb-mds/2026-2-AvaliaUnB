@@ -262,7 +262,6 @@ class ClienteFalso:
             'comentarios_reacoes': [],
             'denuncias_comentarios': [],
             'favoritos': [],
-            'favoritos': [],
             'moderadores': [],
             'moderacoes_comentarios': [],
             'contestacoes_comentarios': [],
