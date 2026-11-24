@@ -67,7 +67,77 @@ class TestFiltrosAvancadosRepositorioEController(BaseFiltrosAvancados):
                 with self.subTest(invalidos=invalidos):
                     self.assertEqual([p['id'] for p, _ in controller.catalogo(**invalidos)],
                                      [1, 2, 3])
+class TestFiltrosAvancadosRotasENavegacao(BaseFiltrosAvancados):
+    def html(self, caminho):
+        resposta = self.web.get(caminho)
+        self.assertEqual(resposta.status_code, 200, caminho)
+        return resposta.get_data(as_text=True)
 
+    def test_filtra_isoladamente_e_mantem_valores_preenchidos_na_tela(self):
+        html_min = self.html('/professores?nota_min=4.0')
+        self.assertIn('JOSÉ ÁVILA', html_min)
+        self.assertNotIn('MARIA LIMA', html_min)
+        self.assertRegex(html_min, r'<input[^>]*name="nota_min"[^>]*value="4\.0"')
+        self.assertIn('Filtrando por nota mínima “4.0”', html_min)
+
+        html_max = self.html('/professores?nota_max=3.5')
+        self.assertIn('MARIA LIMA', html_max)
+        self.assertNotIn('JOSÉ ÁVILA', html_max)
+        self.assertRegex(html_max, r'<input[^>]*name="nota_max"[^>]*value="3\.5"')
+
+        html_qtd = self.html('/professores?avaliacoes_min=5')
+        self.assertIn('JOSÉ ÁVILA', html_qtd)
+        self.assertNotIn('MARIA LIMA', html_qtd)
+        self.assertRegex(html_qtd, r'<input[^>]*name="avaliacoes_min"[^>]*value="5"')
+
+    def test_combina_filtros_avancados_com_busca_e_departamento_nos_formularios(self):
+        html = self.html('/professores?q=jose&departamento=FCTE&nota_min=4.0&nota_max=5.0&avaliacoes_min=5')
+        self.assertIn('1 professor encontrado', html)
+        self.assertIn('JOSÉ ÁVILA', html)
+        self.assertNotIn('MARIA LIMA', html)
+
+        busca = re.search(r'<form[^>]*busca-unificada[^>]*>(.*?)</form>', html, re.S).group(1)
+        for campo, valor in (('departamento', 'FCTE'), ('nota_min', '4.0'),
+                             ('nota_max', '5.0'), ('avaliacoes_min', '5')):
+            self.assertRegex(busca, rf'<input type="hidden" name="{campo}" value="{re.escape(valor)}">')
+
+        filtros = re.search(r'<form[^>]*filtro-avancado-consulta[^>]*>(.*?)</form>', html, re.S).group(1)
+        self.assertIn('<input type="hidden" name="q" value="jose">', filtros)
+
+    def test_navegacao_de_retorno_do_perfil_mantem_os_filtros(self):
+        url_consulta = '/professores?departamento=FCTE&nota_min=4.0&nota_max=5.0&avaliacoes_min=5'
+        html_lista = self.html(url_consulta)
+        link_perfil = html_lib.unescape(
+            re.search(r'<h2><a href="([^"]+)">JOSÉ ÁVILA</a></h2>', html_lista).group(1)
+        )
+        next_param = parse_qs(urlparse(link_perfil).query)['next'][0]
+        self.assertEqual(unquote(next_param), url_consulta)
+
+        html_perfil = self.html(link_perfil)
+        link_voltar = html_lib.unescape(
+            re.search(r'<a class="profile-back" href="([^"]+)">', html_perfil).group(1)
+        )
+        self.assertEqual(link_voltar, url_consulta)
+
+        html_retorno = self.html(link_voltar)
+        self.assertIn('JOSÉ ÁVILA', html_retorno)
+        self.assertNotIn('MARIA LIMA', html_retorno)
+
+    def test_paginacao_preserva_filtros_avancados(self):
+        for i in range(205):
+            pid = 100 + i
+            self.cliente.tabelas['professores'].append(
+                {'id': pid, 'nome': f'DOCENTE EXTRA {i:03d}', 'departamento': 'FCTE'})
+            self.avaliar(pid, 10, 3, 3, 3, 3, 3, didatica=5, clareza=5, organizacao=5, disponibilidade=5)
+        self.app.extensions['repositorios'].professores.invalidar_cache()
+
+        html = self.html('/professores?nota_min=4.0&avaliacoes_min=5&pagina=2')
+        proxima = html_lib.unescape(re.search(r'<a [^>]*rel="next" href="([^"]+)"', html).group(1))
+        anterior = html_lib.unescape(re.search(r'<a [^>]*rel="prev" href="([^"]+)"', html).group(1))
+        self.assertIn('nota_min=4.0', proxima)
+        self.assertIn('avaliacoes_min=5', proxima)
+        self.assertIn('nota_min=4.0', anterior)
+        self.assertIn('avaliacoes_min=5', anterior)
 
 if __name__ == '__main__':
     unittest.main()
