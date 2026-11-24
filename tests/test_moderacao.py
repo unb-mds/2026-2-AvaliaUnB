@@ -488,7 +488,99 @@ class TestRotasModeracao(unittest.TestCase):
         )
         self.assertEqual(resp_manter_oculto.status_code, 400)
         self.assertIn('acao', resp_manter_oculto.get_json()['erros'])
-    
+
+    def test_fila_autorizacao_cobre_visitante_comum_e_moderador(self):
+        _, c_denunciado = self._criar_comentario_denunciado()
+
+        # 1. Visitante (sem login): 302 para /login em HTML e 401 em JSON
+        resp_vis_html = self.web.get('/moderacao', headers={'Accept': 'text/html'})
+        self.assertEqual(resp_vis_html.status_code, 302)
+        self.assertIn('/login', resp_vis_html.headers['Location'])
+
+        resp_vis_json = self.web.get('/moderacao', headers={'Accept': 'application/json'})
+        self.assertEqual(resp_vis_json.status_code, 401)
+
+        # 2. Usuário comum: 403 em HTML e JSON
+        self._logar('comum@gmail.com', 'comum', moderador=False)
+        self.assertEqual(
+            self.web.get('/moderacao', headers={'Accept': 'text/html'}).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.web.get('/moderacao', headers={'Accept': 'application/json'}).status_code,
+            403,
+        )
+
+        # 3. Moderador: 200 em HTML e JSON com o comentário denunciado
+        self._logar('mod@gmail.com', 'moderadora', moderador=True)
+        resp_mod_html = self.web.get('/moderacao', headers={'Accept': 'text/html'})
+        self.assertEqual(resp_mod_html.status_code, 200)
+        self.assertIn('Comentário ofensivo denunciado.', resp_mod_html.get_data(as_text=True))
+
+        resp_mod_json = self.web.get('/moderacao', headers={'Accept': 'application/json'})
+        self.assertEqual(resp_mod_json.status_code, 200)
+        ids_fila = [item['comentario_id'] for item in resp_mod_json.get_json()['fila']]
+        self.assertEqual(ids_fila, [c_denunciado])
+
+    def test_decidir_autorizacao_cobre_visitante_comum_e_moderador(self):
+        _, c_denunciado = self._criar_comentario_denunciado()
+        payload = {'acao': 'ocultar', 'justificativa': 'Ofensa pessoal comprovada.'}
+
+        # 1. Visitante (sem login): 302 para /login em HTML e 401 em JSON
+        resp_vis_html = self.web.post(
+            f'/moderacao/comentarios/{c_denunciado}/decidir',
+            data=payload,
+            headers={'Accept': 'text/html'},
+        )
+        self.assertEqual(resp_vis_html.status_code, 302)
+        self.assertIn('/login', resp_vis_html.headers['Location'])
+
+        resp_vis_json = self.web.post(
+            f'/moderacao/comentarios/{c_denunciado}/decidir',
+            data=payload,
+            headers={'Accept': 'application/json'},
+        )
+        self.assertEqual(resp_vis_json.status_code, 401)
+
+        # 2. Usuário comum: 403 em HTML e JSON
+        self._logar('comum@gmail.com', 'comum', moderador=False)
+        self.assertEqual(
+            self.web.post(
+                f'/moderacao/comentarios/{c_denunciado}/decidir',
+                data=payload,
+                headers={'Accept': 'text/html'},
+            ).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.web.post(
+                f'/moderacao/comentarios/{c_denunciado}/decidir',
+                data=payload,
+                headers={'Accept': 'application/json'},
+            ).status_code,
+            403,
+        )
+
+        # Nenhuma decisão foi gravada por visitante ou usuário comum
+        decisoes_antes = (
+            self.cliente.table('moderacoes_comentarios')
+            .select('*')
+            .eq('comentario_id', c_denunciado)
+            .execute()
+            .data
+        )
+        self.assertEqual(decisoes_antes, [])
+
+        # 3. Moderador: registra a decisão com sucesso (200 em JSON)
+        self._logar('mod@gmail.com', 'moderadora', moderador=True)
+        resp_mod = self.web.post(
+            f'/moderacao/comentarios/{c_denunciado}/decidir',
+            data=payload,
+            headers={'Accept': 'application/json'},
+        )
+        self.assertEqual(resp_mod.status_code, 200)
+        self.assertEqual(resp_mod.get_json()['acao'], 'ocultar')
+        
 
 class TestContestacaoAutor(unittest.TestCase):
     def setUp(self):
