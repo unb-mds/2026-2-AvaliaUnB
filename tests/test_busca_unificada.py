@@ -185,6 +185,9 @@ class TestCampoBuscaUnificada(unittest.TestCase):
             self.assertIn(trecho, script)
         self.assertNotIn('innerHTML', script, 'Sugestões devem ser inseridas como texto')
 
-
+    def test_busca_unificada_nao_prende_filtro_nome_anterior(self):
+        _, formulario = self.formulario('/professores?nome=thiago&departamento=FCTE')
+        self.assertNotIn('name="nome"', formulario)
+        self.assertIn('<input type="hidden" name="departamento" value="FCTE">', formulario)
 if __name__ == '__main__':
     unittest.main()

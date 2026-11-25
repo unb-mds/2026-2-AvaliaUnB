@@ -32,8 +32,8 @@
     <main class="shell view page" id="conteudo">
        <header><div class="eyebrow">Conheça melhor seus professores</div><h1 class="page-title">Explorar professores<span class="accent">.</span></h1><p class="page-lead">Encontre avaliações de estudantes da UnB. Use a pesquisa e os filtros para refinar por nome, disciplina, departamento, nota ou volume de avaliações.</p></header>
 
-        <form method="get" action="{{ url_for('professores.listar') }}" class="search psearch busca-unificada" role="search">
-            {% for campo in ('nome', 'disciplina', 'departamento', 'nota_min', 'nota_max', 'avaliacoes_min') %}{% if filtros[campo] %}
+       <form method="get" action="{{ url_for('professores.listar') }}" class="search psearch busca-unificada" role="search">
+            {% for campo in ('disciplina', 'departamento', 'nota_min', 'nota_max', 'avaliacoes_min') %}{% if filtros[campo] %}
             <input type="hidden" name="{{ campo }}" value="{{ filtros[campo] }}">
             {% endif %}{% endfor %}
             <div class="campo campo-sugestoes" data-sugestoes="{{ url_for('professores.sugestoes') }}" data-contexto="consulta">
