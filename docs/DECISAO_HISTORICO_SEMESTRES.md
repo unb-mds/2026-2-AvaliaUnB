@@ -5,7 +5,7 @@ Issue [#242](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/242) · 23/11/20
 **Status:** opção A — manutenção do histórico completo, escolhida pela
 responsável Giovanna da Costa Santos (`giiicostaa`) em 25/11/2026 para revisão
 da equipe. A proposta anterior (opção C) consta dos PRs #269 e #281; foi
-reconsiderada sem implementação no código. A manutenção do modelo A não exige
+reconsiderada antes de integração de código na `main`. A manutenção do modelo A não exige
 alteração no banco, scraper, workflow ou interface. A ratificação coletiva
 da nova escolha depende da revisão do PR.
 
@@ -49,9 +49,15 @@ entregas existentes já atendem ao modelo A; não há novas tarefas de implement
 
 ## Tarefas de implementação
 
-As tarefas abaixo foram abertas em 25/11/2026 como sub-issues vinculadas à #242.
+As tarefas abaixo foram abertas em 25/11/2026 para a opção C e encerradas na
+mesma data como `Not planned`, pois deixaram de ser necessárias no modelo A.
+Os PRs [#282](https://github.com/unb-mds/2026-2-AvaliaUnB/pull/282),
+[#283](https://github.com/unb-mds/2026-2-AvaliaUnB/pull/283) e
+[#284](https://github.com/unb-mds/2026-2-AvaliaUnB/pull/284), de
+`Geovanaduartee`, foram fechados sem merge. O histórico das contribuições
+permanece disponível; nenhum desses PRs foi integrado à `main`.
 
-| Tarefa | Escopo e critérios de aceite |
+| Tarefa | Escopo anterior (opção C) |
 |---|---|
 | [#278 — Configurar semestre atual](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/278) | Persistir e consultar par válido; ativar somente após validação da coleta; reimportação e coleta histórica não alteram o semestre atual; ausência de configuração mantém consulta histórica |
 | [#279 — Filtrar catálogo por semestre](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/279) | Semestre atual por padrão, seleção de um período ou todos; busca, sugestões e disciplinas coerentes; URL preserva seleção; estados vazios e perfis históricos acessíveis |
@@ -72,3 +78,5 @@ não precisam ser recriadas. A decisão conserva essas entregas.
 | Vínculos das novas issues | Giovanna (`giiicostaa`) | 25/11/2026 — #278, #279 e #280 |
 | Escolha de manter o modelo A | Giovanna (`giiicostaa`) | 25/11/2026 — sem mudança de código |
 | Ratificação coletiva do modelo A | Equipe AvaliaUnB | Pendente de revisão do PR |
+| Encaminhamento das sub-issues | Giovanna (`giiicostaa`) | 25/11/2026 — #278, #279 e #280 canceladas; PRs #282, #283 e #284 fechados sem merge |
+| Atualização da issue #242 | Giovanna (`giiicostaa`) | 25/11/2026 — decisão revisada e registro das pendências atualizado |
