@@ -1,41 +1,68 @@
-# Diagramas de Arquitetura
+# Arquitetura
 
-Aqui estão as versões mais recentes e atualizadas da arquitetura do projeto AvaliaUnb.
+Os diagramas representam a arquitetura implementada na `main`, conferida em
+25/11/2026. O estado de cada fluxo e as evoluções planejadas estão no
+[inventário da interface](ESTADO_DA_INTERFACE.md).
 
-=== "Contexto"
+## Contexto
 
-    ### Diagrama de Contexto
+![Contexto do AvaliaUnB: consulta pública, participação autenticada e coleta do SIGAA](diagrama-contexto.svg)
 
-    ![Diagrama de Contexto](Diagrama%20de%20contexto.png)
+Visitantes consultam catálogo, perfis, médias, ranking, comparação e comentários.
+Com Google, estudantes avaliam turmas cursadas, comentam, reagem, denunciam e
+gerenciam favoritos. O Supabase Auth mantém a sessão; o scraper busca ofertas no
+SIGAA e grava o catálogo no PostgreSQL do Supabase.
 
-=== "Componentes da API"
+## Componentes da aplicação
 
-    ### Diagrama de Componentes da API
+![Navegador, templates Jinja2, rotas Flask, controllers, repositórios e Supabase](diagrama-componentes.svg)
 
-    ![Diagrama de Componentes](Diagrama%20de%20Componentes%20da%20API.png)
+A aplicação renderiza HTML no servidor. Rotas delegam autenticação, validação,
+consultas, avaliações, comentários e moderação aos controllers e repositórios.
+A autoria dos comentários e as decisões de moderação permanecem privadas no
+backend. O navegador não recebe a chave de serviço do Supabase.
 
-=== "Tech Stack"
+## Tech stack
 
-    ### Tech Stack
+![Stack atual: Jinja2, HTML, CSS, JavaScript, Python, Flask, PostgreSQL, Supabase Auth e Selenium](tech-stack.svg)
 
-    ![Tech Stack](teck%20stack.png)
+Não há build de frontend separado. A aplicação web usa Python e Flask; os dados
+e as contas usam Supabase/PostgreSQL e Supabase Auth. A coleta do SIGAA roda
+separada da aplicação web, inclusive pelo workflow do GitHub Actions.
 
-## Aprofundamento
+## Histórias confirmadas
 
-### Estratégia de histórico de semestres (#242)
+| Atividade | História | Onde conferir |
+|---|---|---|
+| Explorar | Buscar por professor, disciplina ou departamento e abrir resultados | `/professores` |
+| Consultar | Ver médias por disciplina/semestre e evolução em gráfico ou tabela | `/professores/<id>` |
+| Comparar | Comparar professores na mesma disciplina ou em seleção livre | `/comparar` |
+| Avaliar | Registrar notas para uma turma cursada e depois editar ou excluir | `/avaliar/<id>` e `/perfil` |
+| Comentar | Publicar sem identificação pública e gerenciar os próprios relatos | Perfil do professor e `/perfil` |
+| Moderar | Tratar denúncias e contestações com justificativa | `/moderacao` |
+| Favoritar | Salvar professores numa lista pessoal e removê-los quando quiser | Perfil do professor e `/perfil` |
 
-A arquitetura mantém a coleta e a persistência cumulativas de ofertas e
-avaliações. A proposta de consulta híbrida separa três conceitos: semestre atual (configuração operacional), período cursado (dado de avaliação)
-e período selecionado para consulta (estado da navegação).
+O catálogo conserva ofertas históricas. A decisão híbrida sobre priorizar o
+semestre atual e permitir a consulta dos anteriores está registrada em
+[DECISAO_HISTORICO_SEMESTRES.md](DECISAO_HISTORICO_SEMESTRES.md); essa seleção
+de ofertas ainda não integra a interface.
 
-O scraper registra ofertas por ano e período; uma futura confirmação
-operacional define o semestre atual depois da validação. O repositório de
-catálogo deverá aplicar o recorte selecionado antes da paginação. Os
-repositórios de avaliação continuarão agregando a série histórica, sem
-dependência do semestre atual. A configuração e o novo recorte são trabalho
-futuro, detalhado no [registro da decisão](DECISAO_HISTORICO_SEMESTRES.md).
+O semestre atual da proposta é uma configuração operacional confirmada após
+validar a coleta; ele não é inferido da data do calendário ou do maior período
+no banco. O semestre cursado na avaliação e o período escolhido na consulta
+são independentes. O recorte do catálogo deverá ocorrer antes da paginação,
+preservando médias, ranking e evolução históricos. A implementação está
+separada nas issues [#278](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/278),
+[#279](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/279) e
+[#280](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/280).
 
-Os diagramas mostram as relações gerais. Consulte o [guia do backend](BACKEND.md)
-para rotas e repositórios, o [modelo de dados](Modelo%20de%20Dados.md)
-para tabelas e RLS, o [scraper](COMO_USAR_SCRAPER.md) para a coleta e
-[o mapa da documentação](GUIA_DOCUMENTACAO.md) para os demais temas.
+## Histórico visual
+
+Os PNGs antigos e wireframes são acervo de planejamento. Os diagramas SVG
+acima são a referência atual versionada. O [FigJam do projeto](https://www.figma.com/board/PgqkPopVXOiSqm9gD5RRNv/AvaliaAi---Template-MDS?node-id=0-1)
+acompanha o story map e as decisões; os estados futuros dos protótipos não
+representam funcionalidades publicadas.
+
+Para detalhes, consulte o [backend](BACKEND.md), o [frontend](FRONTEND.md),
+o [modelo de dados](Modelo%20de%20Dados.md), o [guia do scraper](COMO_USAR_SCRAPER.md)
+e o [mapa da documentação](GUIA_DOCUMENTACAO.md).

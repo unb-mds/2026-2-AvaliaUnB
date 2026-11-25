@@ -96,6 +96,23 @@ documente elas nos agents."
   para os ícones em SVG.
 - A revisão e o commit ficaram com o Caio.
 
+## Revisão de arquitetura e documentação (novembro de 2026, issue #170)
+
+| Item | Detalhe |
+|---|---|
+| Ferramenta | Codex |
+| Pedido | Resolver as pendências da issue #170 e alinhar o PR #178 à main |
+| Resultado | Integração da main sem reescrever histórico; documentação de arquitetura, interface, comentários e migrações; roteiro de conferência do FigJam |
+| Revisão | Preservação dos registros de uso de IA, releases e decisão de semestres; remoção de referências desatualizadas sobre moderação, retenção, autoria e favicon |
+| Skills de apoio | Computer Use e Plugin Management para consultar acesso às integrações; sem alteração comprovada no board do FigJam |
+| Verificação | Build estrito do MkDocs, suíte existente, links locais, XML dos SVGs e ausência de marcadores de conflito; resultados registrados no PR #178 |
+
+A integração Figma recusou acesso ao board, mas a conta no navegador tinha
+permissão de edição. Após as alterações feitas pela usuária, o Codex conferiu
+contexto, componentes, stack, story map e os rótulos de planejamento pelo navegador
+em 25/11/2026. Os ajustes finais de coleta separada e criação do perfil com Google
+foram verificados; as evidências estão em `docs/REVISAO_FIGJAM.md`.
+
 ## Skills de apoio instaladas no fim do projeto
 
 | Skill | Origem | Quem usou | Para quê |

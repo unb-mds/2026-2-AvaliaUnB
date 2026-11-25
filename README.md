@@ -41,14 +41,13 @@ anteriores podem conter apenas parte delas.
 
 | Etapa | Funcionalidades | Estado |
 |---|---|---|
-| R1 — fluxo essencial | Login com Google (o perfil é criado no primeiro acesso), busca de professores e disciplinas, perfil do professor, avaliação por cinco critérios e consulta de médias | Implementado |
-| R2 — consulta e gestão de avaliações | Ranking geral e por departamento, comparação de professores (inclusive de disciplinas diferentes, com destaque do melhor desempenho), busca unificada com autocompletar, filtro por departamento, busca que ignora acentos e espaços extras e perfil do usuário com edição e exclusão das próprias avaliações | Implementado |
-| Evolução dos filtros | Faixa de nota e volume de avaliações | Implementado (#221) |
-| Histórico de semestres | Preservação das turmas, avaliação por turma cursada e evolução de notas | Implementado (#225, #252, #224) |
-| Consulta por oferta | Priorizar o semestre atual e permitir outros períodos | [Proposta híbrida (#242)](docs/DECISAO_HISTORICO_SEMESTRES.md); implementação futura |
-| Comentários | Listar os 50 mais recentes, filtrar por disciplina, publicar, editar e excluir o próprio comentário anonimamente; reagir com 👍 ou 👎 e denunciar | Implementado ([regras](docs/COMENTARIOS.md)) |
-| Reações e moderação | Reações, ordenação escolhida pela pessoa (#213), filtro automático do texto (#214), denúncia (#215), área de moderação com contestação (#216) e descarte dos registros após 90 dias (#217) | Implementado ([regras](docs/COMENTARIOS.md)) |
-| Favoritos e gráficos | Lista pessoal de professores favoritos (#223) e gráfico da evolução das notas por semestre (#224) | Implementado |
+| Consulta | Busca com sugestões, filtros avançados e paginação; perfis com médias por disciplina/semestre e evolução | Implementado (#220, #221, #224) |
+| Avaliação | Cinco critérios por turma cursada; gestão das próprias avaliações | Implementado (#252) |
+| Comparação e ranking | Comparação na mesma disciplina ou livre; ranking por departamento | Implementado (#186, #218, #219, #222) |
+| Conta pessoal | Favoritos, avaliações e comentários próprios | Implementado (#223, #260) |
+| Comentários | Publicação anônima, filtro de conteúdo, edição/exclusão, reações, ordenação e denúncias | Implementado (#212, #213, #214, #215, #258, #260) |
+| Moderação e retenção | Decisões justificadas, contestação e descarte dos registros encerrados após 90 dias | Implementado (#216, #217) |
+| Consulta por oferta | Priorizar o semestre atual e permitir outros períodos | [Decisão híbrida (#242)](docs/DECISAO_HISTORICO_SEMESTRES.md); interface futura |
 
 A consulta principal fica em `/professores`; ranking e comparação ficam em
 `/ranking` e `/comparar`. A lista é ordenada pela quantidade de avaliações.
@@ -62,7 +61,7 @@ Veja as [regras de busca, notas, comparação e ranking](docs/FUNCIONALIDADES.md
 | Perfil | Acesso | O que pode fazer |
 |---|---|---|
 | Visitante | Sem login | Consultar professores, disciplinas, médias, ranking e comparação |
-| Usuário cadastrado | Conta Google | Consultar e registrar avaliações; listar, editar e excluir as próprias avaliações em `/perfil`; comentar no perfil dos professores e editar ou excluir os próprios comentários |
+| Usuário cadastrado | Conta Google | Avaliar e gerenciar as próprias avaliações, comentar anonimamente, reagir, denunciar comentários alheios e gerenciar favoritos |
 
 O público principal são os estudantes da UnB. Docentes também podem consultar
 os indicadores públicos. A entrada é feita somente com a conta Google; a conta
@@ -108,8 +107,8 @@ acompanhados nas issues
 [#114](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/114).
 
 O [guia do frontend](docs/FRONTEND.md) inventaria as telas, os estilos e os
-estados existentes e explica como contribuir. As definições finais de cores,
-tipografia e componentes serão incorporadas quando a #112 for consolidada.
+estados existentes e explica como contribuir. O [design system](docs/DESIGN_SYSTEM.md)
+registra cores, tipografia e componentes atuais.
 
 ## Como executar
 
@@ -208,9 +207,10 @@ Já estão implementados no perfil do professor (#167): listar os comentários
 (mais recentes primeiro, 50 por vez), filtrar por disciplina, publicar, editar e
 excluir o próprio comentário. A listagem não identifica o autor. Basta estar
 logado para comentar, com limite de 10 comentários por hora por usuário.
-Reações (#212), ordenação escolhida pela pessoa (#213), filtro do texto antes da
-publicação (#214), denúncias (#215) e moderação com contestação (#216) também
-estão implementados.
+Reações (#212), ordenação (#213), filtro automático (#214), denúncias (#215),
+moderação (#216) e retenção (#217) estão implementadas. A política e a execução
+das migrações ainda precisam ser conferidas no ambiente de destino. Consulte o
+[estado da interface](docs/ESTADO_DA_INTERFACE.md) para o inventário atualizado.
 
 ## Documentação
 
@@ -219,17 +219,18 @@ estão implementados.
 | Início e instruções de execução | [Documentação do projeto](docs/index.md) · [Mapa e índice por assunto](docs/GUIA_DOCUMENTACAO.md) |
 | Produto e requisitos | [Documento de visão](docs/DOCUMENTO_DE_VISAO.md) |
 | Funcionalidades | [Busca, notas, comparação e ranking](docs/FUNCIONALIDADES.md) |
+| Estado da interface | [Implementado e planejado](docs/ESTADO_DA_INTERFACE.md) |
 | Backend | [Estrutura, rotas, sessões e repositórios](docs/BACKEND.md) |
 | Frontend | [Templates, estilos, estados e contribuição](docs/FRONTEND.md) |
 | Dados | [Modelo de dados](docs/Modelo%20de%20Dados.md) |
 | Arquitetura | [Diagramas do sistema](docs/ARQUITETURA.md) |
 | Coleta | [Guia do scraper](docs/COMO_USAR_SCRAPER.md) |
 | Cibersegurança | [Mecanismos e correções](docs/CIBERSEGURANCA.md) · [Relatório da auditoria](docs/AUDITORIA_SEGURANCA.md) |
-| Comentários | [Regras dos comentários](docs/COMENTARIOS.md): listagem, reações, ordenação, filtro, denúncia e moderação |
+| Comentários | [Regras e implementação dos comentários](docs/COMENTARIOS.md) |
 | Uso de IA | [Ferramentas por integrante e regras](docs/USO_DE_IA.md) · [Registro dos agentes](.agents/README.md) |
 | Automação e checks | [Pipeline do GitHub Actions](docs/pipeline.md) · [DoR e DoD](docs/PROCESSO_CONTRIBUICAO.md) |
 | Hospedagem | [Configuração de Preview, produção e lançamento](docs/HOSPEDAGEM.md) |
-| Design | [Board do Figma](https://www.figma.com/board/PgqkPopVXOiSqm9gD5RRNv/AvaliaAi---Template-MDS?node-id=0-1&p=f&t=Rxu6jVCgeVZHCyg2-0) |
+| Design | [Board do Figma](https://www.figma.com/board/PgqkPopVXOiSqm9gD5RRNv/AvaliaAi---Template-MDS?node-id=0-1) |
 | Histórico | [Release 1](RELEASE-v1.0.0.md) · [v1.0.1](RELEASE-v1.0.1.md) · [v1.0.2](https://github.com/unb-mds/2026-2-AvaliaUnB/releases/tag/v1.0.2) · [v2.0.0](https://github.com/unb-mds/2026-2-AvaliaUnB/releases/tag/v2.0.0) |
 
 Para abrir o site localmente, instale `mkdocs-material` no ambiente virtual e
@@ -264,7 +265,7 @@ Projeto desenvolvido no contexto da disciplina **Métodos de Desenvolvimento
 de Software da Universidade de Brasília**, no semestre **2026/2**.
 
 Resumo do que cada integrante fez, levantado das issues atribuídas e dos
-commits na `main` até 24/11/2026. O detalhe completo está no
+commits na `main` até 25/11/2026. O detalhe completo está no
 [histórico de contribuições](https://github.com/unb-mds/2026-2-AvaliaUnB/graphs/contributors)
 e no [quadro de issues](https://github.com/unb-mds/2026-2-AvaliaUnB/issues).
 
@@ -273,6 +274,6 @@ e no [quadro de issues](https://github.com/unb-mds/2026-2-AvaliaUnB/issues).
 | Caio ([@caiionog](https://github.com/caiionog)) | Organização do backlog e das sprints, com a maior parte das issues e o modelo de tarefa com DoR e DoD. Controle de sessão e fluxo de autenticação no MVP; configuração do Supabase e primeira versão do scraper do SIGAA; login somente com Google (#162). Tabela de comentários (#166), backup público do banco (#165), barra de dificuldade (#193) e logo. Na Release 2: busca unificada com autocompletar (#220), correção de professores duplicados (#235), atualização semestral do SIGAA pelo GitHub Actions (#225), denúncia de comentários (#215), favoritos (#223), gráfico de evolução por semestre (#224), avaliação por turma cursada (#252) e aparência das reações (#270). |
 | Geovana Duarte ([@Geovanaduartee](https://github.com/Geovanaduartee)) | Documentação de backend, frontend, cibersegurança e regras dos comentários (#116), revisão do README (#115) e design system com os protótipos de comentários (#112). Ranking e comparação de professores (#95, #186), revogação da sessão no logout (#126), verificação do e-mail antes de comentar (#189), nova interface editorial (#245), comentários anônimos para o público (#258) e ícone da aba (#263). |
 | Giovanna da Costa Santos ([@giiicostaa](https://github.com/giiicostaa)) | Wireframe, story map e estrutura inicial da interface; integração do fluxo principal do MVP (#40), responsividade e testes de autenticação. Correções da auditoria de segurança (#127, #130), revisão e conexão dos documentos (#136, #171, #182), DoR e DoD do processo de contribuição. Reações 👍/👎 nos comentários (#212) e decisão sobre o histórico de semestres (#242). |
-| Gabriel Silva ([@gsm22](https://github.com/gsm22)) | Consulta, filtros e modelo de professores e disciplinas no MVP, com testes da busca. Evolução do scraper: todas as unidades, paginação, modo `--dry-run` e persistência idempotente. Pipeline do GitHub Actions, GitHub Pages com MkDocs, auditoria de segurança e `CLAUDE.md`. Comentários no perfil do professor (#167), decisões C01–C11 (#211), filtro automático do texto (#214), ordenação dos comentários (#213) e nomes sem CAIXA ALTA (#236). |
+| [@gsm22](https://github.com/gsm22) | Consulta, filtros e modelo de professores e disciplinas no MVP, com testes da busca. Evolução do scraper: todas as unidades, paginação, modo `--dry-run` e persistência idempotente. Pipeline do GitHub Actions, GitHub Pages com MkDocs, auditoria de segurança e `CLAUDE.md`. Comentários no perfil do professor (#167), decisões C01–C11 (#211), filtro automático do texto (#214), ordenação dos comentários (#213) e nomes sem CAIXA ALTA (#236). |
 | Luiz Guilherme de Alencar Magalhães ([@lgalencar25](https://github.com/lgalencar25)) | Documento de visão, diagramas C4 e de stack, persona 1 e MkDocs inicial. Modelos de usuário e avaliação e schema inicial do PostgreSQL; Docker e docker-compose (#85, #86). Recuperação de senha (#163), retorno à página de origem após o login (#199), comparação entre disciplinas diferentes com destaque do melhor professor (#218, #219), ranking por departamento (#222), releases v1.0.1 (#207) e atualização de links e do `CLAUDE.md` (#209, #210). |
 | Miguel Cardoso ([@MiguelCardoso28](https://github.com/MiguelCardoso28)) | Jornada do usuário, página inicial responsiva e release notes da v1.0.0. Perfil do usuário com edição das próprias avaliações, navegação de retorno com filtros (#113) e leitura pública com chave anônima (#124). Página de política de privacidade e termos (#181), correção do "Comparar este professor" (#197), área de moderação com contestação (#216) e descarte de registros após 90 dias (#217). |

@@ -1,14 +1,12 @@
 # Especificação de comentários avaliativos
 
-**Status: implementado, com origem na issue #116.** Este
-documento descreve o comportamento dos comentários, das reações e da
-moderação. A primeira parte já está implementada no perfil do professor
-(issue #167): listar, filtrar por disciplina, publicar, editar e excluir o
-próprio comentário. A denúncia está implementada na issue #215, o filtro automático
-na issue #214, as reações na #212 e a ordenação escolhida pela pessoa na #213.
-A moderação com ocultação e contestação está na issue #216, e o descarte dos registros após 90 dias na #217. As decisões C01 a C11,
-na [tabela do final do documento](#decisoes-para-o-grupo-revisar), foram
-decididas pela equipe; os pontos ainda a confirmar estão indicados nelas.
+**Status: regras e fluxos implementados, com decisões originadas na issue #116.**
+Listagem anônima, publicação, edição/exclusão, reações, ordenação, denúncias,
+filtro automático, moderação, contestação e retenção têm implementação na
+`main` (#167, #212–#217, #258, #260). As decisões C01 a C11, na
+[tabela do final do documento](#decisoes-para-o-grupo-revisar), registram as
+regras acordadas. A situação das migrações no Supabase publicado precisa ser
+verificada no ambiente.
 
 A base é a [proposta de dados da #109](Modelo%20de%20Dados.md#6-proposta-tabela-comentarios).
 A tabela `comentarios` está versionada em
@@ -23,7 +21,7 @@ avaliação e disponibilidade, com contexto útil para outros estudantes.
 
 ## Quem pode consultar e participar
 
-| Pessoa | Comportamento proposto |
+| Pessoa | Comportamento implementado |
 |---|---|
 | Visitante | Lê comentários publicados no perfil do professor |
 | Usuário autenticado | Usa uma conta comum, bastando estar logado, para comentar, reagir e denunciar |
@@ -41,7 +39,7 @@ Uma conta de comentários não concede acesso à moderação.
 
 ## Texto, quantidade e vínculo
 
-| Regra | Proposta para revisão |
+| Regra | Comportamento implementado |
 |---|---|
 | Professor | Obrigatório e existente no catálogo |
 | Disciplina | Obrigatória. Deve ter sido ministrada pelo professor |
@@ -249,15 +247,15 @@ Limitações conhecidas:
 - O filtro está no controller: quem chamar o repositório diretamente não passa
   por ele.
 
-## Denúncia e moderação
+## Denúncia e moderação implementadas
 
-Proposta de fluxo:
+Fluxo implementado:
 
 1. Um usuário autenticado denuncia um comentário, selecionando motivo e, se
    necessário, acrescentando uma explicação.
 2. O sistema confirma o recebimento sem expor a identidade do denunciante ao
-   autor ou a visitantes. Uma denúncia ativa por usuário e comentário evita
-   duplicação; a regra precisa ser refletida no futuro modelo.
+   autor ou a visitantes. Cada pessoa mantém no máximo uma denúncia ativa por
+   comentário; após resolução, pode denunciar de novo.
 3. Um moderador autorizado consulta texto, motivo e contexto e registra a
    decisão de manter, ocultar ou restaurar, com justificativa.
 4. O autor pode pedir revisão em um formulário privado associado ao comentário.
@@ -275,19 +273,21 @@ explicação opcional de até 500 caracteres. A tabela privada
 `denuncias_comentarios` está em
 [`005_denuncias_comentarios.sql`](migrations/005_denuncias_comentarios.sql);
 veja o [modelo de dados](Modelo%20de%20Dados.md#7-denuncias-de-comentarios-denuncias_comentarios).
-Os passos 3 e 4 ficam para a #216.
+Os passos 3 e 4 estão implementados na #216. Moderadores autorizados consultam
+a fila em `/moderacao`, mantêm, ocultam ou restauram comentários com justificativa,
+e autores podem enviar contestações privadas. A rotina da #217 descarta registros
+de casos encerrados após 90 dias e conserva registros ligados a comentários ocultos.
 
-A [proposta de banco](Modelo%20de%20Dados.md) descreve a proteção das tabelas
-de comentários e reações. A implementação futura precisa definir o registro
-privado das análises e denúncias e revisar as permissões de moderação,
-inclusive o uso de service key descrito em [Cibersegurança](CIBERSEGURANCA.md).
+A [documentação do banco](Modelo%20de%20Dados.md) descreve a proteção das tabelas
+de comentários, reações, denúncias e moderação. As permissões da área restrita
+e o uso da service key estão detalhados em [Cibersegurança](CIBERSEGURANCA.md).
 Decidido (C08): os comentários são publicados na hora. A tela de moderação
 mostra somente os comentários denunciados, e o moderador pode manter, ocultar
 da visão pública ou restaurar, sempre com justificativa. Todos os integrantes
 da equipe do projeto têm acesso a essa tela, e toda ação registra quem a fez e
 a justificativa. Não existe moderação manual pelo painel do Supabase como
-etapa oficial. A proposta operacional é usar três dias úteis como meta para a
-primeira análise, a confirmar pelo grupo. Sempre que possível, outra pessoa
+etapa oficial. A regra operacional estabelece três dias úteis como meta para a
+primeira análise. Sempre que possível, outra pessoa
 moderadora analisa a contestação. Se ninguém da equipe puder atender a fila de
 denúncias, a publicação de novos comentários fica pausada até haver cobertura.
 
@@ -300,7 +300,7 @@ exclusão pela própria pessoa e a apuração de abusos. A resposta pública do
 backend não inclui identificadores da conta nem consulta o perfil do autor.
 
 A [migração de privacidade](migrations/20261122155752_anonimato_comentarios.sql)
-deve ser aplicada após as migrações 001 a 007 para proteger também a leitura
+deve ser aplicada após as migrações numeradas 001 a 009 para proteger também a leitura
 direta pela Data API: `anon` e `authenticated` só podem consultar as colunas
 públicas. `usuario_id` e `ocultado_em` permanecem privados. O backend mantém
 acesso por `service_role`, sem mudanças nas políticas de escrita ou de RLS.
@@ -314,7 +314,6 @@ indiscriminadamente o texto ou dados pessoais.
 As cascatas propostas na #109 apagam comentários quando o perfil do autor ou o
 professor é excluído. Uma disciplina com comentários vinculados deve ser
 mantida para preservar o vínculo dos relatos históricos.
-O registro mínimo da denúncia, da decisão de moderação e da contestação é guardado por até 90 dias após o encerramento do caso e descartado automaticamente por rotina diária agendada no GitHub Actions (.github/workflows/retencao_moderacao.yml, com função SQL em docs/migrations/009_retencao_moderacao_90_dias.sql), sem apagar comentários publicados (issue #217).
 O texto excluído sai da listagem imediatamente. O registro mínimo da denúncia, da decisão de moderação e da contestação é guardado por até **90 dias** após o encerramento do caso e descartado automaticamente por rotina diária agendada no GitHub Actions (`.github/workflows/retencao_moderacao.yml`, chamando a função SQL em `docs/migrations/009_retencao_moderacao_90_dias.sql`), sem apagar comentários publicados e preservando o histórico enquanto o comentário continuar ocultado (`ocultado_em IS NOT NULL`) (issue #217). O texto excluído sai da listagem imediatamente.
 
 ## Decisões para o grupo revisar
@@ -329,7 +328,7 @@ O texto excluído sai da listagem imediatamente. O registro mínimo da denúncia
 | C06 | Denúncia privada e moderação por responsáveis autorizados | Decidida e implementada (#215 e #216). A denúncia funciona na #215 e a área restrita de moderação (/moderacao) está implementada na #216, acessível apenas a usuários cadastrados na tabela privada moderadores. |
 | C07 | Ocultação motivada, sem republicação automática por edição | Decidida e implementada (#216). Comentário ocultado por moderação sai da listagem pública e não volta por edição do autor; só um moderador restaura, com justificativa registrada. |
 | C08 | Comentários publicados na hora. A tela de moderação mostra somente os denunciados, e o moderador pode manter, ocultar da visão pública ou restaurar, sempre com justificativa. Todos os integrantes da equipe têm acesso, e toda ação registra quem a fez e a justificativa. Primeira análise em até três dias úteis, formulário privado de contestação e retenção de até 90 dias após o encerramento | Decidida e implementada (#216; retenção de 90 dias implementada na #217). Comentários são publicados na hora; a tela /moderacao mostra somente os denunciados e permite manter, ocultar ou restaurar com justificativa e registro do moderador. O autor pode contestar em /comentarios/<id>/contestar. |
-| C09 | Ícones 👍 e 👎 sempre visíveis, com números apenas nas reações recebidas. Uma reação por conta e comentário, com opção de trocar ou remover | Implementada na #212 |
+| C09 | Ícones 👍 e 👎 sempre visíveis, com os dois totais, inclusive zero. Uma reação por conta e comentário, com opção de trocar ou remover | Implementada na #212; apresentação atualizada na #270 |
 | C10 | Filtrar no servidor antes de publicar ou editar. Bloquear violações claras e deixar os casos incertos para a moderação, que atua mediante denúncia | Decidida e implementada (#214; veja "Regras decididas (C10)" acima): rejeita sem salvar, com aviso para reescrever; sem IA. Vale ao publicar e ao editar |
 | C11 | Data em cada comentário. Ordenação por Mais recentes, Mais curtidos, Mais antigos ou Mais reações | Decidida e implementada: data em cada comentário (#167) e as quatro ordens (#213). Mais recentes é o padrão |
 
@@ -338,7 +337,7 @@ As decisões podem ser revisadas no PR ou na
 Os [protótipos da #112](TELAS_COMENTARIOS.md) e a [proposta de dados da #109](Modelo%20de%20Dados.md#6-proposta-tabela-comentarios)
 acompanham estas regras.
 
-## Critérios de aceite
+## Critérios de comportamento implementados
 
 - Visitantes consultam comentários sem identificação do autor e contagens de reações. Estar logado
   (login pelo Google) é obrigatório para comentar,
@@ -353,13 +352,13 @@ acompanham estas regras.
   editar ou apagar.
 - Só o autor edita ou exclui. O servidor nega tentativas de se passar por outro
   usuário e mantém os identificadores de conta fora das respostas públicas.
-- O e-mail de cadastro do autor não aparece em nenhuma página nem resposta de
-  comentários, nem ao clicar no nome de usuário.
+- Nome, e-mail, avatar e rótulo identificador do autor não aparecem nas
+  listagens públicas de comentários; o vínculo privado permite as ações próprias.
 - Uma conta troca ou desfaz sua reação. Pedidos simultâneos respeitam a
   unicidade, e autores não reagem ao próprio comentário.
 - A lista exibe a data e os dois ícones em cada comentário, inclusive para
   visitantes sem login.
-  Os números aparecem só para reações recebidas.
+  Os dois totais aparecem sempre, inclusive zero.
   Com 8 curtidas e 1 descurtida, o comentário aparece com 8 e 1 separados.
   Na opção Mais reações, as duas contagens somam 9 para a ordenação.
 - Com 3 curtidas e nenhuma descurtida, a lista exibe 👍 3 e 👎 sem número.
@@ -382,11 +381,11 @@ acompanham estas regras.
 - As telas cobrem vazio, envio, erro, edição, confirmação de exclusão e ocultação.
 - As permissões de backend e banco seguem o modelo aprovado, com testes de
   autorização. A tabela `comentarios` vem da migração `002_comentarios.sql`;
-  reações, denúncias e moderação também têm migrações versionadas (`008_moderacao_comentarios.sql`).
+  reações, denúncias, moderação e retenção têm migrações versionadas.
 
 Documentos relacionados: [modelo de dados](Modelo%20de%20Dados.md),
 [protótipos](TELAS_COMENTARIOS.md), [frontend](FRONTEND.md) e
 [cibersegurança](CIBERSEGURANCA.md). Os comentários (listar, filtrar por
 disciplina, publicar, editar e excluir) já estão ativos no perfil do professor
-desde a #167 e o filtro automático desde a #214; reações (#212), denúncia (#215) e
-ordenação (#213) também estão implementadas. A moderação fica nas demais issues.
+desde a #167; filtro automático (#214), reações (#212), denúncia (#215),
+ordenação (#213), moderação (#216) e retenção (#217) também estão implementadas.

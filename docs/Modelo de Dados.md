@@ -384,13 +384,12 @@ REVOKE ALL ON comentarios_reacoes FROM PUBLIC, anon, authenticated;
 2. **Registros independentes.** Comentários e avaliações por estrelas são
    gravados em tabelas separadas. Cada operação verifica suas próprias
    permissões e campos, independentemente de haver registro na outra tabela.
-   A tabela `avaliacoes` admite um registro por conta, professor e
-   disciplina, conforme a seção 2.5.
+   A tabela `avaliacoes` admite um registro por conta, professor, disciplina,
+   ano e período, conforme a seção 2.5 e a migração 007 (#252).
 3. **Leitura pública sem identificação.** O backend lista comentários visíveis com
-   ID do comentário, texto, disciplina, datas e contagens.
-   A ordenação usa a data da primeira publicação (`criado_em`), a contagem
-   de curtidas ou a soma de curtidas e descurtidas, conforme a
-   [especificação](COMENTARIOS.md).
+   ID do comentário, texto, disciplina, datas e contagens de reações. As ordens
+   disponíveis são Mais recentes (padrão), Mais antigos, Mais curtidos e Mais
+   reações (#212 e #213), conforme a [especificação](COMENTARIOS.md).
    O perfil do autor não é consultado. A resposta não inclui `usuario_id` nem
    `username`, conforme o [fluxo de privacidade](COMENTARIOS.md). A migração
    [`20261122155752_anonimato_comentarios.sql`](migrations/20261122155752_anonimato_comentarios.sql)
@@ -398,10 +397,10 @@ REVOKE ALL ON comentarios_reacoes FROM PUBLIC, anon, authenticated;
    as colunas públicas. Consultas diretas devem especificar essas colunas;
    `SELECT *`, filtros e junções por `usuario_id` são bloqueados. O vínculo
    privado, a escrita por autor, o RLS e o acesso do backend permanecem.
-4. **Moderação.** A tabela `comentarios` guarda o texto já aprovado. Textos
-   que precisam de revisão ficam em uma fila privada separada, inclusive
-   revisões de comentários publicados. O modelo de fila, denúncias e decisões
-   será detalhado na implementação do [fluxo de moderação](COMENTARIOS.md).
+4. **Moderação (#216).** Comentários são publicados após as validações; denúncias
+   ficam em tabela privada (#215). A área restrita, as decisões justificadas de
+   manter/ocultar/restaurar e as contestações estão implementadas. Não há fila
+   de pré-aprovação: a moderação atua sobre denúncias e contestações.
 
 ### 6.4 Onde cada regra é aplicada
 
@@ -412,8 +411,8 @@ REVOKE ALL ON comentarios_reacoes FROM PUBLIC, anon, authenticated;
 | Só o autor edita ou apaga | O backend compara a sessão com o autor. A `service_role` ignora o RLS. |
 | Identidade do autor e de quem reage | O servidor usa a sessão verificada e não aceita `usuario_id` enviado pelo cliente. |
 | Uma denúncia ativa por conta e comentário | O índice único parcial garante a unicidade. O backend confere antes, recusa o próprio comentário e não expõe o denunciante (seção 7). |
-| Uma reação por conta e comentário | A chave primária garante a unicidade. O backend valida comentário visível e autor diferente de quem reage. |
-| Filtro antes de publicar ou editar | O backend só grava texto público depois da aprovação automática ou manual. |
+| Uma reação por conta e comentário (#212) | Chave composta e backend validam comentário visível, sessão autenticada e autor diferente. |
+| Filtro antes de publicar ou editar (#214) | O filtro bloqueia violações claras antes de gravar. Casos incertos passam e podem seguir para moderação após denúncia; não há fila de pré-aprovação. |
 
 ## 7. Denúncias de comentários (`denuncias_comentarios`)
 
@@ -519,6 +518,17 @@ WHERE usuario_id = (SELECT id FROM perfis WHERE username = 'username_membro');
 7. Executar `docs/migrations/005_denuncias_comentarios.sql` para criar a tabela privada de denúncias (seção 7).
 8. Executar `docs/migrations/006_favoritos.sql` para criar a tabela de favoritos (seção 8).
 9. Executar `docs/migrations/007_avaliacao_por_semestre.sql` para permitir uma avaliação por turma cursada (seção 2.5).
-10. Aplicar `docs/migrations/20261122155752_anonimato_comentarios.sql` e `docs/migrations/20261123100000_reacoes.sql` para privacidade e reações. A chave composta evita duplicação, `valor` aceita somente 1 ou -1, e a exclusão do comentário ou da conta remove as reações em cascata. A tabela de reações é privada e acessada pelo backend.
+10. Executar [`008_moderacao_comentarios.sql`](migrations/008_moderacao_comentarios.sql)
+    para criar as tabelas privadas de moderadores, decisões e contestações (#216 / PR #255).
+11. Executar [`009_retencao_moderacao_90_dias.sql`](migrations/009_retencao_moderacao_90_dias.sql)
+    após a 008, para instalar a função de descarte dos registros encerrados (#217 / PR #256).
+    Conferir as credenciais e a execução do workflow `.github/workflows/retencao_moderacao.yml`
+    no ambiente de destino. Os PRs #255 e #256 já foram integrados; isso não
+    comprova a aplicação das migrações ou a execução da rotina no banco publicado.
+12. Aplicar [`20261122155752_anonimato_comentarios.sql`](migrations/20261122155752_anonimato_comentarios.sql)
+    e [`20261123100000_reacoes.sql`](migrations/20261123100000_reacoes.sql)
+    para privacidade e reações. A chave composta evita duplicação, `valor` aceita
+    somente 1 ou -1, e a exclusão do comentário ou da conta remove as reações em
+    cascata. A tabela de reações é privada e acessada pelo backend.
 
 Veja também: [guia do backend](BACKEND.md), [guia do scraper](COMO_USAR_SCRAPER.md) e [mapa da documentação](GUIA_DOCUMENTACAO.md).

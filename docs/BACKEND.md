@@ -65,6 +65,11 @@ Os caminhos da tabela são relativos à raiz do repositório.
 | POST | `/professores/<int:professor_id>/comentarios` | Autenticado | Publica um comentário em uma disciplina vinculada ao professor; limite de 10 por hora por usuário |
 | GET, POST | `/comentarios/<int:comentario_id>/editar` | Autor autenticado | Formulário e atualização do texto e da disciplina do próprio comentário |
 | GET, POST | `/comentarios/<int:comentario_id>/excluir` | Autor autenticado | GET mostra a confirmação; POST exclui o próprio comentário |
+| POST | `/comentarios/<int:comentario_id>/reacao` | Autenticado + CSRF | Registra, troca ou remove a reação da conta |
+| GET, POST | `/comentarios/<int:comentario_id>/denunciar` | Autenticado | Formulário e envio privado de denúncia de comentário alheio |
+| GET | `/moderacao` | Moderador autorizado | Consulta denúncias e contestações pendentes |
+| POST | `/moderacao/comentarios/<int:comentario_id>/decidir` | Moderador autorizado + CSRF | Mantém, oculta ou restaura com justificativa |
+| GET, POST | `/comentarios/<int:comentario_id>/contestar` | Autor autenticado | Envia contestação privada de uma decisão de moderação |
 
 O perfil e o formulário de avaliação recebem também `next` para manter a URL
 de retorno da busca. A validação desse parâmetro está em `app/seguranca.py`;
@@ -208,11 +213,13 @@ na [issue #116](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/116).
 
 ## Comentários
 
-O perfil do professor lista, e usuários autenticados publicam, editam e excluem,
-comentários sobre a experiência com um professor em uma disciplina que ele
-ministra. As regras de negócio estão em [Comentários](COMENTARIOS.md). Reações,
-denúncia, filtro automático do texto (#214), moderação com ocultação e
-contestação (#216) e descarte dos registros após 90 dias (#217) estão implementados.
+O perfil do professor lista comentários anônimos; usuários autenticados podem
+publicar, editar, excluir, reagir e denunciar. O filtro automático é aplicado
+antes de publicar ou editar. Moderadores autorizados tratam denúncias e
+contestações na área restrita, com decisões justificadas. A retenção da #217
+descarta registros de casos encerrados após 90 dias, preservando casos abertos
+e o histórico de comentários ainda ocultados. As regras e limites
+estão em [Comentários](COMENTARIOS.md).
 
 `POST /comentarios/<id>/reacao` exige login e CSRF. Aceita `valor` 1, -1 ou 0
 (remover). O servidor verifica visibilidade e autoria e usa a conta da sessão.

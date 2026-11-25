@@ -1,168 +1,125 @@
 # Frontend
 
-A interface do AvaliaUnb é renderizada pelo Flask com templates Jinja2 em
-`app/templates/` e folhas de estilo em `app/static/`. A navegação e o envio de
-dados usam links e formulários HTML; a aplicação não exige um build de frontend
-separado para executar essas telas.
+O AvaliaUnB usa Flask e templates Jinja2 em `app/templates/`, com HTML,
+CSS e JavaScript em `app/static/`. Links e formulários funcionam no servidor;
+não é necessário um build de frontend separado. Este inventário descreve a
+`main` conferida em 25/11/2026. O [estado da interface](ESTADO_DA_INTERFACE.md)
+separa o que está implementado das evoluções previstas nas issues.
 
-## Páginas e estilos atuais
+## Páginas e recursos atuais
 
-| Template | Conteúdo | CSS carregado |
+Todas as páginas usam `_tema.html`: `base.css`, `modelo-editorial.css`,
+`integracao-editorial.css`, `tema.js` e favicon. A existência de uma folha
+antiga em `static/` não significa que ela seja carregada pela página atual.
+
+| Template | Conteúdo atual | Recursos adicionais ao tema compartilhado |
 |---|---|---|
-| `index.html` | Início, consulta, ranking e acesso à conta | `base.css`, `index.css` |
-| `login.html` | Botão "Entrar com Google" (login e cadastro) e mensagem de erro | `base.css`, `auth.css` |
-| `sobre.html` | Apresentação do projeto, critérios e privacidade | `base.css`, `sobre.css` |
-| `lista_professores.html` | Filtros, catálogo, média geral em estrelas e estados sem resultado | `indicadores.css` (que importa `base.css`), `lista_professores.css` |
-| `perfil_professor.html` | Disciplinas (campo digitável), indicadores, média geral, evolução por semestre (gráfico SVG e tabela), comparação, avaliação e a seção de comentários (filtro por disciplina, lista, formulário de publicar e convite para entrar) | `indicadores.css`, `perfil_professor.css`, `comentarios.css`, `evolucao.css` (gráfico de evolução por semestre) |
-| `avaliacao.html` | Criação e edição de notas (botões de 1 a 5; dificuldade em barra de crescimento) | `indicadores.css`, `avaliacao.css` |
-| `editar_comentario.html` | Edição do próprio comentário (disciplina e texto) | `indicadores.css`, `avaliacao.css`, `comentarios.css` |
-| `excluir_comentario.html` | Confirmação de exclusão do próprio comentário | `indicadores.css`, `avaliacao.css`, `comentarios.css` |
-| `perfil.html` | Avaliações do usuário e ações de editar e excluir | `base.css`, `perfil.css` |
-| `comparacao.html` | Escolha por nome e comparação de professores | `indicadores.css`, `comparacao.css` |
-| `ranking.html` | Classificação e estado sem professores elegíveis | `indicadores.css`, `ranking.css` |
+| `index.html` | Início, pesquisa e atalhos de navegação | Topo compartilhado |
+| `login.html` | Entrar com Google, primeiro acesso e mensagem de erro | Topo compartilhado |
+| `sobre.html` | Projeto, critérios e privacidade | Topo compartilhado |
+| `privacidade.html` | Dados da conta, participação e privacidade dos comentários | Topo compartilhado |
+| `lista_professores.html` | Busca única, filtro de departamento, cartões e paginação | `indicadores.css`, `campo-busca.js` |
+| `perfil_professor.html` | Médias, semestre, gráfico/tabela de evolução, favoritos e comentários | `indicadores.css`, `evolucao.css`, `campo-busca.js` |
+| `avaliacao.html` | Notas por cinco critérios; turma cursada; edição das próprias notas | `indicadores.css` |
+| `editar_comentario.html` | Disciplina e texto preenchidos; Salvar e Cancelar | `indicadores.css` |
+| `excluir_comentario.html` | Confirmação antes de excluir o próprio comentário | `indicadores.css` |
+| `denunciar_comentario.html` | Motivo e explicação privada; confirmação de envio | `indicadores.css` |
+| `moderacao.html` | Fila restrita de denúncias e contestações; decisões justificadas | Tema compartilhado |
+| `contestar_comentario.html` | Contestação privada de decisão de moderação | Tema compartilhado |
+| `perfil.html` | Conta, favoritos, Meus comentários e Minhas Avaliações | Topo compartilhado |
+| `comparacao.html` | Mesma disciplina ou seleção livre entre disciplinas diferentes | `indicadores.css`, `campo-busca.js` |
+| `ranking.html` | Classificação por média, quantidade e filtro de departamento | Tema compartilhado |
 
-Fragmentos reutilizados: `_topo.html` (faixa azul com o menu de acesso rápido de três
-traços, a marca, a conta e o Sair, usada na home, na busca, na comparação, no ranking
-e nos dois perfis; espera `usuario` no contexto) e `_macros.html` (macro `nota`, que formata notas com vírgula e sem
-decimal quando inteiras, como 5 em vez de 5,0, e macro `barra_dificuldade`, que
-desenha a dificuldade como barra de crescimento, e macro `logo`, com o símbolo e o
-nome usados no topo e na tela de entrar no perfil do professor, no perfil
-do usuário e na comparação; veja o [design system](DESIGN_SYSTEM.md#barra-de-dificuldade)).
+`verificar_email.html` e seu fluxo continuam no código, mas não são requisito
+para comentar. O login com Google já é suficiente para participar.
 
-As rotas preparam os dados e chamam `render_template`. Os nomes dos endpoints,
-parâmetros e regras de autorização estão no [guia do backend](BACKEND.md).
+## Identidade e navegação
 
-## Componentes e estados existentes
+O visual editorial usa fundo escuro por padrão, destaque verde e fontes locais
+Inter e Inter Tight. O tema claro é opcional; `tema.js` restaura a preferência
+do navegador. Os estilos compartilhados fazem a adaptação dos componentes
+antigos `.botao`, `.campo`, `.card` aos atuais `.btn`, `.teacher` e `.review`.
 
-### Período de oferta (planejamento #242)
+O topo em `_topo.html` oferece **Início**, **Explorar**, **Ranking**,
+**Comparar** e **Sobre**, além de alternância de tema e **Entrar** ou **Perfil**.
+Quem está logado tem Sair. No celular, o botão de menu abre a navegação;
+`editorial.js` controla esse comportamento. A aba atual recebe `aria-current`.
+`_rodape.html` contém Sobre, Privacidade e feedback.
 
-A [decisão híbrida](DECISAO_HISTORICO_SEMESTRES.md) prevê um seletor de período
-no catálogo: ativo por padrão, períodos anteriores e Todos. A lista de
-professores e as sugestões devem respeitar o recorte, com estado vazio e opção
-de voltar ao histórico. Os links, filtros combinados e paginação preservam a
-seleção. O perfil continua acessível mesmo sem oferta vigente. A interface deve
-identificar o período da oferta sem confundi-lo com o filtro de médias ou a
-turma escolhida para avaliar. O seletor ainda não faz parte dos templates atuais.
+`_macros.html` reúne a marca, `icone_seta`, a formatação de nota com vírgula e
+`barra_dificuldade`. O chapéu branco com estrela aparece no tema escuro; o
+símbolo vetorial usa as cores do tema claro. O favicon de chapéu com estrela
+sobre fundo transparente foi integrado na #263 / PR #264, sem mudar a logo
+do cabeçalho.
 
-O arquivo `base.css` concentra os tokens do [design system](DESIGN_SYSTEM.md)
-como variáveis em `:root` (`--cor-*`, `--espaco-*`, `--raio`, `--altura-controle`,
-larguras e margens) e os componentes reutilizáveis: `.botao` com `-primario`,
-`-secundario` e `-destrutivo`, `.campo` (com `.campo-ajuda` e `.campo-erro`),
-`.card`, `.mensagem` e `.mensagem-erro`, o topo (`.topo`, `.marca`, `.abas`, `.aba`, `.botao-sair`),
-a nota em estrelas (`.estrelas` e `.preenche-0` a `.preenche-100`) e o foco visível
-de 2 px. Cada tela carrega `base.css` diretamente ou por meio de `indicadores.css`,
-que o importa com `@import`.
+## Fluxos e componentes
 
-O topo (`_topo.html`) é uma barra branca fixa ao rolar, com a marca e as abas
-**Consulta**, **Ranking**, **Sobre** e **Perfil** (ou **Entrar**, sem login). A aba
-da página atual recebe `aria-current="page"`, definido pelo `request.endpoint`.
-No celular, as abas ficam numa segunda linha com rolagem horizontal.
+- **Busca:** campo único por professor, disciplina ou departamento, com
+  sugestões acessíveis em `campo-busca.js`. Sem JavaScript, o formulário envia
+  `q` na Consulta e `busca` na Comparação. Departamento é um refinamento opcional.
+- **Cartões:** mostram disciplinas, código, quantidade e dificuldade média
+  (`.disciplina-item`, `barra_dificuldade(valor, true)`, `.barra-hp-compacta`).
+  Com até cinco disciplinas aparecem todas; acima disso, quatro e um
+  `<details class="disciplinas-extras">` para as demais. A barra compacta é
+  decorativa; o texto ao lado contém a informação para leitores de tela.
+- **Notas:** cinco critérios; a média geral e o ranking excluem dificuldade.
+  As estrelas usam `.estrelas` e `.preenche-N`. A turma cursada é escolhida ao
+  avaliar; as médias podem ser filtradas por semestre e a evolução tem tabela
+  alternativa ao gráfico SVG (`evolucao.css`).
+- **Comparação:** dois ou mais professores distintos; na mesma disciplina,
+  médias restritas à disciplina; no modo livre, médias gerais e aviso de
+  disciplinas diferentes quando aplicável. A seleção permite adicionar/remover.
+- **Comentários:** lista de até 50 por vez, mais recentes por padrão; opções
+  Mais antigos, Mais curtidos e Mais reações; filtro independente por
+  disciplina, texto escapado e data. Não há identificação pública, avatar ou
+  rótulo substituto. Os formulários orientam a evitar dados pessoais no texto.
+- **Ações próprias:** `_acoes_comentario.html` exibe Editar e Excluir juntos,
+  em botões de contorno com área mínima de 44 px e foco visível. Também aparece
+  em Meus comentários no perfil pessoal. Salvar ou cancelar retorna ao contexto
+  de origem; excluir exige confirmação. Só o autor recebe essas ações.
+- **Reações:** polegares em SVG com `currentColor`, contagens inclusive zero,
+  `aria-pressed`, ícone preenchido na seleção, foco visível e alvo de 44 px.
+  Os estilos ficam em `integracao-editorial.css` (`.review .comentario-reacoes`),
+  pois `comentarios.css` não é carregado no perfil desde a interface editorial.
+- **Denúncia:** conta autenticada pode denunciar comentário alheio; os dados
+  do denunciante e a explicação não aparecem na listagem pública.
+- **Favoritos:** lista privada no perfil, com adicionar/remover no professor.
 
-O arquivo `indicadores.css` reúne estilos compartilhados para filtros, listas,
-indicadores, comparação e ranking. Entre as classes existentes estão `.filtros`,
-`.lista-professores`, `.indicadores`, `.ajuda`, `.erros`, `.tabela-comparacao`
-e `.tabela-ranking`. As telas de busca, perfil do professor, avaliação e comparação
-carregam depois uma folha própria que ajusta o que é específico delas, sem alterar
-`indicadores.css`, porque o ranking depende dele.
+## Implementação e planejamento dos comentários
 
-Os comentários têm folha própria, `comentarios.css`, carregada depois do CSS da
-tela e só com tokens de `base.css`, então vale nos dois temas. Ela estiliza a
-seção do perfil (filtro "Disciplina", cartão de cada comentário com a disciplina
-em etiqueta, links Editar e Excluir, convite "Entrar para comentar", aviso de
-erro e frase dos 50 comentários) e o formulário, que também aparece na página de
-editar. A confirmação de exclusão usa `.botao-destrutivo` (cor `--cor-erro`) e
-deixa o "Cancelar" em destaque. Em telas de até 600 px, a seção usa coluna única
-e botões em largura total. A confirmação de exclusão do comentário é uma página
-própria, sem JavaScript.
+Listar, publicar, editar, excluir, reagir (#212), ordenar (#213), filtrar
+automaticamente o texto (#214), denunciar (#215), moderar/contestar (#216) e
+reter os registros de moderação pelo prazo aprovado (#217) têm fluxos
+implementados.
+As [telas de comentários](TELAS_COMENTARIOS.md) são protótipos de planejamento;
+não representam capturas fiéis da interface atual. Seus estados futuros
+não devem ser confundidos com funcionalidades disponíveis.
 
-Na listagem pública não há nome de usuário, avatar ou rótulo substituto acima
-do comentário. A disciplina, a data e o texto continuam visíveis. Os avisos de
-publicação e edição informam que a identificação da conta não aparece. Edição,
-exclusão e denúncia continuam exigindo as permissões da conta autenticada (#258).
+## Estados, acessibilidade e segurança
 
-O catálogo mostra mensagens diferentes para ausência de dados e ausência de
-resultados dos filtros e exibe a média
-geral em cinco estrelas ou `N/A (Não avaliado)`. A busca é um campo único
-(professor, disciplina ou departamento) com sugestões; filtros vindos da home ou de uma
-sugestão aparecem numa linha com o link "Limpar filtros". O perfil informa quando não há avaliações válidas e mostra a
-média geral do professor; a avaliação exibe erros de campo; a comparação
-exige dois professores diferentes; e o ranking informa quando ninguém atinge o
-mínimo de avaliações. No perfil do usuário, Apagar abre uma confirmação (`<details>`,
-sem JavaScript) antes de enviar a exclusão.
+As telas tratam lista vazia, erro de consulta, formulário inválido e ausência
+de notas válidas (`N/A`). A falha em Meus comentários não bloqueia as demais
+seções do perfil. As ações usam links/formulários com rótulos, foco por teclado,
+mensagens com `role="alert"` quando pertinentes e CSRF em todos os POSTs.
 
-Na Consulta, cada disciplina do cartão (`.disciplina-item`) mostra o nome e o
-código e, abaixo ou ao lado, a dificuldade média com a barra compacta
-(`barra_dificuldade(valor, true)`, `.barra-hp-compacta`, sem a escala de 1 a 5),
-o texto "Dificuldade X,Y/5" e a quantidade ("N avaliações" ou "1 avaliação"), ou
-só "Sem avaliações ainda". A barra compacta é decorativa para leitores de tela
-(`aria-hidden="true"`, sem `role` nem `aria-label`), porque o texto ao lado já
-traz o valor. Com até 5 disciplinas todas aparecem; com mais de 5, aparecem 4 e
-as demais ficam num `<details class="disciplinas-extras">` com o resumo "Ver mais
-N disciplinas", dentro do cartão e sem JavaScript. O botão Comentários do cartão
-leva à seção de comentários do perfil, o perfil tem o link `.atalho-comentarios`
-no topo e a tela de avaliar (só avaliação nova) tem a linha `.convite-comentario`,
-fora do formulário de notas. Os estilos ficam em `lista_professores.css`,
-`perfil_professor.css` e `avaliacao.css`, só com tokens.
-
-A média geral usa didática, clareza, organização e disponibilidade, sem a
-dificuldade, como o ranking. A política de segurança (`style-src 'self'` em
-`app/seguranca.py`) bloqueia `style=""` inline, então valores dinâmicos de estilo
-precisam virar classes de CSS (como `.preenche-N` nas barras e `.degrau-ativo` na
-barra de dificuldade).
-
-Cores, Arial, espaçamentos, raios e alturas seguem o design system e vêm das
-variáveis de `base.css`. O ranking possui uma folha de estilos própria e segue disponível na rota `/ranking`;
-qualquer alteração de escopo deve ser tratada em sua issue específica.
-
-Scripts em `app/static/` (a política de segurança só aceita scripts do próprio
-domínio): `campo-busca.js` transforma os `<select>` dentro de `.campo-busca` (professores na
-comparação e disciplina no perfil do professor) em campos digitáveis com sugestões.
-O `<select>` continua no formulário, então a tela funciona sem JavaScript.
-O mesmo arquivo liga a busca unificada aos campos `.campo-sugestoes` (Consulta e
-Comparação): consulta `data-sugestoes` com o `data-contexto` do campo e mostra as
-sugestões no padrão *combobox* da WAI-ARIA (setas, Enter, Esc, `aria-activedescendant`
-e uma região `status` que anuncia a quantidade). Sem JavaScript, o formulário envia o
-termo (`q` na Consulta, `busca` na Comparação, que lista os resultados como links).
-
-## Design system e visual final
-
-A [issue #112](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/112) reúne a
-consolidação de cores, tipografia, espaçamentos, componentes e estados. A aplicação do visual nas telas principais está na
-[issue #114](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/114).
-
-O inventário acima registra a interface que existe hoje. O
-[design system](DESIGN_SYSTEM.md) reúne o padrão proposto para os componentes.
-Os [protótipos de comentários](TELAS_COMENTARIOS.md) aplicam esse padrão.
-O [mapa da documentação](GUIA_DOCUMENTACAO.md) conecta as regras de interface,
-[funcionalidades](FUNCIONALIDADES.md) e [contribuição](PROCESSO_CONTRIBUICAO.md).
-
-As telas de comentários seguem a
-[especificação para revisão](COMENTARIOS.md). A #112 depende dessa especificação
-para desenhar os fluxos de listar, escrever, editar e apagar comentários, que
-já estão implementados (#167). Reações, ordenação, denúncia e moderação ainda
-são propostas.
+A política de segurança em `app/seguranca.py` usa `style-src 'self'`; estilos
+dinâmicos devem usar classes CSS, como `.preenche-N` e `.degrau-ativo`, em vez
+de `style` inline. Nenhum vínculo de autoria deve ser exposto para identificar
+ações do usuário. A [migração de privacidade](migrations/20261122155752_anonimato_comentarios.sql)
+protege a leitura direta da Data API e precisa ser conferida no destino.
 
 ## Como contribuir com as telas
 
-1. Identifique a rota e o template afetados e preserve os nomes de campos e
-   parâmetros esperados pelo backend. Use `url_for` para endpoints e recursos
-   estáticos ao adicionar links.
-2. Reutilize os estilos compartilhados existentes. Ao extrair CSS repetido,
-   confira as demais páginas que carregam a folha alterada.
-3. Mantenha `csrf_token` em formulários POST, inclusive logout e exclusão.
-   Nas telas de autenticação, preserve o campo `formato=html`.
-4. Preserve os rótulos associados aos campos, mensagens de erro, cabeçalhos e
-   captions das tabelas. Confira foco visível e navegação por teclado.
-5. Confira desktop e mobile, textos longos, estados vazios e erros. Para ranking
-   e comparação, verifique também a rolagem horizontal e a legibilidade das tabelas.
-6. Execute os testes do fluxo alterado e a suíte descrita em [Backend](BACKEND.md).
-   Registre no PR as telas e estados conferidos no navegador.
+1. Confira a rota, o template e os recursos realmente carregados. Preserve os
+   campos e parâmetros aceitos pelo backend e use `url_for`.
+2. Reutilize o [design system](DESIGN_SYSTEM.md), os estilos e macros atuais;
+   confira as outras páginas que compartilham a folha alterada.
+3. Preserve CSRF, autoria da sessão, validações e proteção das rotas.
+4. Confira notebook e celular, temas claro/escuro, foco por teclado, textos
+   longos, filtros, estados vazios e erros.
+5. Rode os testes pertinentes e `mkdocs build --strict`. Registre o que foi
+   conferido no PR e diferencie proposta de funcionalidade implementada.
 
-A conferência de contraste e o inventário de estados de carregamento continuam
-no escopo da #112. A aprovação das regras de comentários é uma etapa do grupo
-na #116; a interface de listar, publicar, editar e excluir comentários está
-implementada, assim como reações (#212), ordenação (#213), denúncia (#215) e a
-área de moderação (#216). Os controles de reação usam os tokens de ambos os temas,
-`aria-pressed`, ícone preenchido na seleção, foco visível e alvos de toque de 44 px.
-Desde a #270, os estilos ficam em `integracao-editorial.css` (`.review .comentario-reacoes`),
-porque o `comentarios.css` não é carregado no perfil desde a interface editorial.
+As regras detalhadas estão em [Funcionalidades](FUNCIONALIDADES.md),
+[Comentários](COMENTARIOS.md), [Backend](BACKEND.md) e no
+[mapa da documentação](GUIA_DOCUMENTACAO.md).

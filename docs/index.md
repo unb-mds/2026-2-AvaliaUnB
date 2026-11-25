@@ -58,15 +58,18 @@ propõe priorizar ofertas do semestre atual sem perder esse histórico.
 
     ---
 
-    Coloque dois professores lado a lado antes de montar a grade.
+    Compare dois ou mais professores da mesma disciplina ou em seleção livre antes de montar a grade.
 
 - :material-account-circle-outline: **Perfil do estudante**
 
     ---
 
-    Cada pessoa vê, edita e apaga as próprias avaliações.
+    Cada pessoa gerencia suas avaliações, comentários e professores favoritos.
 
 </div>
+
+Consulte o [estado da interface e das issues](ESTADO_DA_INTERFACE.md) para
+acompanhar funcionalidades implementadas e evoluções ainda planejadas.
 
 ## Por que ele existe
 
@@ -190,7 +193,7 @@ Para navegar por assunto e evitar versões divergentes, consulte o
 
     Mecanismos atuais e plano de correções.
 
-- :simple-figma: **[Protótipo no Figma](https://www.figma.com/board/PgqkPopVXOiSqm9gD5RRNv/AvaliaAi---Template-MDS?node-id=0-1&p=f&t=Rxu6jVCgeVZHCyg2-0)**
+- :simple-figma: **[Board do Figma](https://www.figma.com/board/PgqkPopVXOiSqm9gD5RRNv/AvaliaAi---Template-MDS?node-id=0-1)**
 
     ---
 

@@ -17,7 +17,7 @@ seção de comentários. Uma falha dessa consulta mostra um aviso sem impedir
 as avaliações e os favoritos. Comentários ocultados não entram nessa listagem.
 
 Não há alteração no formato JSON de `/perfil`, nas regras de autoria ou no banco.
-A retirada da identificação pública segue separadamente na #258 / PR #259.
+A identificação pública foi retirada na #258 / PR #259, já integrado.
 
 Este guia detalha as funcionalidades já disponíveis na `main`. O resumo das
 entregas e do planejamento fica no
@@ -183,7 +183,7 @@ O perfil do professor tem uma seção **Comentários**, separada das notas.
   (maior número de 👍) e `reacoes` (maior total de 👍 + 👎). Em empate, o mais
   recente vem primeiro; em `antigos`, o mais antigo. Valor inválido volta a
   `recentes`, sem erro. Combina com `comentarios_disciplina` e é mantida ao
-  publicar, editar, excluir, denunciar e reagir (issue #213).
+  publicar, editar, excluir, denunciar e reagir (issues #212, #213 e #215).
 - **Filtro:** o parâmetro `comentarios_disciplina` filtra por disciplina. Vazio ou
   inválido volta a "Todas as disciplinas", sem erro. Ele é independente do
   `disciplina_id`, que escolhe as médias.
@@ -289,16 +289,12 @@ catálogo. Se ninguém atingir o mínimo, a página informa esse estado.
 
 ## Funcionalidades planejadas
 
-O filtro de período de oferta (#242) ainda não tem fluxo implementado. Filtros
-por faixa de nota e volume de avaliações (#221), favoritos, o gráfico de
-evolução por semestre, reações, denúncias, moderação e a ordenação de
-comentários escolhida pela pessoa já estão disponíveis.
-
-A [proposta de banco para comentários](Modelo%20de%20Dados.md#6-proposta-tabela-comentarios)
-já está publicada. A [especificação](COMENTARIOS.md) reúne anonimato,
-reações, filtro e denúncias; o que ainda é proposta está indicado nela.
-A proposta começou na
-[issue #116](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/116).
+A priorização do semestre atual no catálogo e a seleção de outros períodos
+continuam como evolução futura da decisão híbrida #242, com implementação
+separada nas issues #278, #279 e #280. As avaliações e ofertas
+históricas permanecem disponíveis. Confira o [estado da interface](ESTADO_DA_INTERFACE.md)
+e a [decisão sobre histórico](DECISAO_HISTORICO_SEMESTRES.md) antes de tratar
+uma proposta como implementação existente.
 
 Relacionado: [visão e requisitos](DOCUMENTO_DE_VISAO.md), [backend](BACKEND.md),
 [frontend](FRONTEND.md) e [mapa da documentação](GUIA_DOCUMENTACAO.md).

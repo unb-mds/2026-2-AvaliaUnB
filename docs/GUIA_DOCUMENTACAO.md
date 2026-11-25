@@ -17,7 +17,7 @@ os detalhes. **Descrição do estado atual não equivale a funcionalidade planej
 | Templates e componentes | [Frontend](FRONTEND.md) | [Design system](DESIGN_SYSTEM.md) |
 | CI, checks e publicação | [Pipeline](pipeline.md) | [Hospedagem](HOSPEDAGEM.md) |
 | Auditoria e plano de correção | [Auditoria de segurança](AUDITORIA_SEGURANCA.md) | [Cibersegurança](CIBERSEGURANCA.md) |
-| Comentários (#167), reações (#212), denúncias (#215) e moderação (#216) | [Especificação](COMENTARIOS.md) | [Mockups](TELAS_COMENTARIOS.md) |
+| Comentários, reações, denúncias e moderação | [Especificação](COMENTARIOS.md) | [Estado da interface](ESTADO_DA_INTERFACE.md), [protótipos](TELAS_COMENTARIOS.md) |
 | Uso de IA por integrante e regras | [Uso de IA no projeto](USO_DE_IA.md) | `.agents/README.md` no repositório |
 | Pronto para começar/concluído | [Critérios de contribuição](PROCESSO_CONTRIBUICAO.md) | Templates de issue/PR em `.github/` |
 
@@ -55,10 +55,10 @@ evitar sobreposição de PRs.
 - **RLS e autorização:** a [auditoria](AUDITORIA_SEGURANCA.md) é um registro
   histórico, enquanto [cibersegurança](CIBERSEGURANCA.md) acompanha mudanças em
   andamento. Não confundir a análise de 02/11 com o estado posterior.
-- **Comentários e moderação:** listar, filtrar por disciplina, publicar, editar e
-  excluir o próprio comentário estão implementados (#167). Reações, ordenação
-  escolhida pela pessoa, filtro automático, denúncia e moderação são propostas,
-  não telas funcionais, e dependem de aprovação e implementação específica.
+- **Comentários e moderação:** publicação anônima, filtro automático, reações,
+  ordenação, denúncias, moderação e retenção estão implementadas. Consulte o
+  [estado da interface](ESTADO_DA_INTERFACE.md); protótipos não são capturas da
+  aplicação publicada.
 - **Histórico:** [Release 1](https://github.com/unb-mds/2026-2-AvaliaUnB/blob/main/RELEASE-v1.0.0.md),
   [v1.0.1](https://github.com/unb-mds/2026-2-AvaliaUnB/blob/main/RELEASE-v1.0.1.md) e
   [implementações antigas](https://github.com/unb-mds/2026-2-AvaliaUnB/blob/main/docs/IMPLEMENTACAO_26_36_37.md) registram entregas

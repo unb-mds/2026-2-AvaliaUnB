@@ -1,11 +1,13 @@
 # Telas de comentários
 
-**Protótipos da #112. As telas de listar, escrever, editar e apagar já existem
-no perfil do professor (issue #167), com as diferenças indicadas abaixo.**
-A ocultação passou a ser feita pela área de moderação (#216), e o autor vê o próprio comentário ocultado com um link para contestar. Continuam como protótipo os estados **Verificando** e **Em revisão** dos
-desenhos de escrever e editar. O filtro automático já existe (issue #214): na
-implementação, ele responde com um aviso de erro junto ao campo e o texto
-preservado, ou publica direto.
+**Protótipos da #112; não são capturas do frontend atual.** Listar, escrever,
+editar, excluir, reagir, ordenar, denunciar e moderar têm fluxos implementados
+(#167, #212–#217, #258, #260). Os desenhos antecipam estados de interface; por
+exemplo, a publicação não exibe **Verificando** nem **Em revisão**. O filtro
+automático (#214) responde com aviso junto ao campo e preserva o texto bloqueado.
+
+A ocultação é feita na área restrita de moderação (#216). O autor pode ver
+o comentário ocultado e acessar o formulário privado de contestação.
 
 Protótipos da #112 para revisar a experiência em uma tela estreita. Os fluxos
 seguem a [especificação da #116](COMENTARIOS.md) e os componentes do
