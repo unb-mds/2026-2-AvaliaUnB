@@ -161,8 +161,8 @@ são propostas.
 A conferência de contraste e o inventário de estados de carregamento continuam
 no escopo da #112. A aprovação das regras de comentários é uma etapa do grupo
 na #116; a interface de listar, publicar, editar e excluir comentários está
-implementada, assim como reações (#212) e denúncia (#215). Ordenação e moderação
-continuam planejadas. Os controles de reação usam os tokens de ambos os temas,
+implementada, assim como reações (#212), ordenação (#213), denúncia (#215) e a
+área de moderação (#216). Os controles de reação usam os tokens de ambos os temas,
 `aria-pressed`, ícone preenchido na seleção, foco visível e alvos de toque de 44 px.
 Desde a #270, os estilos ficam em `integracao-editorial.css` (`.review .comentario-reacoes`),
 porque o `comentarios.css` não é carregado no perfil desde a interface editorial.

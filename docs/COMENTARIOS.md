@@ -1,12 +1,12 @@
 # Especificação de comentários avaliativos
 
-**Status: proposta para revisão do grupo, com origem na issue #116.** Este
+**Status: implementado, com origem na issue #116.** Este
 documento descreve o comportamento dos comentários, das reações e da
 moderação. A primeira parte já está implementada no perfil do professor
 (issue #167): listar, filtrar por disciplina, publicar, editar e excluir o
 próprio comentário. A denúncia está implementada na issue #215, o filtro automático
 na issue #214, as reações na #212 e a ordenação escolhida pela pessoa na #213.
-Moderação e ocultação continuam sendo planos futuros (issues #216 e #217). As decisões C01 a C11,
+A moderação com ocultação e contestação está na issue #216, e o descarte dos registros após 90 dias na #217. As decisões C01 a C11,
 na [tabela do final do documento](#decisoes-para-o-grupo-revisar), foram
 decididas pela equipe; os pontos ainda a confirmar estão indicados nelas.
 
@@ -338,7 +338,7 @@ As decisões podem ser revisadas no PR ou na
 Os [protótipos da #112](TELAS_COMENTARIOS.md) e a [proposta de dados da #109](Modelo%20de%20Dados.md#6-proposta-tabela-comentarios)
 acompanham estas regras.
 
-## Critérios para a futura implementação
+## Critérios de aceite
 
 - Visitantes consultam comentários sem identificação do autor e contagens de reações. Estar logado
   (login pelo Google) é obrigatório para comentar,
@@ -382,7 +382,7 @@ acompanham estas regras.
 - As telas cobrem vazio, envio, erro, edição, confirmação de exclusão e ocultação.
 - As permissões de backend e banco seguem o modelo aprovado, com testes de
   autorização. A tabela `comentarios` vem da migração `002_comentarios.sql`;
-  reações e denúncias têm migrações versionadas; moderação ainda não.
+  reações, denúncias e moderação também têm migrações versionadas (`008_moderacao_comentarios.sql`).
 
 Documentos relacionados: [modelo de dados](Modelo%20de%20Dados.md),
 [protótipos](TELAS_COMENTARIOS.md), [frontend](FRONTEND.md) e

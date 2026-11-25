@@ -1,9 +1,8 @@
 # Pipeline (GitHub Actions)
 
 Na `main`, os workflows ficam em `.github/workflows/`: `testes.yml`,
-`seguranca.yml`, `docs.yml`, `scraper-fumaca.yml` e `atualizar-dados-sigaa.yml`. Uma validação do MkDocs em PR foi proposta
-separadamente na [issue #171](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/171);
-ela só passa a integrar a `main` após o respectivo PR ser mesclado.
+`seguranca.yml`, `docs.yml`, `validar-documentacao.yml`, `scraper-fumaca.yml`,
+`atualizar-dados-sigaa.yml` e `retencao_moderacao.yml`.
 
 <div class="grid cards" markdown>
 
@@ -36,12 +35,18 @@ e as correções são acompanhadas em [Cibersegurança](CIBERSEGURANCA.md).
 
     ---
 
-    `atualizar-dados-sigaa.yml`: só roda quando alguém dispara pela aba Actions. Faz o dry-run ou, com aprovação no environment `producao`, grava o semestre no Supabase e abre um PR com o backup. Veja o [passo a passo](COMO_USAR_SCRAPER.md#5-atualizar-os-dados-a-cada-semestre-github-actions).
+    `atualizar-dados-sigaa.yml`: só roda quando alguém dispara pela aba Actions. Faz o dry-run ou, com aprovação no environment `producao`, converte para a grafia comum os nomes ainda em CAIXA ALTA, grava o semestre no Supabase e abre um PR com o backup. Veja o [passo a passo](COMO_USAR_SCRAPER.md#5-atualizar-os-dados-a-cada-semestre-github-actions).
 
     A [decisão #242](DECISAO_HISTORICO_SEMESTRES.md) mantém a gravação cumulativa.
     A futura ativação do período de oferta deverá exigir validação explícita
     da coleta completa; uma execução histórica ou falha não muda o período ativo.
     O pipeline atual ainda não ativa períodos.
+
+- :material-delete-clock-outline: **Retenção de 90 dias**
+
+    ---
+
+    `retencao_moderacao.yml`: roda todo dia às 06:00 UTC (e sob demanda pela aba Actions) no environment `producao` e descarta os registros de denúncia e moderação encerrados há mais de 90 dias (#217).
 
 </div>
 

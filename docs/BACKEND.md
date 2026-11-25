@@ -210,9 +210,9 @@ na [issue #116](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/116).
 
 O perfil do professor lista, e usuários autenticados publicam, editam e excluem,
 comentários sobre a experiência com um professor em uma disciplina que ele
-ministra. As regras de negócio estão em [Comentários](COMENTARIOS.md). Reações
-e denúncia estão implementadas; moderação, ocultação e filtro automático ainda
-estão planejados.
+ministra. As regras de negócio estão em [Comentários](COMENTARIOS.md). Reações,
+denúncia, filtro automático do texto (#214), moderação com ocultação e
+contestação (#216) e descarte dos registros após 90 dias (#217) estão implementados.
 
 `POST /comentarios/<id>/reacao` exige login e CSRF. Aceita `valor` 1, -1 ou 0
 (remover). O servidor verifica visibilidade e autoria e usa a conta da sessão.

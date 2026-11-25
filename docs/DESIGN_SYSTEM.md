@@ -399,7 +399,7 @@ só de interface.
 | Campo, seletor e área de texto | Rótulo visível, borda, ajuda e erro junto ao campo | Vazio, preenchido, foco, erro e desabilitado |
 | Card de professor | Nome, departamento, disciplinas e ações | Padrão e resultado de filtro |
 | Card de comentário | Texto, nome de usuário, data, disciplina (em etiqueta) e ações permitidas. O nome é só texto: o e-mail do autor nunca é exibido | Publicado, em edição e ocultado para o autor |
-| Reação a comentário | Polegares em SVG na cor do texto (`currentColor`), em botões fantasma lado a lado no padrão de `.btn.ghost`: borda `--line`, raio de 10 px, alvo de 44 px. O total aparece sempre, inclusive 0. Os botões têm nomes acessíveis Curtir e Descurtir e usam `aria-pressed` para indicar a seleção (#270) | Neutro; passar o mouse (borda `--accent`); selecionado com borda, texto e fundo suave em `--accent` e ícone preenchido; foco; leitura no próprio comentário, sem borda |
+| Reação a comentário | Polegares em SVG na cor do texto (`currentColor`) com o total ao lado, sem borda nem fundo, lado a lado com alvo de toque de 44 px. O total aparece sempre, inclusive 0. Os botões têm nomes acessíveis Curtir e Descurtir e usam `aria-pressed` para indicar a seleção (#270) | Neutro em `--muted`; passar o mouse (texto em `--text`); selecionado com texto em `--accent` e ícone preenchido; foco; leitura no próprio comentário |
 | Mensagem | Explica o estado e a próxima ação | Informação, sucesso, erro, vazio e carregamento |
 | Diálogo de exclusão | Identifica o item e sua consequência. Cancelar recebe o foco inicial | Aberto, confirmando e falha |
 | Tabela de indicadores | Legenda, cabeçalhos associados e valores legíveis | Com dados, sem dados e erro |

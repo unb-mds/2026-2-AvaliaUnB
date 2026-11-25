@@ -140,6 +140,30 @@ jobs:
           echo "CHROME_BINARY=$binario" >> "$GITHUB_ENV"
           echo "CHROME_VERSION_MAIN=$versao" >> "$GITHUB_ENV"
 
+      # Desde a #236 o importador grava nomes em grafia comum. Se o banco ainda tiver
+      # nomes em CAIXA ALTA, a trava do importador para com código 2 sem gravar nada.
+      # A conversão é idempotente (sem pendências, não altera nada) e aborta sem
+      # gravar se dois professores ficariam com o mesmo nome.
+      - name: Converter nomes já gravados para a grafia comum
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          set +e
+          python scraper/manutencao_banco.py converter-nomes --gravar 2>&1 | tee conversao.log
+          codigo=${PIPESTATUS[0]}
+          set -e
+          {
+            echo "## Conversão de nomes (código de saída $codigo)"
+            echo '```'
+            tail -n 25 conversao.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$codigo" != "0" ]; then
+            echo "::error::A conversão de nomes falhou (colisão ou erro de gravação). O scraper não foi executado. Veja conversao.log no artifact scraper-log."
+            exit 1
+          fi
+
       - name: Rodar o scraper e gravar no Supabase
         id: scraper
         env:
@@ -225,6 +249,7 @@ jobs:
         with:
           name: scraper-log
           path: |
+            conversao.log
             scraper.log
             duplicatas.log
             debug/
@@ -233,6 +258,12 @@ jobs:
 
       - name: Falhar se alguma unidade deu erro
         if: steps.scraper.outputs.codigo != '0'
+        env:
+          CODIGO: ${{ steps.scraper.outputs.codigo }}
         run: |
-          echo "::error::O scraper saiu com código ${{ steps.scraper.outputs.codigo }}. Os dados das unidades lidas já foram gravados; rode de novo só as unidades que falharam."
+          if [ "$CODIGO" = "2" ]; then
+            echo "::error::Importação interrompida pela trava de nomes em CAIXA ALTA (código 2). Nada foi gravado. Rode 'python scraper/manutencao_banco.py converter-nomes --gravar' e dispare o workflow de novo."
+          else
+            echo "::error::O scraper saiu com código $CODIGO. Os dados das unidades lidas já foram gravados; rode de novo só as unidades que falharam."
+          fi
           exit 1
