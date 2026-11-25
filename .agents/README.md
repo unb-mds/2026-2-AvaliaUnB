@@ -107,8 +107,11 @@ documente elas nos agents."
 | Skills de apoio | Computer Use e Plugin Management para consultar acesso às integrações; sem alteração comprovada no board do FigJam |
 | Verificação | Build estrito do MkDocs, suíte existente, links locais, XML dos SVGs e ausência de marcadores de conflito; resultados registrados no PR #178 |
 
-A edição e a conferência visual do FigJam dependem de uma conta autorizada.
-O roteiro versionado não é evidência de que os cartões do board foram atualizados.
+A integração Figma recusou acesso ao board, mas a conta no navegador tinha
+permissão de edição. Após as alterações feitas pela usuária, o Codex conferiu
+contexto, componentes, stack, story map e os rótulos de planejamento pelo navegador
+em 25/11/2026. Os ajustes finais de coleta separada e criação do perfil com Google
+foram verificados; as evidências estão em `docs/REVISAO_FIGJAM.md`.
 
 ## Skills de apoio instaladas no fim do projeto
 

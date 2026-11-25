@@ -49,6 +49,8 @@ esta lista: entregas concluídas como **IMPLEMENTADO** e evoluções futuras com
 Consulte também o [inventário do frontend](FRONTEND.md), as
 [funcionalidades](FUNCIONALIDADES.md) e a [especificação de comentários](COMENTARIOS.md).
 
-O [roteiro de conferência do FigJam](REVISAO_FIGJAM.md) lista os cartões,
-estados e evidências necessários. A revisão visual do board ainda não foi
-concluída; o roteiro não substitui a edição e a conferência por uma conta autorizada.
+O [registro de conferência do FigJam](REVISAO_FIGJAM.md) lista os cartões,
+estados e evidências conferidos pelo navegador em 25/11/2026 após as alterações
+da usuária. Contexto, componentes, stack e story map estão alinhados; os wireframes
+permanecem como referência de planejamento. Restam revisão da equipe, merge e
+conferência da publicação da documentação para concluir a issue #170.

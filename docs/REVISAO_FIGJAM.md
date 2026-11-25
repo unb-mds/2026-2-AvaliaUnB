@@ -1,10 +1,12 @@
 # Conferência do FigJam — issue #170
 
 Referência de código: `cea8eced5b7f222ddd9d863a3a33c0d7a7fed560` da `main`,
-conferida em 25/11/2026. Este roteiro prepara a revisão do
-[board canônico](https://www.figma.com/board/PgqkPopVXOiSqm9gD5RRNv/AvaliaAi---Template-MDS?node-id=0-1).
-Ele não comprova que os cartões do board foram alterados. A conferência visual
-e a edição do FigJam continuam pendentes de uma conta com acesso ao board.
+conferida em 25/11/2026. A revisão de alinhamento documental do
+[board canônico](https://www.figma.com/board/PgqkPopVXOiSqm9gD5RRNv/AvaliaAi---Template-MDS?node-id=0-1)
+foi feita pelo Codex pelo navegador em 25/11/2026, após as alterações informadas
+por Geovana Duarte. Os dois ajustes finais foram conferidos diretamente:
+Selenium na área **Coleta de dados** e **Perfil criado no primeiro acesso com Google**
+no story map. O agente apenas conferiu o board; as edições foram feitas pela usuária.
 
 ## Cartões a conferir e atualizar
 
@@ -24,18 +26,27 @@ e a edição do FigJam continuam pendentes de uma conta com acesso ao board.
 | Identidade | Interface editorial, destaque verde, Inter/Inter Tight, temas escuro/claro, navegação móvel e favicon de chapéu com estrela | Implementado (#245, #263, #270) |
 | Ofertas por semestre | Preservar histórico e priorizar semestre atual explicitamente configurado; selecionar outros períodos ou todos; médias independentes do filtro de oferta | Planejado (#242, #278, #279, #280) |
 
-## Critérios para concluir a conferência visual
+## Evidências da conferência
 
-- [ ] Abrir o board com uma conta autorizada e conferir as áreas acima.
-- [ ] Atualizar os cartões e suas ligações, com IMPLEMENTADO ou PLANEJADO.
-- [ ] Retirar dos fluxos atuais cadastro por senha, SQLite, confirmação adicional
-      de e-mail para comentar e identificação pública do autor.
-- [ ] Identificar wireframes antigos como histórico; **Verificando** e **Em revisão**
-      são estados de protótipo, sem fila de pré-aprovação na implementação atual.
-- [ ] Conferir a apresentação em tela larga e estreita e os dois temas contra a
-      interface, sem tratar protótipos como capturas do produto.
-- [ ] Registrar na issue #170 a data, a pessoa responsável e links dos frames
-      conferidos; só então marcar a conferência do FigJam como concluída.
+- [x] Contexto: consulta pública, participação com Google, comentários sem
+      identificação pública e dados do SIGAA importados pelo scraper.
+- [x] Componentes: mesma aplicação Flask responsiva, rotas de autenticação,
+      sessão, notas/comentários, consulta e persistência Supabase/PostgreSQL.
+- [x] Tech stack: Selenium separado do banco, na área **Coleta de dados**.
+- [x] Story map: **Perfil criado no primeiro acesso com Google**; consulta,
+      notas por turma cursada, comparação e ranking atualizados.
+- [x] Entregas marcadas como **IMPLEMENTADO**, incluindo comentários anônimos,
+      reações, ordenação, filtro automático, moderação, contestação e retenção.
+- [x] Consulta por oferta marcada como **PLANEJADO**, referenciando #242,
+      #278, #279 e #280; médias independentes do filtro de oferta.
+- [x] Wireframes identificados como referência de planejamento, preservando
+      os desenhos antigos sem apresentá-los como a interface publicada.
+
+Áreas conferidas no [board](https://www.figma.com/board/PgqkPopVXOiSqm9gD5RRNv/AvaliaAi---Template-MDS?node-id=0-1):
+**Arquitetura**, **Tech stack**, **Story Map — implementado e planejado** e
+**Wireframes — referência de planejamento**. A conferência verifica o alinhamento
+com a documentação; não substitui testes de usabilidade, contraste ou responsividade
+da aplicação, nem comprova a execução de migrações no Supabase publicado.
 
 Os SVGs em [Arquitetura](ARQUITETURA.md), o [inventário do frontend](FRONTEND.md)
 e o [estado da interface](ESTADO_DA_INTERFACE.md) são as referências versionadas.
