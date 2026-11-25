@@ -44,17 +44,18 @@ separada da aplicação web, inclusive pelo workflow do GitHub Actions.
 
 O catálogo conserva ofertas históricas. A decisão híbrida sobre priorizar o
 semestre atual e permitir a consulta dos anteriores está registrada em
-[DECISAO_HISTORICO_SEMESTRES.md](DECISAO_HISTORICO_SEMESTRES.md); essa seleção
-de ofertas ainda não integra a interface.
+[DECISAO_HISTORICO_SEMESTRES.md](DECISAO_HISTORICO_SEMESTRES.md). O seletor de
+ofertas e a configuração explícita estão implementados (#278 e #279). Sem
+semestre confirmado, a aplicação mantém a consulta histórica; a ativação exige
+coleta validada e revisão/deploy da configuração versionada.
 
-O semestre atual da proposta é uma configuração operacional confirmada após
+O semestre atual é uma configuração operacional confirmada após
 validar a coleta; ele não é inferido da data do calendário ou do maior período
 no banco. O semestre cursado na avaliação e o período escolhido na consulta
-são independentes. O recorte do catálogo deverá ocorrer antes da paginação,
-preservando médias, ranking e evolução históricos. A implementação está
-separada nas issues [#278](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/278),
-[#279](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/279) e
-[#280](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/280).
+são independentes. O recorte do catálogo ocorre antes da paginação,
+preservando médias, ranking e evolução históricos. O
+[guia de semestres](SEMESTRE_ATUAL.md) detalha a configuração, o filtro e a
+integração operacional da coleta (#280).
 
 ## Histórico visual
 
