@@ -24,7 +24,7 @@ no story map. O agente apenas conferiu o board; as edições foram feitas pela u
 | Denunciar e moderar | Denúncia privada; área restrita; manter, ocultar ou restaurar com justificativa; contestação privada; sem fila de pré-aprovação | Implementado (#215, #216) |
 | Retenção | Rotina para descartar registros de casos encerrados após 90 dias, preservando casos abertos e histórico de comentários ainda ocultados | Implementado no repositório (#217); execução no destino deve ser conferida |
 | Identidade | Interface editorial, destaque verde, Inter/Inter Tight, temas escuro/claro, navegação móvel e favicon de chapéu com estrela | Implementado (#245, #263, #270) |
-| Ofertas por semestre | Preservar histórico e priorizar semestre atual explicitamente configurado; selecionar outros períodos ou todos; médias independentes do filtro de oferta | Planejado (#242, #278, #279, #280) |
+| Ofertas por semestre | Preservar o catálogo histórico completo, sem priorizar semestre atual; manter médias por semestre | Implementado (modelo A, #242) |
 
 ## Evidências da conferência
 
@@ -37,8 +37,9 @@ no story map. O agente apenas conferiu o board; as edições foram feitas pela u
       notas por turma cursada, comparação e ranking atualizados.
 - [x] Entregas marcadas como **IMPLEMENTADO**, incluindo comentários anônimos,
       reações, ordenação, filtro automático, moderação, contestação e retenção.
-- [x] Consulta por oferta marcada como **PLANEJADO**, referenciando #242,
-      #278, #279 e #280; médias independentes do filtro de oferta.
+- [x] Na revisão original, consulta por oferta marcada como **PLANEJADO**,
+      referenciando #242, #278, #279 e #280. A decisão posterior mantém o modelo A;
+      o marcador no FigJam deve ser atualizado pela equipe se ainda refletir a proposta anterior.
 - [x] Wireframes identificados como referência de planejamento, preservando
       os desenhos antigos sem apresentá-los como a interface publicada.
 

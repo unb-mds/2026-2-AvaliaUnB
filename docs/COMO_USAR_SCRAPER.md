@@ -259,20 +259,15 @@ e só é disparado manualmente.
   nada e preenche professores que antes apareciam como "A DEFINIR DOCENTE". Turmas
   canceladas no SIGAA **não** são apagadas do banco.
 
-### Preservação e ativação de semestres (#242)
+### Preservação do histórico de semestres (#242)
 
 A coleta mantém as turmas dos semestres anteriores. O backup do workflow
 abrange o catálogo acumulado; não é um backup das avaliações ou comentários.
-Não limpe tabelas ao iniciar outro semestre e não confunda uma reimportação
-histórica com uma mudança do semestre de oferta.
-
-A [opção híbrida](DECISAO_HISTORICO_SEMESTRES.md) propõe ativar explicitamente
-o novo período depois de confirmar que o SIGAA publicou as ofertas, que o
-dry-run está coerente e que a gravação completa foi aprovada e concluída.
-Valide ano, período, quantidade de unidades e turmas e integridade dos
-vínculos. Coleta vazia ou incompleta, falha ou reexecução histórica não
-deve alterar o semestre atual. O mecanismo de ativação ainda será implementado;
-o workflow atual continua apenas coletando, gravando e versionando o backup.
+Não limpe tabelas ao iniciar outro semestre. A [decisão de manter o modelo A](DECISAO_HISTORICO_SEMESTRES.md)
+preserva a coleta cumulativa e o workflow existente, sem ativação de semestre
+atual. Confira ano, período, unidades, turmas e vínculos no dry-run antes de
+aprovar a gravação. A reimportação usa as mesmas chaves de unicidade e não
+exclui outros períodos.
 
 ### Configuração única (administrador do repositório)
 

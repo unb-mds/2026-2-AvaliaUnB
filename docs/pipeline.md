@@ -38,9 +38,8 @@ e as correções são acompanhadas em [Cibersegurança](CIBERSEGURANCA.md).
     `atualizar-dados-sigaa.yml`: só roda quando alguém dispara pela aba Actions. Faz o dry-run ou, com aprovação no environment `producao`, converte para a grafia comum os nomes ainda em CAIXA ALTA, grava o semestre no Supabase e abre um PR com o backup. Veja o [passo a passo](COMO_USAR_SCRAPER.md#5-atualizar-os-dados-a-cada-semestre-github-actions).
 
     A [decisão #242](DECISAO_HISTORICO_SEMESTRES.md) mantém a gravação cumulativa.
-    A futura ativação do período de oferta deverá exigir validação explícita
-    da coleta completa; uma execução histórica ou falha não muda o semestre atual.
-    O pipeline atual ainda não ativa períodos.
+    O modelo A não necessita de ativação do semestre atual: o pipeline conserva
+    as ofertas históricas e mantém o dry-run, aprovação da gravação e backup.
 
 - :material-delete-clock-outline: **Retenção de 90 dias**
 

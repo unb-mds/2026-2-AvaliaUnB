@@ -36,15 +36,13 @@ parcial; departamento exige igualdade depois da normalização; `nota_min` e
 vírgula decimal, excluindo docentes sem avaliações válidas); e `avaliacoes_min`
 exige uma quantidade mínima de avaliações registradas.
 
-### Ofertas por semestre (proposta #242)
+### Ofertas históricas (#242)
 
-Hoje a busca consulta todas as ofertas históricas. A opção híbrida propõe
-priorizar o semestre atual na busca e no catálogo, com opções de outros
-períodos e de todos os semestres. Um professor sem oferta atual ainda pode ser
-consultado no histórico e pelo link de perfil. A seleção deve ser explícita,
-com estado vazio próprio, e não alterar as notas históricas do professor.
-O novo filtro de oferta ainda não está implementado; ele é independente do
-filtro de médias e do semestre cursado já existentes. Veja a
+A busca, as sugestões e o catálogo consultam ofertas de todos os semestres
+coletados. Um professor sem oferta atual continua consultável. A decisão de
+manter o modelo A não introduz seletor ou priorização automática por semestre
+de oferta. As ofertas vigentes devem ser consultadas no SIGAA; o filtro de
+médias por semestre e o semestre cursado são mantidos. Veja a
 [decisão #242](DECISAO_HISTORICO_SEMESTRES.md).
 
 A normalização ignora acentos, maiúsculas e espaços extras. A lista é ordenada
@@ -130,8 +128,8 @@ professor e disciplina, com notas inteiras de um a cinco para os cinco critério
   mudar o semestre, a pessoa exclui e avalia de novo.
 
 A [decisão #242](DECISAO_HISTORICO_SEMESTRES.md) preserva esse comportamento:
-o futuro padrão de oferta atual não limita a escolha da turma cursada. Não há
-remoção automática de avaliações ou comentários ao trocar o período de oferta.
+o catálogo histórico não limita a escolha da turma cursada. Não há remoção
+automática de avaliações ou comentários ao coletar um novo semestre.
 
 ### Médias: todos os semestres ou um semestre
 
@@ -289,12 +287,10 @@ catálogo. Se ninguém atingir o mínimo, a página informa esse estado.
 
 ## Funcionalidades planejadas
 
-A priorização do semestre atual no catálogo e a seleção de outros períodos
-continuam como evolução futura da decisão híbrida #242, com implementação
-separada nas issues #278, #279 e #280. As avaliações e ofertas
-históricas permanecem disponíveis. Confira o [estado da interface](ESTADO_DA_INTERFACE.md)
-e a [decisão sobre histórico](DECISAO_HISTORICO_SEMESTRES.md) antes de tratar
-uma proposta como implementação existente.
+A decisão #242 mantém o modelo A, portanto a priorização do semestre atual e
+o seletor de ofertas não integram o planejamento vigente. As avaliações e
+ofertas históricas permanecem disponíveis. Confira o [estado da interface](ESTADO_DA_INTERFACE.md)
+e a [decisão sobre histórico](DECISAO_HISTORICO_SEMESTRES.md).
 
 Relacionado: [visão e requisitos](DOCUMENTO_DE_VISAO.md), [backend](BACKEND.md),
 [frontend](FRONTEND.md) e [mapa da documentação](GUIA_DOCUMENTACAO.md).

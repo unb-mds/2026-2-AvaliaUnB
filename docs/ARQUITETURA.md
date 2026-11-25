@@ -42,19 +42,12 @@ separada da aplicação web, inclusive pelo workflow do GitHub Actions.
 | Moderar | Tratar denúncias e contestações com justificativa | `/moderacao` |
 | Favoritar | Salvar professores numa lista pessoal e removê-los quando quiser | Perfil do professor e `/perfil` |
 
-O catálogo conserva ofertas históricas. A decisão híbrida sobre priorizar o
-semestre atual e permitir a consulta dos anteriores está registrada em
-[DECISAO_HISTORICO_SEMESTRES.md](DECISAO_HISTORICO_SEMESTRES.md); essa seleção
-de ofertas ainda não integra a interface.
-
-O semestre atual da proposta é uma configuração operacional confirmada após
-validar a coleta; ele não é inferido da data do calendário ou do maior período
-no banco. O semestre cursado na avaliação e o período escolhido na consulta
-são independentes. O recorte do catálogo deverá ocorrer antes da paginação,
-preservando médias, ranking e evolução históricos. A implementação está
-separada nas issues [#278](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/278),
-[#279](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/279) e
-[#280](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/280).
+O catálogo conserva e consulta ofertas históricas sem filtro de semestre de
+oferta. A [decisão #242](DECISAO_HISTORICO_SEMESTRES.md) mantém o modelo A,
+isto é, a arquitetura atual, sem configuração de semestre atual ou alteração
+do scraper. O semestre cursado permanece um dado da avaliação; as médias por
+disciplina podem ser filtradas por semestre, enquanto as médias gerais, ranking
+e evolução preservam o histórico. O catálogo não confirma ofertas vigentes.
 
 ## Histórico visual
 

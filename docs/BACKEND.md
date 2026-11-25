@@ -76,12 +76,11 @@ de retorno da busca. A validação desse parâmetro está em `app/seguranca.py`;
 o bloqueio de barra invertida foi integrado no
 [PR #133](https://github.com/unb-mds/2026-2-AvaliaUnB/pull/133).
 
-**Semestre de oferta (proposta #242):** o futuro parâmetro de consulta do
-catálogo deverá ser distinto do `semestre` das médias e da avaliação. Não muda
-o significado das rotas existentes nem restringe avaliações históricas.
-O ranking e as médias gerais continuam agregando avaliações válidas de todos
-os períodos. Consulte a [decisão](DECISAO_HISTORICO_SEMESTRES.md); nesta
-issue não há mudança de contrato de rota ou API.
+**Histórico de semestres (#242):** o catálogo consulta todas as ofertas sem
+parâmetro de semestre de oferta. O parâmetro `semestre` das médias e da avaliação
+continua com seu significado existente. O ranking e as médias gerais agregam
+avaliações válidas de todos os períodos. A [decisão](DECISAO_HISTORICO_SEMESTRES.md)
+mantém o modelo A sem mudança de contrato de rota ou API.
 
 Os formulários e as páginas de comentário preservam `next` e
 `comentarios_disciplina` (e, ao publicar, a disciplina das médias, enviada no

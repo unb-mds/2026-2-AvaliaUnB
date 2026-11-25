@@ -107,11 +107,9 @@ Vínculo entre professor e disciplina em um semestre. Alimentada pelo scraper.
   substituem os anteriores. Reexecutar a coleta do mesmo período reaproveita a
   chave composta. Professores e disciplinas de períodos antigos continuam
   disponíveis e os vínculos das avaliações são preservados.
-- **Decisão #242 (proposta C):** manter esse esquema; o semestre atual deverá ser
-  uma configuração explícita validada após a coleta, não uma exclusão de turmas
-  nem o maior par presente no banco. A configuração ainda não existe no SQL
-  versionado. O modelo e a validação dessa configuração ficam para a futura
-  implementação da [decisão](DECISAO_HISTORICO_SEMESTRES.md).
+- **Decisão #242 (modelo A):** manter esse esquema e consultar todas as ofertas
+  históricas. Não é necessária configuração de semestre atual nem migração
+  adicional. Veja o [registro da decisão](DECISAO_HISTORICO_SEMESTRES.md).
 
 ### 2.4 `perfis`
 
@@ -149,9 +147,9 @@ Avaliação por critérios objetivos, com notas inteiras de 1 a 5.
 - **Semestre:** `ano`/`periodo` é a turma escolhida no formulário. O backend confere que existe uma linha em `turmas` para o professor, a disciplina e o semestre (não há FK composta). Avaliações anteriores à #252 têm o semestre da turma mais recente do par na época.
 - **Índice:** `idx_avaliacoes_professor_semestre (professor_id, ano, periodo)` atende o filtro de semestre das médias e o gráfico de evolução.
 
-- **Retenção por semestre:** o semestre atual não altera a chave,
+- **Retenção por semestre:** uma nova coleta não altera a chave,
   o semestre cursado ou a visibilidade de avaliações antigas. Não é necessária
-  uma nova migração de avaliações para a opção C: a #252 já cobre a unicidade.
+  uma nova migração de avaliações para o modelo A: a #252 já cobre a unicidade.
   Comentários permanecem vinculados ao professor e à disciplina, sem coluna de
   semestre cursado; a data de publicação não é equivalente à turma cursada.
 

@@ -137,3 +137,13 @@ npx skills add https://github.com/obra/superpowers --skill test-driven-developme
 | Resultado | PR #269, sub-issues #278, #279 e #280 e PR #281 de atualização documental |
 | Revisão | Conferência das regras já implementadas (#224 e #252), preservação do histórico, escopo das sub-issues e vínculo com o PR integrado; ratificação coletiva permanece pendente |
 | Verificação | `mkdocs build --strict` e `git diff --check` no PR #281; nenhuma alteração de código de produção |
+
+## Revisão da decisão sobre semestres (25/11/2026, issue #242)
+
+| Item | Detalhe |
+|---|---|
+| Ferramenta | ChatGPT |
+| Pedido | Manter a opção A, atualizar toda a documentação e preservar os commits anteriores |
+| Resultado | Branch `docs/242-manter-historico`; registro da decisão, guias, requisitos e documentação de interface alinhados ao funcionamento atual |
+| Revisão | Issues #278, #279 e #280 encerradas como `Not planned`; PRs #282, #283 e #284 de Geovana Duarte fechados sem merge conforme solicitação de Giovanna; decisão #242 atualizada, preservado o histórico das contribuições |
+| Verificação | `mkdocs build --strict` e `git diff --check`; nenhuma alteração de código, migração ou workflow |
