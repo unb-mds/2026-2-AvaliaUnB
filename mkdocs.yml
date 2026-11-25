@@ -65,6 +65,7 @@ nav:
     - Diagramas de Arquitetura: ARQUITETURA.md
     - Modelo de Dados: "Modelo de Dados.md"
     - "Histórico de semestres (decisão #242)": DECISAO_HISTORICO_SEMESTRES.md
+    - Semestre atual e consulta histórica: SEMESTRE_ATUAL.md
   - Desenvolvimento:
     - Backend: BACKEND.md
     - Frontend: FRONTEND.md
