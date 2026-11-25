@@ -2,7 +2,7 @@
 
 **Protótipos da #112. As telas de listar, escrever, editar e apagar já existem
 no perfil do professor (issue #167), com as diferenças indicadas abaixo.**
-Ocultação continua sendo protótipo, assim como os estados **Verificando** e **Em revisão** dos
+A ocultação passou a ser feita pela área de moderação (#216), e o autor vê o próprio comentário ocultado com um link para contestar. Continuam como protótipo os estados **Verificando** e **Em revisão** dos
 desenhos de escrever e editar. O filtro automático já existe (issue #214): na
 implementação, ele responde com um aviso de erro junto ao campo e o texto
 preservado, ou publica direto.

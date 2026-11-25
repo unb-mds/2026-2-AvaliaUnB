@@ -224,7 +224,9 @@ ignorar a trava. O `--dry-run` não consulta o banco e não é afetado.
 3. Aplicar: `python scraper/manutencao_banco.py converter-nomes --gravar`.
 4. Regenerar `docs/backup` com `python scraper/manutencao_banco.py backup` e versionar os CSVs.
 5. Aguardar até 5 minutos: o catálogo do app fica em cache por esse tempo.
-6. Só então disparar o workflow de atualização com `modo` = `gravar`.
+6. Só então disparar o workflow de atualização com `modo` = `gravar`. (O workflow também
+   roda a conversão antes de coletar, então os passos 2 e 3 são opcionais para quem usa
+   o GitHub Actions.)
 
 Se as listas `PARTICULAS` ou `SIGLAS` mudarem depois, rode `converter-nomes --gravar` de
 novo antes do próximo importador; senão o banco e o importador passam a gravar textos
@@ -336,15 +338,20 @@ Rode o workflow de novo com os mesmos `ano` e `periodo` e `modo` = `gravar`. A
 execução fica parada em *Waiting* até um dos revisores do environment `producao`
 clicar em **Review deployments → Approve and deploy**. Depois de aprovada, ela:
 
-1. coleta e grava professores, disciplinas e turmas no Supabase;
-2. roda `manutencao_banco.py duplicatas`. Se houver duplicatas, aparece um aviso
+1. roda `manutencao_banco.py converter-nomes --gravar`, que passa para a grafia comum
+   os nomes ainda em CAIXA ALTA no banco. Sem pendências, não altera nada. Se dois
+   professores ficariam com o mesmo nome, a execução para antes do scraper, sem gravar;
+2. coleta e grava professores, disciplinas e turmas no Supabase;
+3. roda `manutencao_banco.py duplicatas`. Se houver duplicatas, aparece um aviso
    amarelo na execução (veja [Verificar duplicatas](#verificar-duplicatas));
-3. regenera os CSVs de `docs/backup` com `manutencao_banco.py backup`;
-4. se o backup mudou, abre um PR `dados: backup do catálogo após coleta do SIGAA
+4. regenera os CSVs de `docs/backup` com `manutencao_banco.py backup`;
+5. se o backup mudou, abre um PR `dados: backup do catálogo após coleta do SIGAA
    <ano>/<período>` a partir de uma branch `dados/sigaa-<ano>-<período>-<id>`.
 
-Antes do primeiro `gravar` com o importador que converte nomes, converta o banco (veja
-[Nomes em grafia comum](#nomes-em-grafia-comum)); senão a trava interrompe a gravação.
+O passo 1 existe porque a trava do importador (veja
+[Nomes em grafia comum](#nomes-em-grafia-comum)) interrompia o `gravar` com código 2
+enquanto o banco tinha nomes em CAIXA ALTA. Rodar a conversão à mão, pelo passo a passo
+operacional, continua válido; no workflow ela não é mais um pré-requisito.
 
 **4. Revisar e mesclar o PR do backup.**
 
@@ -358,7 +365,8 @@ reabra o PR para dispará-los.
 | Sintoma | O que fazer |
 |---|---|
 | Execução vermelha com "unidades puladas por erro" | As unidades lidas **já foram gravadas**. Rode `gravar` de novo só com as unidades que falharam. |
-| Execução vermelha com "Importação interrompida: N conflito(s)" (saída `2`) | Nada foi gravado. Rode `python scraper/manutencao_banco.py converter-nomes --gravar` e dispare o workflow de novo. |
+| Execução vermelha com "Importação interrompida" (saída `2`) | Nada foi gravado. O workflow já converte os nomes antes do scraper; se ainda assim acontecer, rode `python scraper/manutencao_banco.py converter-nomes --gravar` e dispare o workflow de novo. |
+| Execução vermelha em "Converter nomes já gravados" | Há colisão de nomes de professores ou falha de gravação; nada foi coletado. Veja `conversao.log` no artifact `scraper-log`, resolva as colisões e dispare de novo. |
 | `SessionNotCreatedException` / versão do ChromeDriver | O workflow já define `CHROME_BINARY` e `CHROME_VERSION_MAIN` com o Google Chrome do runner (que também tem Chromium). Confira no passo "Apontar o scraper para o Google Chrome do runner" qual versão foi detectada e abra uma issue com o log. |
 | Nenhuma turma em nenhuma unidade | Confira `ano`/`periodo`. O SIGAA pode ainda não ter publicado o período, ou o layout mudou (veja os HTMLs em `debug/` no artifact). |
 | Passo "Abrir PR com o backup" falha | Falta a permissão do item 3 da [configuração única](#configuracao-unica-administrador-do-repositorio). Os dados já estão no banco. Rode o backup localmente (seção 4) ou ajuste a permissão e rode `gravar` de novo. |

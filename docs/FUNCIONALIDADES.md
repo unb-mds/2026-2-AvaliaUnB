@@ -289,9 +289,10 @@ catálogo. Se ninguém atingir o mínimo, a página informa esse estado.
 
 ## Funcionalidades planejadas
 
-Outros gráficos e moderação ainda não têm fluxo implementado. Reações,
-denúncias e a ordenação de comentários escolhida pela pessoa já estão
-disponíveis.
+O filtro de período de oferta (#242) ainda não tem fluxo implementado. Filtros
+por faixa de nota e volume de avaliações (#221), favoritos, o gráfico de
+evolução por semestre, reações, denúncias, moderação e a ordenação de
+comentários escolhida pela pessoa já estão disponíveis.
 
 A [proposta de banco para comentários](Modelo%20de%20Dados.md#6-proposta-tabela-comentarios)
 já está publicada. A [especificação](COMENTARIOS.md) reúne anonimato,

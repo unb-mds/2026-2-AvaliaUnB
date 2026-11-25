@@ -41,14 +41,14 @@ anteriores podem conter apenas parte delas.
 
 | Etapa | Funcionalidades | Estado |
 |---|---|---|
-| R1 — fluxo essencial | Cadastro, login, busca de professores e disciplinas, perfil do professor, avaliação por cinco critérios e consulta de médias | Implementado |
-| R2 — consulta e gestão de avaliações | Ranking, comparação entre dois professores, filtro por departamento, busca que ignora acentos e espaços extras e perfil do usuário com edição e exclusão das próprias avaliações | Implementado |
+| R1 — fluxo essencial | Login com Google (o perfil é criado no primeiro acesso), busca de professores e disciplinas, perfil do professor, avaliação por cinco critérios e consulta de médias | Implementado |
+| R2 — consulta e gestão de avaliações | Ranking geral e por departamento, comparação de professores (inclusive de disciplinas diferentes, com destaque do melhor desempenho), busca unificada com autocompletar, filtro por departamento, busca que ignora acentos e espaços extras e perfil do usuário com edição e exclusão das próprias avaliações | Implementado |
 | Evolução dos filtros | Faixa de nota e volume de avaliações | Implementado (#221) |
 | Histórico de semestres | Preservação das turmas, avaliação por turma cursada e evolução de notas | Implementado (#225, #252, #224) |
 | Consulta por oferta | Priorizar o semestre ativo e permitir outros períodos | [Proposta híbrida (#242)](docs/DECISAO_HISTORICO_SEMESTRES.md); implementação futura |
 | Comentários | Listar os 50 mais recentes, filtrar por disciplina, publicar, editar e excluir o próprio comentário anonimamente; reagir com 👍 ou 👎 e denunciar | Implementado ([regras](docs/COMENTARIOS.md)) |
-| Reações e moderação | Reações, ordenação escolhida pela pessoa, filtro automático, denúncia e moderação | [Proposta para revisão](docs/COMENTARIOS.md) |
-| Outras funcionalidades planejadas | Favoritos e gráficos de desempenho | Implementado |
+| Reações e moderação | Reações, ordenação escolhida pela pessoa (#213), filtro automático do texto (#214), denúncia (#215), área de moderação com contestação (#216) e descarte dos registros após 90 dias (#217) | Implementado ([regras](docs/COMENTARIOS.md)) |
+| Favoritos e gráficos | Lista pessoal de professores favoritos (#223) e gráfico da evolução das notas por semestre (#224) | Implementado |
 
 A consulta principal fica em `/professores`; ranking e comparação ficam em
 `/ranking` e `/comparar`. A lista é ordenada pela quantidade de avaliações.
@@ -208,8 +208,9 @@ Já estão implementados no perfil do professor (#167): listar os comentários
 (mais recentes primeiro, 50 por vez), filtrar por disciplina, publicar, editar e
 excluir o próprio comentário. A listagem não identifica o autor. Basta estar
 logado para comentar, com limite de 10 comentários por hora por usuário.
-Reações (#212) e denúncias (#215) estão implementadas; ordenação escolhida pela
-pessoa, filtro antes da publicação e moderação continuam planejados.
+Reações (#212), ordenação escolhida pela pessoa (#213), filtro do texto antes da
+publicação (#214), denúncias (#215) e moderação com contestação (#216) também
+estão implementados.
 
 ## Documentação
 
@@ -224,11 +225,12 @@ pessoa, filtro antes da publicação e moderação continuam planejados.
 | Arquitetura | [Diagramas do sistema](docs/ARQUITETURA.md) |
 | Coleta | [Guia do scraper](docs/COMO_USAR_SCRAPER.md) |
 | Cibersegurança | [Mecanismos e correções](docs/CIBERSEGURANCA.md) · [Relatório da auditoria](docs/AUDITORIA_SEGURANCA.md) |
-| Comentários | [Regras dos comentários](docs/COMENTARIOS.md) (parte implementada na #167; o restante para revisão do grupo) |
+| Comentários | [Regras dos comentários](docs/COMENTARIOS.md): listagem, reações, ordenação, filtro, denúncia e moderação |
+| Uso de IA | [Ferramentas por integrante e regras](docs/USO_DE_IA.md) · [Registro dos agentes](.agents/README.md) |
 | Automação e checks | [Pipeline do GitHub Actions](docs/pipeline.md) · [DoR e DoD](docs/PROCESSO_CONTRIBUICAO.md) |
 | Hospedagem | [Configuração de Preview, produção e lançamento](docs/HOSPEDAGEM.md) |
 | Design | [Board do Figma](https://www.figma.com/board/PgqkPopVXOiSqm9gD5RRNv/AvaliaAi---Template-MDS?node-id=0-1&p=f&t=Rxu6jVCgeVZHCyg2-0) |
-| Histórico | [Release 1](RELEASE-v1.0.0.md) · [v1.0.1](RELEASE-v1.0.1.md) |
+| Histórico | [Release 1](RELEASE-v1.0.0.md) · [v1.0.1](RELEASE-v1.0.1.md) · [v1.0.2](https://github.com/unb-mds/2026-2-AvaliaUnB/releases/tag/v1.0.2) · [v2.0.0](https://github.com/unb-mds/2026-2-AvaliaUnB/releases/tag/v2.0.0) |
 
 Para abrir o site localmente, instale `mkdocs-material` no ambiente virtual e
 execute `mkdocs serve` na raiz. Valide com `mkdocs build --strict`.
