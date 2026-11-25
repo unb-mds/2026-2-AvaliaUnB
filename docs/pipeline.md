@@ -35,7 +35,7 @@ e as correções são acompanhadas em [Cibersegurança](CIBERSEGURANCA.md).
 
     ---
 
-    `atualizar-dados-sigaa.yml`: só roda quando alguém dispara pela aba Actions. Faz o dry-run ou, com aprovação no environment `producao`, converte para a grafia comum os nomes ainda em CAIXA ALTA, grava o semestre no Supabase e abre um PR com o backup. Veja o [passo a passo](COMO_USAR_SCRAPER.md#5-atualizar-os-dados-a-cada-semestre-github-actions).
+    `atualizar-dados-sigaa.yml`: só roda quando alguém dispara pela aba Actions. Faz o dry-run ou, no environment `producao`, converte para a grafia comum os nomes ainda em CAIXA ALTA, grava o semestre no Supabase e abre um PR com o backup. As regras de aprovação do ambiente são configuradas no GitHub. Veja o [passo a passo](COMO_USAR_SCRAPER.md#5-atualizar-os-dados-a-cada-semestre-github-actions).
 
     A [decisão #242](DECISAO_HISTORICO_SEMESTRES.md) mantém a gravação cumulativa.
     A confirmação opcional do semestre atual exige todas as unidades, coleta

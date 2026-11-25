@@ -84,3 +84,14 @@ e 6.889 vínculos únicos de turma. Os 112 registros de docente "A DEFINIR" fora
 contabilizados e ignorados conforme a regra existente. Essa execução não gravou
 dados e não comprova, sozinha, que todos os vínculos já estão no banco publicado;
 a ativação exige a verificação de persistência descrita acima.
+
+A [execução com gravação e conferência](https://github.com/unb-mds/2026-2-AvaliaUnB/actions/runs/45626854707)
+foi concluída em 25/11/2026, com backup prévio, 99 unidades, zero unidade/linha
+pulada por erro e 6.888 vínculos únicos verificados no banco. O relatório registrou
+2.842 professores e 3.467 disciplinas nessa coleta. O SIGAA é uma fonte mutável;
+os totais acima são de execuções distintas, e a persistência cumulativa não remove
+os vínculos anteriores que deixem de aparecer em uma coleta posterior.
+
+O arquivo proposto para 2026/2 inclui o link dessa execução, os totais e a assinatura
+das turmas. A configuração e o backup foram incorporados ao PR #284 para revisão
+junto à tarefa #280. A ativação no site ainda depende da integração e do deploy.

@@ -50,10 +50,11 @@ def main():
     args = parser.parse_args()
     try:
         relatorio = json.loads(args.relatorio.read_text(encoding='utf-8'))
-        resultado = confirmar(relatorio, args.confirmar, args.config, args.gravar,
-                               os.getenv('GITHUB_SERVER_URL', '') + '/' +
-                               os.getenv('GITHUB_REPOSITORY', '') + '/actions/runs/' +
-                               os.getenv('GITHUB_RUN_ID', ''))
+        servidor, repositorio, run_id = (os.getenv(k, '') for k in
+            ('GITHUB_SERVER_URL', 'GITHUB_REPOSITORY', 'GITHUB_RUN_ID'))
+        execucao = f'{servidor}/{repositorio}/actions/runs/{run_id}' if all(
+            (servidor, repositorio, run_id)) else ''
+        resultado = confirmar(relatorio, args.confirmar, args.config, args.gravar, execucao)
     except (OSError, ValueError, TypeError, KeyError) as erro:
         parser.exit(1, f'Confirmação recusada: {erro}\n')
     print(json.dumps(resultado, ensure_ascii=False, indent=2))

@@ -293,7 +293,7 @@ catálogo. Se ninguém atingir o mínimo, a página informa esse estado.
 ## Funcionalidades planejadas
 
 O filtro de ofertas e a configuração explícita estão implementados nas #278 e
-#279. A integração da validação operacional da coleta fica na #280. Uma entrega
+#279. A integração da validação operacional da coleta está implementada na #280. Uma entrega
 de código não confirma, sozinha, que o semestre atual foi ativado no ambiente.
 As avaliações e ofertas históricas permanecem disponíveis. Confira o
 [estado da interface](ESTADO_DA_INTERFACE.md) e o [guia operacional](SEMESTRE_ATUAL.md).

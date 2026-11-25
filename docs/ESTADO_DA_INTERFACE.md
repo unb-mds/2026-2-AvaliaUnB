@@ -24,12 +24,12 @@ Supabase publicado.
 | Retenção | Descarte automático dos registros de moderação encerrados após 90 dias, preservando casos abertos e comentários | #217, #256 |
 | Interface | Tema escuro/claro, identidade editorial, navegação móvel, Sobre e Política de Privacidade e Termos | #245, #258, #270 |
 | Ofertas por semestre | Seletor de período ou todos; semestre atual explícito em arquivo versionado; ausência de definição mantém o histórico. Busca, sugestões e paginação usam o mesmo recorte | #278, #279 |
+| Confirmação operacional | Relatório de cobertura e integridade, backup prévio e persistência conferida; configuração de 2026/2 proposta após validação, com link da execução e assinatura | #280 |
 
 ## Planejado
 
 | Evolução | Situação | Referência |
 |---|---|---|
-| Ativação operacional do semestre atual | Exige validação da coleta, confirmação explícita e revisão/deploy da configuração; não é inferida da data ou do maior período | #242, #280 |
 | Publicação e aplicação da política de retenção no ambiente | Conferir configuração e execução no destino; a documentação do workflow não comprova implantação | #217 |
 
 ## Decisões vigentes

@@ -4,7 +4,7 @@
 # Passo a passo completo em docs/COMO_USAR_SCRAPER.md.
 #
 # - modo "dry-run": coleta e mostra o que seria gravado. Não usa nenhuma chave.
-# - modo "gravar": exige aprovação no environment "producao" (onde ficam os
+# - modo "gravar": usa o environment "producao" (onde ficam os
 #   segredos SUPABASE_URL e SUPABASE_SERVICE_KEY), grava no Supabase e abre um
 #   PR com os CSVs de docs/backup atualizados.
 name: Atualizar dados do SIGAA
@@ -22,7 +22,7 @@ on:
         type: choice
         options: ["1", "2", "3", "4"]
       modo:
-        description: "dry-run só mostra os dados; gravar escreve no Supabase (pede aprovação)"
+        description: "dry-run só mostra os dados; gravar escreve no Supabase pelo ambiente producao"
         required: true
         type: choice
         default: dry-run
