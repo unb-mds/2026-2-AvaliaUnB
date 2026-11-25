@@ -18,3 +18,7 @@ class TestWorkflowConfirmacaoSemestre(unittest.TestCase):
         confirmacao=gravar.split('id: confirmacao',1)[1].split('      - name:',1)[0]
         self.assertIn("steps.scraper.outputs.codigo == '0'",confirmacao)
         self.assertIn("steps.duplicatas.outputs.codigo == '0'",confirmacao)
+        self.assertNotIn('| tee',confirmacao,
+                         'O exit code do validador não pode ser mascarado pelo tee')
+        abertura=gravar.split('- name: Abrir PR com o backup atualizado',1)[1].split('      - name:',1)[0]
+        self.assertIn('set -euo pipefail',abertura)

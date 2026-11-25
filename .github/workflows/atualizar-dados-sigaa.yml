@@ -261,7 +261,8 @@ jobs:
         env:
           CONFIRMAR: ${{ inputs.confirmar_semestre }}
         run: |
-          python -m scraper.confirmar_semestre coleta.json --confirmar "$CONFIRMAR" --gravar | tee confirmacao.log
+          python -m scraper.confirmar_semestre coleta.json --confirmar "$CONFIRMAR" --gravar > confirmacao.log
+          cat confirmacao.log
           echo "Configuração gerada para revisão no PR de dados; só entra em produção após merge/deploy." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Atualizar o backup em docs/backup
@@ -277,6 +278,7 @@ jobs:
           PERIODO: ${{ inputs.periodo }}
           CODIGO: ${{ steps.scraper.outputs.codigo }}
         run: |
+          set -euo pipefail
           if git diff --quiet -- docs/backup config/semestre_atual.json; then
             echo "Backup sem mudanças; nenhum PR aberto." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
