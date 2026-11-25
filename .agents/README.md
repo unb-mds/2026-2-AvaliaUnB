@@ -110,3 +110,13 @@ As duas ficam em `.agents/skills/` e têm o commit de origem travado em
 npx skills add https://github.com/vercel-labs/skills --skill find-skills
 npx skills add https://github.com/obra/superpowers --skill test-driven-development
 ```
+
+## Histórico de semestres (novembro de 2026, issue #242)
+
+| Item | Detalhe |
+|---|---|
+| Ferramenta | ChatGPT (assistência à documentação e organização das issues) |
+| Pedido | Documentar a opção híbrida e finalizar as pendências da decisão; padronizar o termo como semestre atual |
+| Resultado | PR #269, sub-issues #278, #279 e #280 e PR #281 de atualização documental |
+| Revisão | Conferência das regras já implementadas (#224 e #252), preservação do histórico, escopo das sub-issues e vínculo com o PR integrado; ratificação coletiva permanece pendente |
+| Verificação | `mkdocs build --strict` e `git diff --check` no PR #281; nenhuma alteração de código de produção |

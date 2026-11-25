@@ -39,7 +39,7 @@ exige uma quantidade mínima de avaliações registradas.
 ### Ofertas por semestre (proposta #242)
 
 Hoje a busca consulta todas as ofertas históricas. A opção híbrida propõe
-priorizar o semestre ativo na busca e no catálogo, com opções de outros
+priorizar o semestre atual na busca e no catálogo, com opções de outros
 períodos e de todos os semestres. Um professor sem oferta atual ainda pode ser
 consultado no histórico e pelo link de perfil. A seleção deve ser explícita,
 com estado vazio próprio, e não alterar as notas históricas do professor.

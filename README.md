@@ -45,7 +45,7 @@ anteriores podem conter apenas parte delas.
 | R2 — consulta e gestão de avaliações | Ranking geral e por departamento, comparação de professores (inclusive de disciplinas diferentes, com destaque do melhor desempenho), busca unificada com autocompletar, filtro por departamento, busca que ignora acentos e espaços extras e perfil do usuário com edição e exclusão das próprias avaliações | Implementado |
 | Evolução dos filtros | Faixa de nota e volume de avaliações | Implementado (#221) |
 | Histórico de semestres | Preservação das turmas, avaliação por turma cursada e evolução de notas | Implementado (#225, #252, #224) |
-| Consulta por oferta | Priorizar o semestre ativo e permitir outros períodos | [Proposta híbrida (#242)](docs/DECISAO_HISTORICO_SEMESTRES.md); implementação futura |
+| Consulta por oferta | Priorizar o semestre atual e permitir outros períodos | [Proposta híbrida (#242)](docs/DECISAO_HISTORICO_SEMESTRES.md); implementação futura |
 | Comentários | Listar os 50 mais recentes, filtrar por disciplina, publicar, editar e excluir o próprio comentário anonimamente; reagir com 👍 ou 👎 e denunciar | Implementado ([regras](docs/COMENTARIOS.md)) |
 | Reações e moderação | Reações, ordenação escolhida pela pessoa (#213), filtro automático do texto (#214), denúncia (#215), área de moderação com contestação (#216) e descarte dos registros após 90 dias (#217) | Implementado ([regras](docs/COMENTARIOS.md)) |
 | Favoritos e gráficos | Lista pessoal de professores favoritos (#223) e gráfico da evolução das notas por semestre (#224) | Implementado |
@@ -164,7 +164,7 @@ A aplicação será servida pelo Gunicorn em `http://localhost:8000`.
 O scraper é executado separadamente. A cada semestre, ele roda pelo workflow manual
 *Atualizar dados do SIGAA* no GitHub Actions; veja o [guia do scraper](docs/COMO_USAR_SCRAPER.md).
 As coletas acrescentam ofertas sem apagar o histórico. A opção híbrida da #242
-propõe definir o período de oferta ativo após validação da coleta e manter os
+propõe definir o semestre atual após validação da coleta e manter os
 anteriores consultáveis. A regra das avaliações por turma cursada permanece.
 
 ### Hospedagem
