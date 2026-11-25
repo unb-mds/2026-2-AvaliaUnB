@@ -271,7 +271,7 @@ o novo período depois de confirmar que o SIGAA publicou as ofertas, que o
 dry-run está coerente e que a gravação completa foi aprovada e concluída.
 Valide ano, período, quantidade de unidades e turmas e integridade dos
 vínculos. Coleta vazia ou incompleta, falha ou reexecução histórica não
-deve alterar o período ativo. O mecanismo de ativação ainda será implementado;
+deve alterar o semestre atual. O mecanismo de ativação ainda será implementado;
 o workflow atual continua apenas coletando, gravando e versionando o backup.
 
 ### Configuração única (administrador do repositório)
