@@ -1,3 +1,15 @@
 {
-  "semestre_atual": null
+  "semestre_atual": {
+    "ano": 2026,
+    "periodo": 2
+  },
+  "coleta": {
+    "execucao": "https://github.com/unb-mds/2026-2-AvaliaUnB/actions/runs/45626854707",
+    "gerado_em": "2026-11-25T13:58:24.254681+00:00",
+    "assinatura_turmas": "feddb2bb1c129689e3b0ea1390937f3ca19194839051be504a49453912661e2f",
+    "unidades": 99,
+    "turmas": 6888,
+    "professores": 2842,
+    "disciplinas": 3467
+  }
 }
