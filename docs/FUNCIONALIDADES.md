@@ -36,16 +36,19 @@ parcial; departamento exige igualdade depois da normalização; `nota_min` e
 vírgula decimal, excluindo docentes sem avaliações válidas); e `avaliacoes_min`
 exige uma quantidade mínima de avaliações registradas.
 
-### Ofertas por semestre (proposta #242)
+### Ofertas por semestre (#242, #278 e #279)
 
-Hoje a busca consulta todas as ofertas históricas. A opção híbrida propõe
-priorizar o semestre atual na busca e no catálogo, com opções de outros
-períodos e de todos os semestres. Um professor sem oferta atual ainda pode ser
-consultado no histórico e pelo link de perfil. A seleção deve ser explícita,
-com estado vazio próprio, e não alterar as notas históricas do professor.
-O novo filtro de oferta ainda não está implementado; ele é independente do
-filtro de médias e do semestre cursado já existentes. Veja a
-[decisão #242](DECISAO_HISTORICO_SEMESTRES.md).
+A Consulta oferece **Semestre da oferta**: semestre atual confirmado, outros
+períodos ou todos. A escolha usa `oferta=AAAA-P` ou `oferta=todos` e vale para
+busca, sugestões, departamentos e disciplinas dos cartões antes da paginação.
+Sem configuração explícita do semestre atual, mantém-se a consulta histórica
+e a página informa que ele ainda não foi definido. Um período válido sem ofertas
+mostra resultado vazio sem substituir a seleção; formato inválido retorna 400.
+
+Perfis históricos continuam acessíveis. Médias, ranking, comentários, comparação
+e o semestre cursado das avaliações são independentes desse filtro. A configuração
+é versionada e sua ativação depende de coleta validada, revisão e deploy. Veja o
+[guia operacional](SEMESTRE_ATUAL.md) e a [decisão #242](DECISAO_HISTORICO_SEMESTRES.md).
 
 A normalização ignora acentos, maiúsculas e espaços extras. A lista é ordenada
 pela quantidade de avaliações, com desempate por nome e identificador.
@@ -289,12 +292,11 @@ catálogo. Se ninguém atingir o mínimo, a página informa esse estado.
 
 ## Funcionalidades planejadas
 
-A priorização do semestre atual no catálogo e a seleção de outros períodos
-continuam como evolução futura da decisão híbrida #242, com implementação
-separada nas issues #278, #279 e #280. As avaliações e ofertas
-históricas permanecem disponíveis. Confira o [estado da interface](ESTADO_DA_INTERFACE.md)
-e a [decisão sobre histórico](DECISAO_HISTORICO_SEMESTRES.md) antes de tratar
-uma proposta como implementação existente.
+O filtro de ofertas e a configuração explícita estão implementados nas #278 e
+#279. A integração da validação operacional da coleta fica na #280. Uma entrega
+de código não confirma, sozinha, que o semestre atual foi ativado no ambiente.
+As avaliações e ofertas históricas permanecem disponíveis. Confira o
+[estado da interface](ESTADO_DA_INTERFACE.md) e o [guia operacional](SEMESTRE_ATUAL.md).
 
 Relacionado: [visão e requisitos](DOCUMENTO_DE_VISAO.md), [backend](BACKEND.md),
 [frontend](FRONTEND.md) e [mapa da documentação](GUIA_DOCUMENTACAO.md).

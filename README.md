@@ -47,7 +47,7 @@ anteriores podem conter apenas parte delas.
 | Conta pessoal | Favoritos, avaliações e comentários próprios | Implementado (#223, #260) |
 | Comentários | Publicação anônima, filtro de conteúdo, edição/exclusão, reações, ordenação e denúncias | Implementado (#212, #213, #214, #215, #258, #260) |
 | Moderação e retenção | Decisões justificadas, contestação e descarte dos registros encerrados após 90 dias | Implementado (#216, #217) |
-| Consulta por oferta | Priorizar o semestre atual e permitir outros períodos | [Decisão híbrida (#242)](docs/DECISAO_HISTORICO_SEMESTRES.md); interface futura |
+| Consulta por oferta | Semestre atual explicitamente confirmado, outros períodos ou todos; histórico preservado | Implementado (#278, #279); ativação depende da [validação operacional](docs/SEMESTRE_ATUAL.md) |
 
 A consulta principal fica em `/professores`; ranking e comparação ficam em
 `/ranking` e `/comparar`. A lista é ordenada pela quantidade de avaliações.
