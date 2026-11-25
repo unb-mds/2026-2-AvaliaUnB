@@ -48,7 +48,7 @@ anteriores podem conter apenas parte delas.
 | Consulta por oferta | Priorizar o semestre ativo e permitir outros períodos | [Proposta híbrida (#242)](docs/DECISAO_HISTORICO_SEMESTRES.md); implementação futura |
 | Comentários | Listar os 50 mais recentes, filtrar por disciplina, publicar, editar e excluir o próprio comentário anonimamente; reagir com 👍 ou 👎 e denunciar | Implementado ([regras](docs/COMENTARIOS.md)) |
 | Reações e moderação | Reações, ordenação escolhida pela pessoa, filtro automático, denúncia e moderação | [Proposta para revisão](docs/COMENTARIOS.md) |
-| Outras funcionalidades planejadas | Favoritos e gráficos de desempenho | Pendente |
+| Outras funcionalidades planejadas | Favoritos e gráficos de desempenho | Implementado |
 
 A consulta principal fica em `/professores`; ranking e comparação ficam em
 `/ranking` e `/comparar`. A lista é ordenada pela quantidade de avaliações.
