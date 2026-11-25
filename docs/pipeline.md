@@ -39,7 +39,7 @@ e as correções são acompanhadas em [Cibersegurança](CIBERSEGURANCA.md).
 
     A [decisão #242](DECISAO_HISTORICO_SEMESTRES.md) mantém a gravação cumulativa.
     A futura ativação do período de oferta deverá exigir validação explícita
-    da coleta completa; uma execução histórica ou falha não muda o período ativo.
+    da coleta completa; uma execução histórica ou falha não muda o semestre atual.
     O pipeline atual ainda não ativa períodos.
 
 - :material-delete-clock-outline: **Retenção de 90 dias**
