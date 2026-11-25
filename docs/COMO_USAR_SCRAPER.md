@@ -385,8 +385,6 @@ no SIGAA ou dependências quebradas.
 Ao trocar de semestre, atualize também os padrões de `--ano` e `--periodo` em
 `scraper/cli_sigaa.py`. Senão o teste de fumaça continua consultando o semestre antigo.
 
-### Segurança das chaves
-
 ### Confirmação do semestre atual (#280)
 
 Para atualizar o padrão da Consulta após uma coleta completa, use finalidade

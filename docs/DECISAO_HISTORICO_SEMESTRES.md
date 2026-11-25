@@ -4,8 +4,8 @@ Issue [#242](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/242) · 23/11/20
 
 **Status:** opção C escolhida por Giovanna da Costa Santos (`giiicostaa`),
 responsável pela issue. O [PR #269](https://github.com/unb-mds/2026-2-AvaliaUnB/pull/269)
-foi integrado por `caiionog` em 24/11/2026. A confirmação coletiva ainda deve
-ser registrada. Esta decisão não
+foi integrado por `caiionog` em 24/11/2026. Em 25/11/2026, Geovana Duarte
+confirmou o acordo da equipe com o modelo híbrido para a entrega. Esta decisão não
 é uma entrega de código nem comprova que o novo filtro já esteja em produção.
 
 ## Contexto e diagnóstico
@@ -76,5 +76,5 @@ não precisam ser recriadas. A decisão conserva essas entregas.
 |---|---|---|
 | Proposta e escolha da alternativa C | Giovanna (`giiicostaa`) | 23/11/2026 |
 | Integração do PR #269 | `caiionog` | 24/11/2026 |
-| Ratificação coletiva | Equipe AvaliaUnB | Pendente de confirmação explícita |
+| Acordo da equipe para a entrega | Geovana Duarte comunicou a confirmação | 25/11/2026 — preservar o histórico e priorizar o semestre atual confirmado, com outros períodos e todos |
 | Vínculos das novas issues | Giovanna (`giiicostaa`) | 25/11/2026 — #278, #279 e #280 |
