@@ -216,7 +216,9 @@ na [issue #116](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/116).
 O perfil do professor lista comentários anônimos; usuários autenticados podem
 publicar, editar, excluir, reagir e denunciar. O filtro automático é aplicado
 antes de publicar ou editar. Moderadores autorizados tratam denúncias e
-contestações na área restrita, com decisões justificadas. As regras e limites
+contestações na área restrita, com decisões justificadas. A retenção da #217
+descarta registros de casos encerrados após 90 dias, preservando casos abertos
+e o histórico de comentários ainda ocultados. As regras e limites
 estão em [Comentários](COMENTARIOS.md).
 
 `POST /comentarios/<id>/reacao` exige login e CSRF. Aceita `valor` 1, -1 ou 0

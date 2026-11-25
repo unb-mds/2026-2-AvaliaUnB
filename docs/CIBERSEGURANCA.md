@@ -88,10 +88,12 @@ telefone, CPF, matrícula, links e termos de uma lista em
 
 ## Comentários e moderação
 
-A proposta de comentários, denúncia, permissões de moderação e privacidade está
-em [Comentários](COMENTARIOS.md). As regras dependem de revisão do grupo.
-O esquema atual não implementa denúncia nem um papel de moderador; esses fluxos
-precisam de projeto e implementação próprios após a especificação.
+As regras de comentários, denúncia, moderação e privacidade estão em
+[Comentários](COMENTARIOS.md). A denúncia (#215) fica numa tabela privada,
+acessível só pelo servidor, e não revela quem denunciou. A área de moderação
+(#216) é restrita ao papel de moderador (`moderador_required`), registra cada
+decisão com justificativa e permite ao autor contestar uma ocultação. Os
+registros encerrados são descartados após 90 dias (#217).
 
 Relacionado: [auditoria de 02/11](AUDITORIA_SEGURANCA.md),
 [modelo de dados](Modelo%20de%20Dados.md), [pipeline](pipeline.md) e

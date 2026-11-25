@@ -116,21 +116,21 @@ Consulte [Funcionalidades](FUNCIONALIDADES.md) para saber o que já existe e
 
 | Código | Nome | Descrição | Prioridade |
 | --- | --- | --- | --- |
-| **RF01** | Cadastro de Usuário | Permitir que estudantes criem uma conta no AvaliaUnb. | Alta (R1) |
-| **RF02** | Login / Autenticação | Permitir que usuários cadastrados façam login com credenciais seguras. | Alta (R1) |
+| **RF01** | Cadastro de Usuário | Permitir que estudantes criem uma conta no AvaliaUnb (hoje, criada no primeiro login com Google). | Alta (R1) |
+| **RF02** | Login / Autenticação | Permitir que usuários cadastrados façam login com credenciais seguras (hoje, somente com conta Google). | Alta (R1) |
 | **RF03** | Busca de Professores e Disciplinas | Pesquisar professores por nome, código, departamento ou disciplina. | Alta (R1) |
 | **RF04** | Perfil do Professor | Exibir informações do professor, disciplinas ministradas e histórico de notas. | Alta (R1) |
 | **RF05** | Avaliação por Critérios | Permitir avaliar o professor em critérios: didática, organização, clareza, disponibilidade e dificuldade. | Alta (R1) |
 | **RF06** | Visualização de Médias | Exibir o cálculo de médias agregadas e estatísticas dos professores. | Alta (R1) |
 | **RF07** | Ranking de Professores | Exibir a classificação dos professores mais bem avaliados por departamento ou geral. | Média (R2) |
-| **RF08** | Comparação entre Professores | Selecionar e comparar lado a lado dois ou mais professores da mesma disciplina. | Média (R2) |
+| **RF08** | Comparação entre Professores | Selecionar e comparar lado a lado dois ou mais professores, da mesma disciplina ou de disciplinas diferentes. | Média (R2) |
 | **RF09** | Filtros Avançados | Filtrar professores por faixa de nota, departamento e volume de avaliações. | Média (R2) |
 | **RF10** | Moderação de Avaliações | Permitir a denúncia e remoção de comentários com linguagem ofensiva. | Média (R2) |
 | **RF11** | Favoritar Professores | Salvar professores na lista pessoal do usuário para acompanhamento rápido. | Baixa (R2) |
 | **RF12** | Gráficos de Desempenho | Apresentar gráficos visuais da evolução das notas do professor ao longo dos semestres. | Baixa (R2) |
 
 A [decisão #242](DECISAO_HISTORICO_SEMESTRES.md) propõe preservar o histórico
-necessário a RF04 e RF12 e priorizar o semestre de oferta ativo em RF03.
+necessário a RF04 e RF12 e priorizar o semestre atual em RF03.
 O histórico permanece consultável; a apresentação por período não redefine
 as notas, as médias ou os critérios de ranking. A implementação da nova
 apresentação é uma etapa posterior à ratificação da decisão.
@@ -157,6 +157,6 @@ segurança ou acessibilidade já homologadas.
 
 - **RNF01 - Usabilidade:** A interface do sistema deve ser intuitiva, responsiva e acessível em dispositivos desktops sem necessidade de treinamento prévio.
 - **RNF02 - Desempenho:** A busca por professores e o carregamento das páginas de perfil devem responder em menos de 2 segundos sob carga normal de uso.
-- **RNF03 - Segurança:** As senhas dos usuários devem ser armazenadas com criptografia forte e a comunicação deve utilizar HTTPS.
+- **RNF03 - Segurança:** A comunicação deve utilizar HTTPS e credenciais não podem ser expostas. Com o login somente pelo Google, o AvaliaUnb não recebe nem armazena senhas.
 - **RNF04 - Confiabilidade:** O cálculo das médias deve ser exato e atualizado atomicamente a cada nova avaliação válida submetida.
 - **RNF05 - Portabilidade:** A aplicação deve rodar de forma consistente em diferentes navegadores modernos.

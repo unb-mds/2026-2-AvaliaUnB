@@ -3,7 +3,7 @@
 O AvaliaUnB usa Flask e templates Jinja2 em `app/templates/`, com HTML,
 CSS e JavaScript em `app/static/`. Links e formulários funcionam no servidor;
 não é necessário um build de frontend separado. Este inventário descreve a
-`main` conferida em 24/11/2026. O [estado da interface](ESTADO_DA_INTERFACE.md)
+`main` conferida em 25/11/2026. O [estado da interface](ESTADO_DA_INTERFACE.md)
 separa o que está implementado das evoluções previstas nas issues.
 
 ## Páginas e recursos atuais
@@ -48,8 +48,9 @@ Quem está logado tem Sair. No celular, o botão de menu abre a navegação;
 
 `_macros.html` reúne a marca, `icone_seta`, a formatação de nota com vírgula e
 `barra_dificuldade`. O chapéu branco com estrela aparece no tema escuro; o
-símbolo vetorial usa as cores do tema claro. A atualização do favicon está
-separada na #263 / PR #264, sem mudar a logo do cabeçalho.
+símbolo vetorial usa as cores do tema claro. O favicon de chapéu com estrela
+sobre fundo transparente foi integrado na #263 / PR #264, sem mudar a logo
+do cabeçalho.
 
 ## Fluxos e componentes
 
@@ -68,13 +69,18 @@ separada na #263 / PR #264, sem mudar a logo do cabeçalho.
 - **Comparação:** dois ou mais professores distintos; na mesma disciplina,
   médias restritas à disciplina; no modo livre, médias gerais e aviso de
   disciplinas diferentes quando aplicável. A seleção permite adicionar/remover.
-- **Comentários:** lista dos 50 mais recentes, filtro independente por
+- **Comentários:** lista de até 50 por vez, mais recentes por padrão; opções
+  Mais antigos, Mais curtidos e Mais reações; filtro independente por
   disciplina, texto escapado e data. Não há identificação pública, avatar ou
   rótulo substituto. Os formulários orientam a evitar dados pessoais no texto.
 - **Ações próprias:** `_acoes_comentario.html` exibe Editar e Excluir juntos,
   em botões de contorno com área mínima de 44 px e foco visível. Também aparece
   em Meus comentários no perfil pessoal. Salvar ou cancelar retorna ao contexto
   de origem; excluir exige confirmação. Só o autor recebe essas ações.
+- **Reações:** polegares em SVG com `currentColor`, contagens inclusive zero,
+  `aria-pressed`, ícone preenchido na seleção, foco visível e alvo de 44 px.
+  Os estilos ficam em `integracao-editorial.css` (`.review .comentario-reacoes`),
+  pois `comentarios.css` não é carregado no perfil desde a interface editorial.
 - **Denúncia:** conta autenticada pode denunciar comentário alheio; os dados
   do denunciante e a explicação não aparecem na listagem pública.
 - **Favoritos:** lista privada no perfil, com adicionar/remover no professor.
@@ -85,7 +91,7 @@ Listar, publicar, editar, excluir, reagir (#212), ordenar (#213), filtrar
 automaticamente o texto (#214), denunciar (#215), moderar/contestar (#216) e
 reter os registros de moderação pelo prazo aprovado (#217) têm fluxos
 implementados.
-As [telas de comentários](TELAS_COMENTARIOS.md) são protótipos funcionais;
+As [telas de comentários](TELAS_COMENTARIOS.md) são protótipos de planejamento;
 não representam capturas fiéis da interface atual. Seus estados futuros
 não devem ser confundidos com funcionalidades disponíveis.
 

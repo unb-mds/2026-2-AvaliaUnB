@@ -328,7 +328,7 @@ O texto excluído sai da listagem imediatamente. O registro mínimo da denúncia
 | C06 | Denúncia privada e moderação por responsáveis autorizados | Decidida e implementada (#215 e #216). A denúncia funciona na #215 e a área restrita de moderação (/moderacao) está implementada na #216, acessível apenas a usuários cadastrados na tabela privada moderadores. |
 | C07 | Ocultação motivada, sem republicação automática por edição | Decidida e implementada (#216). Comentário ocultado por moderação sai da listagem pública e não volta por edição do autor; só um moderador restaura, com justificativa registrada. |
 | C08 | Comentários publicados na hora. A tela de moderação mostra somente os denunciados, e o moderador pode manter, ocultar da visão pública ou restaurar, sempre com justificativa. Todos os integrantes da equipe têm acesso, e toda ação registra quem a fez e a justificativa. Primeira análise em até três dias úteis, formulário privado de contestação e retenção de até 90 dias após o encerramento | Decidida e implementada (#216; retenção de 90 dias implementada na #217). Comentários são publicados na hora; a tela /moderacao mostra somente os denunciados e permite manter, ocultar ou restaurar com justificativa e registro do moderador. O autor pode contestar em /comentarios/<id>/contestar. |
-| C09 | Ícones 👍 e 👎 sempre visíveis, com números apenas nas reações recebidas. Uma reação por conta e comentário, com opção de trocar ou remover | Implementada na #212 |
+| C09 | Ícones 👍 e 👎 sempre visíveis, com os dois totais, inclusive zero. Uma reação por conta e comentário, com opção de trocar ou remover | Implementada na #212; apresentação atualizada na #270 |
 | C10 | Filtrar no servidor antes de publicar ou editar. Bloquear violações claras e deixar os casos incertos para a moderação, que atua mediante denúncia | Decidida e implementada (#214; veja "Regras decididas (C10)" acima): rejeita sem salvar, com aviso para reescrever; sem IA. Vale ao publicar e ao editar |
 | C11 | Data em cada comentário. Ordenação por Mais recentes, Mais curtidos, Mais antigos ou Mais reações | Decidida e implementada: data em cada comentário (#167) e as quatro ordens (#213). Mais recentes é o padrão |
 
@@ -352,13 +352,13 @@ acompanham estas regras.
   editar ou apagar.
 - Só o autor edita ou exclui. O servidor nega tentativas de se passar por outro
   usuário e mantém os identificadores de conta fora das respostas públicas.
-- O e-mail de cadastro do autor não aparece em nenhuma página nem resposta de
-  comentários, nem ao clicar no nome de usuário.
+- Nome, e-mail, avatar e rótulo identificador do autor não aparecem nas
+  listagens públicas de comentários; o vínculo privado permite as ações próprias.
 - Uma conta troca ou desfaz sua reação. Pedidos simultâneos respeitam a
   unicidade, e autores não reagem ao próprio comentário.
 - A lista exibe a data e os dois ícones em cada comentário, inclusive para
   visitantes sem login.
-  Os números aparecem só para reações recebidas.
+  Os dois totais aparecem sempre, inclusive zero.
   Com 8 curtidas e 1 descurtida, o comentário aparece com 8 e 1 separados.
   Na opção Mais reações, as duas contagens somam 9 para a ordenação.
 - Com 3 curtidas e nenhuma descurtida, a lista exibe 👍 3 e 👎 sem número.

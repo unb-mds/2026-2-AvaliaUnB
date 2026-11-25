@@ -1,7 +1,7 @@
 # Estado da interface e evoluções planejadas
 
-Revisão de **24/11/2026**, issue #170. Base de código conferida: commit
-`0661393b6af6e0a656526ec410f826b82bb0a1ee` da `main`. Esta página resume o
+Revisão de **25/11/2026**, issue #170. Base de código conferida: commit
+`cea8eced5b7f222ddd9d863a3a33c0d7a7fed560` da `main`. Esta página resume o
 comportamento implementado no repositório e separa propostas ainda não
 entregues. A presença de uma migração no Git não comprova sua aplicação no
 Supabase publicado.
@@ -28,7 +28,7 @@ Supabase publicado.
 
 | Evolução | Situação | Referência |
 |---|---|---|
-| Consulta priorizando ofertas do semestre ativo | Decisão híbrida registrada; o catálogo ainda consulta o histórico completo | #242 |
+| Consulta priorizando ofertas do semestre atual | Decisão híbrida registrada; configuração, filtro e integração da coleta ainda são futuros; o catálogo consulta o histórico completo | #242, #278, #279, #280 |
 | Publicação e aplicação da política de retenção no ambiente | Conferir configuração e execução no destino; a documentação do workflow não comprova implantação | #217 |
 
 ## Decisões vigentes
@@ -48,3 +48,7 @@ esta lista: entregas concluídas como **IMPLEMENTADO** e evoluções futuras com
 **PLANEJADO**. Wireframes são protótipos, não capturas da interface publicada.
 Consulte também o [inventário do frontend](FRONTEND.md), as
 [funcionalidades](FUNCIONALIDADES.md) e a [especificação de comentários](COMENTARIOS.md).
+
+O [roteiro de conferência do FigJam](REVISAO_FIGJAM.md) lista os cartões,
+estados e evidências necessários. A revisão visual do board ainda não foi
+concluída; o roteiro não substitui a edição e a conferência por uma conta autorizada.

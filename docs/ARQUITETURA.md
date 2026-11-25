@@ -1,7 +1,7 @@
 # Arquitetura
 
 Os diagramas representam a arquitetura implementada na `main`, conferida em
-24/11/2026. O estado de cada fluxo e as evoluções planejadas estão no
+25/11/2026. O estado de cada fluxo e as evoluções planejadas estão no
 [inventário da interface](ESTADO_DA_INTERFACE.md).
 
 ## Contexto
@@ -43,9 +43,18 @@ separada da aplicação web, inclusive pelo workflow do GitHub Actions.
 | Favoritar | Salvar professores numa lista pessoal e removê-los quando quiser | Perfil do professor e `/perfil` |
 
 O catálogo conserva ofertas históricas. A decisão híbrida sobre priorizar o
-semestre ativo e permitir a consulta dos anteriores está registrada em
+semestre atual e permitir a consulta dos anteriores está registrada em
 [DECISAO_HISTORICO_SEMESTRES.md](DECISAO_HISTORICO_SEMESTRES.md); essa seleção
 de ofertas ainda não integra a interface.
+
+O semestre atual da proposta é uma configuração operacional confirmada após
+validar a coleta; ele não é inferido da data do calendário ou do maior período
+no banco. O semestre cursado na avaliação e o período escolhido na consulta
+são independentes. O recorte do catálogo deverá ocorrer antes da paginação,
+preservando médias, ranking e evolução históricos. A implementação está
+separada nas issues [#278](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/278),
+[#279](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/279) e
+[#280](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/280).
 
 ## Histórico visual
 

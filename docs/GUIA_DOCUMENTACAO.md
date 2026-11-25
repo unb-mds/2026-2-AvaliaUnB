@@ -18,6 +18,7 @@ os detalhes. **Descrição do estado atual não equivale a funcionalidade planej
 | CI, checks e publicação | [Pipeline](pipeline.md) | [Hospedagem](HOSPEDAGEM.md) |
 | Auditoria e plano de correção | [Auditoria de segurança](AUDITORIA_SEGURANCA.md) | [Cibersegurança](CIBERSEGURANCA.md) |
 | Comentários, reações, denúncias e moderação | [Especificação](COMENTARIOS.md) | [Estado da interface](ESTADO_DA_INTERFACE.md), [protótipos](TELAS_COMENTARIOS.md) |
+| Uso de IA por integrante e regras | [Uso de IA no projeto](USO_DE_IA.md) | `.agents/README.md` no repositório |
 | Pronto para começar/concluído | [Critérios de contribuição](PROCESSO_CONTRIBUICAO.md) | Templates de issue/PR em `.github/` |
 
 ## Inventário da revisão (issue #136)

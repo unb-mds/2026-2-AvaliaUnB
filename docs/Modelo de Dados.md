@@ -107,7 +107,7 @@ Vínculo entre professor e disciplina em um semestre. Alimentada pelo scraper.
   substituem os anteriores. Reexecutar a coleta do mesmo período reaproveita a
   chave composta. Professores e disciplinas de períodos antigos continuam
   disponíveis e os vínculos das avaliações são preservados.
-- **Decisão #242 (proposta C):** manter esse esquema; o período ativo deverá ser
+- **Decisão #242 (proposta C):** manter esse esquema; o semestre atual deverá ser
   uma configuração explícita validada após a coleta, não uma exclusão de turmas
   nem o maior par presente no banco. A configuração ainda não existe no SQL
   versionado. O modelo e a validação dessa configuração ficam para a futura
@@ -149,7 +149,7 @@ Avaliação por critérios objetivos, com notas inteiras de 1 a 5.
 - **Semestre:** `ano`/`periodo` é a turma escolhida no formulário. O backend confere que existe uma linha em `turmas` para o professor, a disciplina e o semestre (não há FK composta). Avaliações anteriores à #252 têm o semestre da turma mais recente do par na época.
 - **Índice:** `idx_avaliacoes_professor_semestre (professor_id, ano, periodo)` atende o filtro de semestre das médias e o gráfico de evolução.
 
-- **Retenção por semestre:** o período de oferta ativo não altera a chave,
+- **Retenção por semestre:** o semestre atual não altera a chave,
   o semestre cursado ou a visibilidade de avaliações antigas. Não é necessária
   uma nova migração de avaliações para a opção C: a #252 já cobre a unicidade.
   Comentários permanecem vinculados ao professor e à disciplina, sem coluna de
@@ -387,9 +387,9 @@ REVOKE ALL ON comentarios_reacoes FROM PUBLIC, anon, authenticated;
    A tabela `avaliacoes` admite um registro por conta, professor, disciplina,
    ano e período, conforme a seção 2.5 e a migração 007 (#252).
 3. **Leitura pública sem identificação.** O backend lista comentários visíveis com
-   ID do comentário, texto, disciplina e datas. A ordenação atual usa a data
-   da primeira publicação (`criado_em`). Reações e ordenação por curtidas estão
-   implementadas nas #212 e #213, conforme a [especificação](COMENTARIOS.md).
+   ID do comentário, texto, disciplina, datas e contagens de reações. As ordens
+   disponíveis são Mais recentes (padrão), Mais antigos, Mais curtidos e Mais
+   reações (#212 e #213), conforme a [especificação](COMENTARIOS.md).
    O perfil do autor não é consultado. A resposta não inclui `usuario_id` nem
    `username`, conforme o [fluxo de privacidade](COMENTARIOS.md). A migração
    [`20261122155752_anonimato_comentarios.sql`](migrations/20261122155752_anonimato_comentarios.sql)
@@ -518,13 +518,17 @@ WHERE usuario_id = (SELECT id FROM perfis WHERE username = 'username_membro');
 7. Executar `docs/migrations/005_denuncias_comentarios.sql` para criar a tabela privada de denúncias (seção 7).
 8. Executar `docs/migrations/006_favoritos.sql` para criar a tabela de favoritos (seção 8).
 9. Executar `docs/migrations/007_avaliacao_por_semestre.sql` para permitir uma avaliação por turma cursada (seção 2.5).
-10. Aplicar `docs/migrations/20261122155752_anonimato_comentarios.sql` e `docs/migrations/20261123100000_reacoes.sql` para privacidade e reações. A chave composta evita duplicação, `valor` aceita somente 1 ou -1, e a exclusão do comentário ou da conta remove as reações em cascata. A tabela de reações é privada e acessada pelo backend.
+10. Executar [`008_moderacao_comentarios.sql`](migrations/008_moderacao_comentarios.sql)
+    para criar as tabelas privadas de moderadores, decisões e contestações (#216 / PR #255).
+11. Executar [`009_retencao_moderacao_90_dias.sql`](migrations/009_retencao_moderacao_90_dias.sql)
+    após a 008, para instalar a função de descarte dos registros encerrados (#217 / PR #256).
+    Conferir as credenciais e a execução do workflow `.github/workflows/retencao_moderacao.yml`
+    no ambiente de destino. Os PRs #255 e #256 já foram integrados; isso não
+    comprova a aplicação das migrações ou a execução da rotina no banco publicado.
+12. Aplicar [`20261122155752_anonimato_comentarios.sql`](migrations/20261122155752_anonimato_comentarios.sql)
+    e [`20261123100000_reacoes.sql`](migrations/20261123100000_reacoes.sql)
+    para privacidade e reações. A chave composta evita duplicação, `valor` aceita
+    somente 1 ou -1, e a exclusão do comentário ou da conta remove as reações em
+    cascata. A tabela de reações é privada e acessada pelo backend.
 
 Veja também: [guia do backend](BACKEND.md), [guia do scraper](COMO_USAR_SCRAPER.md) e [mapa da documentação](GUIA_DOCUMENTACAO.md).
-
-
-A proteção de autoria na leitura direta também exige a migração
-[`20261122155752_anonimato_comentarios.sql`](migrations/20261122155752_anonimato_comentarios.sql),
-versionada na #258. Sua aplicação no ambiente deve ser conferida. As migrações
-de moderação e retenção dos PRs #255/#256 ainda estão em revisão; não fazem
-parte do esquema entregue na base desta documentação.

@@ -52,11 +52,14 @@ nav:
   - Projeto:
     - Funcionalidades: FUNCIONALIDADES.md
     - Implementado e planejado: ESTADO_DA_INTERFACE.md
+    - Conferência do FigJam: REVISAO_FIGJAM.md
     - Comentários avaliativos: COMENTARIOS.md
     - Design system: DESIGN_SYSTEM.md
     - Telas de comentários: TELAS_COMENTARIOS.md
     - Documento de Visão: DOCUMENTO_DE_VISAO.md
     - Contribuição (DoR e DoD): PROCESSO_CONTRIBUICAO.md
+    - Uso de IA no projeto: USO_DE_IA.md
+    - Política de privacidade: POLITICA-DE-PRIVACIDADE.md
     - Board do Figma: "https://www.figma.com/board/PgqkPopVXOiSqm9gD5RRNv/AvaliaAi---Template-MDS?node-id=0-1"
   - Arquitetura:
     - Diagramas de Arquitetura: ARQUITETURA.md

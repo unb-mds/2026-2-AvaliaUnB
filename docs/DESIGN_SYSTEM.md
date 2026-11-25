@@ -1,6 +1,6 @@
 # Design system
 
-Referência da interface editorial atual do AvaliaUnB, conferida em 24/11/2026
+Referência da interface editorial atual do AvaliaUnB, conferida em 25/11/2026
 na revisão da #170. Os protótipos antigos da #112 são histórico de exploração;
 a paleta azul e a home “Bem-vindo” não descrevem a interface atual. O
 [inventário do frontend](FRONTEND.md) lista os recursos realmente carregados,
@@ -73,9 +73,9 @@ chapéu branco com estrela dourada no tema escuro e símbolo vetorial adaptado
 ao tema claro. A seta de navegação é texto com apresentação tipográfica,
 pela macro `icone_seta`, para manter a forma no celular e no notebook.
 
-O favicon é um recurso separado em `static/favicon.svg`; a substituição pelo
-chapéu com estrela sobre fundo transparente está na #263 / PR #264. Não tratar
-um recurso pendente de publicação como confirmação de atualização no navegador.
+O favicon em `static/favicon.svg` usa o chapéu com estrela sobre fundo
+transparente (#263 / PR #264, já integrado). É um recurso separado da marca
+do cabeçalho; sua presença no código não comprova a atualização do cache do navegador.
 
 O topo apresenta Início, Explorar, Ranking, Comparar e Sobre. A conta aparece
 como Entrar ou Perfil. No celular, o menu é aberto pelo botão de navegação;
@@ -97,7 +97,7 @@ complementares. A aba ativa usa `aria-current`.
 | Perfil pessoal | Conta, Favoritos, Meus comentários e Minhas Avaliações |
 | Evolução | Gráfico SVG por semestre e tabela alternativa; mensagem com um só semestre ou sem dados |
 | Mensagem | Diferencia resultado vazio, erro, ausência de notas e validação do formulário |
-| Reação (#212, estilo #270) | Polegares com contagens, troca/remoção e sem voto no próprio comentário; seleção indicada por ícone preenchido e `aria-pressed` |
+| Reação (#212, estilo #270) | Polegares em SVG com `currentColor`, sem borda nem fundo, contagens sempre visíveis (inclusive zero), alvo de 44 px e foco visível; troca/remoção, sem voto no próprio comentário; seleção com `--accent`, ícone preenchido e `aria-pressed` |
 
 ## Barra de dificuldade
 

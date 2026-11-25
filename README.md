@@ -47,7 +47,7 @@ anteriores podem conter apenas parte delas.
 | Conta pessoal | Favoritos, avaliações e comentários próprios | Implementado (#223, #260) |
 | Comentários | Publicação anônima, filtro de conteúdo, edição/exclusão, reações, ordenação e denúncias | Implementado (#212, #213, #214, #215, #258, #260) |
 | Moderação e retenção | Decisões justificadas, contestação e descarte dos registros encerrados após 90 dias | Implementado (#216, #217) |
-| Consulta por oferta | Priorizar o semestre ativo e permitir outros períodos | [Decisão híbrida (#242)](docs/DECISAO_HISTORICO_SEMESTRES.md); interface futura |
+| Consulta por oferta | Priorizar o semestre atual e permitir outros períodos | [Decisão híbrida (#242)](docs/DECISAO_HISTORICO_SEMESTRES.md); interface futura |
 
 A consulta principal fica em `/professores`; ranking e comparação ficam em
 `/ranking` e `/comparar`. A lista é ordenada pela quantidade de avaliações.
@@ -163,7 +163,7 @@ A aplicação será servida pelo Gunicorn em `http://localhost:8000`.
 O scraper é executado separadamente. A cada semestre, ele roda pelo workflow manual
 *Atualizar dados do SIGAA* no GitHub Actions; veja o [guia do scraper](docs/COMO_USAR_SCRAPER.md).
 As coletas acrescentam ofertas sem apagar o histórico. A opção híbrida da #242
-propõe definir o período de oferta ativo após validação da coleta e manter os
+propõe definir o semestre atual após validação da coleta e manter os
 anteriores consultáveis. A regra das avaliações por turma cursada permanece.
 
 ### Hospedagem
@@ -227,10 +227,11 @@ das migrações ainda precisam ser conferidas no ambiente de destino. Consulte o
 | Coleta | [Guia do scraper](docs/COMO_USAR_SCRAPER.md) |
 | Cibersegurança | [Mecanismos e correções](docs/CIBERSEGURANCA.md) · [Relatório da auditoria](docs/AUDITORIA_SEGURANCA.md) |
 | Comentários | [Regras e implementação dos comentários](docs/COMENTARIOS.md) |
+| Uso de IA | [Ferramentas por integrante e regras](docs/USO_DE_IA.md) · [Registro dos agentes](.agents/README.md) |
 | Automação e checks | [Pipeline do GitHub Actions](docs/pipeline.md) · [DoR e DoD](docs/PROCESSO_CONTRIBUICAO.md) |
 | Hospedagem | [Configuração de Preview, produção e lançamento](docs/HOSPEDAGEM.md) |
 | Design | [Board do Figma](https://www.figma.com/board/PgqkPopVXOiSqm9gD5RRNv/AvaliaAi---Template-MDS?node-id=0-1) |
-| Histórico | [Release 1](RELEASE-v1.0.0.md) · [v1.0.1](RELEASE-v1.0.1.md) |
+| Histórico | [Release 1](RELEASE-v1.0.0.md) · [v1.0.1](RELEASE-v1.0.1.md) · [v1.0.2](https://github.com/unb-mds/2026-2-AvaliaUnB/releases/tag/v1.0.2) · [v2.0.0](https://github.com/unb-mds/2026-2-AvaliaUnB/releases/tag/v2.0.0) |
 
 Para abrir o site localmente, instale `mkdocs-material` no ambiente virtual e
 execute `mkdocs serve` na raiz. Valide com `mkdocs build --strict`.
@@ -264,7 +265,7 @@ Projeto desenvolvido no contexto da disciplina **Métodos de Desenvolvimento
 de Software da Universidade de Brasília**, no semestre **2026/2**.
 
 Resumo do que cada integrante fez, levantado das issues atribuídas e dos
-commits na `main` até 24/11/2026. O detalhe completo está no
+commits na `main` até 25/11/2026. O detalhe completo está no
 [histórico de contribuições](https://github.com/unb-mds/2026-2-AvaliaUnB/graphs/contributors)
 e no [quadro de issues](https://github.com/unb-mds/2026-2-AvaliaUnB/issues).
 

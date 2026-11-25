@@ -1,6 +1,8 @@
 # Agentes de IA utilizados
 
 Registro das ferramentas de IA usadas no projeto, para transparência e reprodutibilidade.
+A visão geral, com as ferramentas de cada integrante e as regras seguidas, está em
+[`docs/USO_DE_IA.md`](../docs/USO_DE_IA.md).
 
 ## Logo AvaliaUnB (novembro de 2026)
 
@@ -44,7 +46,7 @@ Dentro do Claude Code:
 | Item | Detalhe |
 |---|---|
 | Ferramenta | [Claude Code](https://claude.com/claude-code), modelo Claude Opus 5.5 |
-| Busca da skill | `find-skills` de [vercel-labs/skills](https://www.skills.sh/vercel-labs/skills/find-skills): consulta ao ranking do skills.sh, preferindo fontes conhecidas e com muitas instalações |
+| Busca da skill | `find-skills` de [vercel-labs/skills](https://www.skills.sh/vercel-labs/skills/find-skills), instalada em `.agents/skills/find-skills/`: consulta ao ranking do skills.sh, preferindo fontes conhecidas e com muitas instalações |
 | Skills escolhidas | `frontend-design` ([anthropics/skills](https://www.skills.sh/anthropics/skills/frontend-design)) e `web-design-guidelines` ([vercel-labs/agent-skills](https://www.skills.sh/vercel-labs/agent-skills/web-design-guidelines)) |
 | Versões | Fixadas por commit em [`skills-lock.json`](../skills-lock.json) |
 | Resultado | `app/templates/_reacoes_comentario.html`, `app/static/integracao-editorial.css` e documentação de frontend |
@@ -65,9 +67,9 @@ links simbólicos, que não funcionam bem no Windows. Para recriá-los, rode o
 ### Para que cada skill serviu
 
 - `frontend-design`: orientou o ajuste pelos tokens que o site já usa, sem
-  inventar outro estilo. O 👍/👎 virou botão fantasma igual a `.btn.ghost`
-  (borda `--line`, raio de 10 px, Inter 700), com o verde `--accent` só na
-  reação selecionada.
+  inventar outro estilo. O 👍/👎 virou polegar em SVG com o total ao lado, em
+  Inter 700 e na cor `--muted`, com o verde `--accent` só na reação selecionada.
+  Numa segunda rodada, a pedido do Caio, a borda em volta dos botões saiu.
 - `web-design-guidelines`: revisão de acessibilidade. Alvo de toque de 44 px,
   foco visível, `aria-pressed`, nome acessível com o total, ícone preenchido
   além da cor para indicar a seleção e `prefers-reduced-motion` respeitado.
@@ -93,3 +95,42 @@ documente elas nos agents."
 - `pytest`: 697 testes passando; o teste do template de reações foi ajustado
   para os ícones em SVG.
 - A revisão e o commit ficaram com o Caio.
+
+## Revisão de arquitetura e documentação (novembro de 2026, issue #170)
+
+| Item | Detalhe |
+|---|---|
+| Ferramenta | Codex |
+| Pedido | Resolver as pendências da issue #170 e alinhar o PR #178 à main |
+| Resultado | Integração da main sem reescrever histórico; documentação de arquitetura, interface, comentários e migrações; roteiro de conferência do FigJam |
+| Revisão | Preservação dos registros de uso de IA, releases e decisão de semestres; remoção de referências desatualizadas sobre moderação, retenção, autoria e favicon |
+| Skills de apoio | Computer Use e Plugin Management para consultar acesso às integrações; sem alteração comprovada no board do FigJam |
+| Verificação | Build estrito do MkDocs, suíte existente, links locais, XML dos SVGs e ausência de marcadores de conflito; resultados registrados no PR #178 |
+
+A edição e a conferência visual do FigJam dependem de uma conta autorizada.
+O roteiro versionado não é evidência de que os cartões do board foram atualizados.
+
+## Skills de apoio instaladas no fim do projeto
+
+| Skill | Origem | Quem usou | Para quê |
+|---|---|---|---|
+| `find-skills` | [vercel-labs/skills](https://www.skills.sh/vercel-labs/skills/find-skills) | Caio | Achar skills no ecossistema do skills.sh antes de instalar; foi usada para escolher as skills da #270 |
+| `test-driven-development` | [obra/superpowers](https://www.skills.sh/obra/superpowers/test-driven-development) | gsm22 | Ciclo red-green-refactor: escrever o teste, vê-lo falhar, implementar o mínimo e refatorar |
+
+As duas ficam em `.agents/skills/` e têm o commit de origem travado em
+[`skills-lock.json`](../skills-lock.json). Para instalar de novo:
+
+```bash
+npx skills add https://github.com/vercel-labs/skills --skill find-skills
+npx skills add https://github.com/obra/superpowers --skill test-driven-development
+```
+
+## Histórico de semestres (novembro de 2026, issue #242)
+
+| Item | Detalhe |
+|---|---|
+| Ferramenta | ChatGPT (assistência à documentação e organização das issues) |
+| Pedido | Documentar a opção híbrida e finalizar as pendências da decisão; padronizar o termo como semestre atual |
+| Resultado | PR #269, sub-issues #278, #279 e #280 e PR #281 de atualização documental |
+| Revisão | Conferência das regras já implementadas (#224 e #252), preservação do histórico, escopo das sub-issues e vínculo com o PR integrado; ratificação coletiva permanece pendente |
+| Verificação | `mkdocs build --strict` e `git diff --check` no PR #281; nenhuma alteração de código de produção |

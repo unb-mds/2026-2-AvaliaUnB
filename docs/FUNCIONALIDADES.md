@@ -17,7 +17,7 @@ seção de comentários. Uma falha dessa consulta mostra um aviso sem impedir
 as avaliações e os favoritos. Comentários ocultados não entram nessa listagem.
 
 Não há alteração no formato JSON de `/perfil`, nas regras de autoria ou no banco.
-A retirada da identificação pública segue separadamente na #258 / PR #259.
+A identificação pública foi retirada na #258 / PR #259, já integrado.
 
 Este guia detalha as funcionalidades já disponíveis na `main`. O resumo das
 entregas e do planejamento fica no
@@ -39,7 +39,7 @@ exige uma quantidade mínima de avaliações registradas.
 ### Ofertas por semestre (proposta #242)
 
 Hoje a busca consulta todas as ofertas históricas. A opção híbrida propõe
-priorizar o semestre ativo na busca e no catálogo, com opções de outros
+priorizar o semestre atual na busca e no catálogo, com opções de outros
 períodos e de todos os semestres. Um professor sem oferta atual ainda pode ser
 consultado no histórico e pelo link de perfil. A seleção deve ser explícita,
 com estado vazio próprio, e não alterar as notas históricas do professor.
@@ -289,8 +289,9 @@ catálogo. Se ninguém atingir o mínimo, a página informa esse estado.
 
 ## Funcionalidades planejadas
 
-A priorização do semestre ativo no catálogo e a seleção de outros períodos
-continuam como evolução futura da decisão híbrida #242. As avaliações e ofertas
+A priorização do semestre atual no catálogo e a seleção de outros períodos
+continuam como evolução futura da decisão híbrida #242, com implementação
+separada nas issues #278, #279 e #280. As avaliações e ofertas
 históricas permanecem disponíveis. Confira o [estado da interface](ESTADO_DA_INTERFACE.md)
 e a [decisão sobre histórico](DECISAO_HISTORICO_SEMESTRES.md) antes de tratar
 uma proposta como implementação existente.

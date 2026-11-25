@@ -6,6 +6,9 @@ editar, excluir, reagir, ordenar, denunciar e moderar têm fluxos implementados
 exemplo, a publicação não exibe **Verificando** nem **Em revisão**. O filtro
 automático (#214) responde com aviso junto ao campo e preserva o texto bloqueado.
 
+A ocultação é feita na área restrita de moderação (#216). O autor pode ver
+o comentário ocultado e acessar o formulário privado de contestação.
+
 Protótipos da #112 para revisar a experiência em uma tela estreita. Os fluxos
 seguem a [especificação da #116](COMENTARIOS.md) e os componentes do
 [design system](DESIGN_SYSTEM.md). Os nomes e textos das telas são exemplos.
