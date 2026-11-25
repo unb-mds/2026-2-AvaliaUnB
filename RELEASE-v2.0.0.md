@@ -52,9 +52,9 @@ A aplicação publicada está disponível em: **https://avaliaunb.com.br/**
 - **Python 3.11+** ou **Docker + Docker Compose**
 - Projeto configurado no **Supabase** com as migrações SQL de `docs/migrations/` aplicadas em ordem
 - Provedor **Google** habilitado no Supabase (*Authentication → Sign In / Providers → Google*) com a URL de retorno cadastrada em *Authentication → URL Configuration*:
-- Execução local com Python: `http://127.0.0.1:5000/login/google/retorno`
-- Execução local com Docker: `http://localhost:8000/login/google/retorno`
-- Produção: `https://avaliaunb.com.br/login/google/retorno`
+  - Execução local com Python: `http://127.0.0.1:5000/login/google/retorno`
+  - Execução local com Docker: `http://localhost:8000/login/google/retorno`
+  - Produção: `https://avaliaunb.com.br/login/google/retorno`
 
 ### 1. Clone o repositório e configure o `.env`
 1. Clone o projeto e acesse a pasta raiz: `git clone https://github.com/unb-mds/2026-2-AvaliaUnB.git && cd 2026-2-AvaliaUnB`
@@ -62,7 +62,7 @@ A aplicação publicada está disponível em: **https://avaliaunb.com.br/**
 
 | Variável | Obrigatória | Descrição |
 | --- | --- | --- |
-| `SECRET_KEY` | Sim | Chave privada e estável para sessão Flask e CSRF (mínimo de 32 caracteres aleatórios). Gere com `python -c \"import secrets; print(secrets.token_hex(32))\"`. |
+| `SECRET_KEY` | Sim | Chave privada e estável para sessão Flask e CSRF (mínimo de 32 caracteres aleatórios). Gere com `python -c "import secrets; print(secrets.token_hex(32))"`. |
 | `SUPABASE_URL` | Sim | URL do projeto Supabase (ex.: `https://projeto.supabase.co`). |
 | `SUPABASE_SERVICE_KEY` | Sim | Chave `service_role` do Supabase, restrita ao servidor. |
 | `APP_ENV` | Não | Ambiente de execução (`development` localmente; `production` em produção). |
@@ -77,7 +77,7 @@ A aplicação publicada está disponível em: **https://avaliaunb.com.br/**
 
 ### 2. Execução local com Python
 1. Crie o ambiente virtual: `python -m venv .venv`
-2. Ative o ambiente virtual: `.\\.venv\\Scripts\\Activate.ps1` (Windows PowerShell) ou `source .venv/bin/activate` (Linux/macOS)
+2. Ative o ambiente virtual: `.\.venv\Scripts\Activate.ps1` (Windows PowerShell) ou `source .venv/bin/activate` (Linux/macOS)
 3. Instale as dependências: `pip install -r requirements.txt`
 4. Inicie o servidor: `python run.py`
 5. Acesse no navegador: `http://127.0.0.1:5000`
@@ -88,6 +88,6 @@ A aplicação publicada está disponível em: **https://avaliaunb.com.br/**
 
 ### 4. Testes automatizados e documentação local
 - **Testes automatizados (offline, com Supabase simulado):**
-- Linux/macOS: `SECRET_KEY=$(python -c \"import secrets; print(secrets.token_hex(32))\") python -m unittest discover -s tests -t .`
-- Windows (PowerShell): `$env:SECRET_KEY=\"chave-de-teste-local-com-mais-de-32-caracteres-1234\"; python -m unittest discover -s tests -t .`
+  - Linux/macOS: `SECRET_KEY=$(python -c "import secrets; print(secrets.token_hex(32))") python -m unittest discover -s tests -t .`
+  - Windows (PowerShell): `$env:SECRET_KEY="chave-de-teste-local-com-mais-de-32-caracteres-1234"; python -m unittest discover -s tests -t .`
 - **Documentação (MkDocs Material):** instale `mkdocs-material`, rode `mkdocs serve` para visualizar localmente e valide com `mkdocs build --strict`.
