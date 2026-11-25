@@ -218,6 +218,8 @@ privacidade. A revisão das regras permanece pendente; o recurso não está impl
 | Design | [Board do Figma](https://www.figma.com/board/PgqkPopVXOiSqm9gD5RRNv/AvaliaAi---Template-MDS?node-id=0-1&p=f&t=Rxu6jVCgeVZHCyg2-0) |
 | Histórico | [Release 1](RELEASE-v1.0.0.md) · [Release 2](RELEASE-v2.0.0.md) |
 
+- Instruções para agentes de IA e padrões do repositório: [`AGENTS.md`](AGENTS.md) e [`.agents/skills/`](.agents/skills/).
+
 Para abrir o site localmente, instale `mkdocs-material` no ambiente virtual e
 execute `mkdocs serve` na raiz. Valide com `mkdocs build --strict`.
 Na `main`, o workflow de documentação publica as mudanças em `docs/` ou
