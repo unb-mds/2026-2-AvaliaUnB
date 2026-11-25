@@ -1,4 +1,5 @@
 import logging
+import json
 import re
 import sys
 import time
@@ -23,7 +24,9 @@ from persistencia_sigaa import (
     CODIGO_SAIDA_CONVERSAO_PENDENTE,
     ConversaoPendenteError,
     gravar_catalogo,
+    conferir_persistencia,
 )
+from validacao_coleta import montar_relatorio
 from resumo_sigaa import Resumo
 from texto_sigaa import (
     UnidadeInvalidaError,
@@ -514,6 +517,8 @@ def main(
     dry_run: bool = False,
     headless: bool = False,
     pausa: float = 1.0,
+    relatorio=None,
+    finalidade='regular',
 ) -> int:
     resumo = Resumo()
     scraper = SigaaScraper(headless=headless, pausa=pausa)
@@ -529,6 +534,7 @@ def main(
         professores_dict = {}
         disciplinas_dict = {}
         turmas = []
+        resultados_unidades = []
 
         for n, (valor, texto) in enumerate(escolhidas):
             if n:
@@ -537,8 +543,10 @@ def main(
                 r = scraper.buscar_unidade(ano, periodo, valor, texto)
             except UnidadeInvalidaError as e:
                 resumo.registrar_unidade_pulada(texto, str(e))
+                resultados_unidades.append({'codigo': str(valor), 'status': FALHA})
                 continue
 
+            resultados_unidades.append({'codigo': str(valor), 'status': r.status})
             if r.status == FALHA:
                 resumo.registrar_unidade_pulada(texto, r.motivo)
             elif r.status == VAZIO:
@@ -555,20 +563,33 @@ def main(
         professores = list(professores_dict.values())
         disciplinas = list(disciplinas_dict.values())
 
+        persistencia_validada = False
         if dry_run:
             imprimir_dry_run(professores, disciplinas, turmas, resumo.a_definir_ignorados)
         elif professores and disciplinas:
             try:
                 # Confere a trava de conversão antes da primeira escrita no banco.
                 gravar_catalogo(professores, disciplinas, turmas)
+                if relatorio:
+                    persistencia_validada = conferir_persistencia(professores, disciplinas, turmas)
             except ConversaoPendenteError as erro:
                 print(f"\n[!] {erro}")
                 resumo.imprimir()
                 return CODIGO_SAIDA_CONVERSAO_PENDENTE
+            except ValueError as erro:
+                print(f'\n[!] Persistência não validada: {erro}')
+                resumo.imprimir()
+                return 1
         else:
             print("[!] Nada para subir (lista vazia).")
 
         resumo.imprimir()
+        if relatorio:
+            dados = montar_relatorio(ano, periodo, disponiveis, resultados_unidades, resumo,
+                                      professores, disciplinas, turmas, dry_run,
+                                      persistencia_validada, finalidade)
+            Path(relatorio).write_text(json.dumps(dados, ensure_ascii=False, indent=2),
+                                      encoding='utf-8')
         return resumo.codigo_saida()
     finally:
         scraper.fechar()
@@ -587,5 +608,7 @@ if __name__ == "__main__":
             dry_run=args.dry_run,
             headless=args.headless,
             pausa=args.pausa,
+            relatorio=args.relatorio,
+            finalidade=args.finalidade,
         )
     )

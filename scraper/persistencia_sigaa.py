@@ -79,6 +79,30 @@ def gravar_catalogo(professores: list, disciplinas: list, turmas: list, cliente=
     salvar_turmas(turmas, mapa_prof, mapa_disc, cliente)
 
 
+def conferir_persistencia(professores, disciplinas, turmas, cliente=None):
+    """Somente leitura: todas as turmas extraídas devem existir com vínculos válidos.
+
+    Não basta um código zero: os helpers de gravação podem relatar erros sem
+    propagá-los. Esta verificação falha se algum vínculo não chegou ao Supabase.
+    """
+    cliente = cliente or _supabase()
+    mapa_prof = {p['nome']: p['id'] for p in ler_tabela(cliente, 'professores', 'id,nome')}
+    mapa_disc = {d['codigo']: d['id'] for d in ler_tabela(cliente, 'disciplinas', 'id,codigo')}
+    if any(p['nome'] not in mapa_prof for p in professores) or any(
+            d['codigo'] not in mapa_disc for d in disciplinas):
+        raise ValueError('Professores ou disciplinas da coleta ausentes no banco.')
+    esperadas = montar_payload_turmas(turmas, mapa_prof, mapa_disc)
+    chaves = lambda linhas: {(t['professor_id'], t['disciplina_id'], t['ano'], t['periodo'])
+                              for t in linhas}
+    if len(esperadas) != len({(t['professor_nome'], t['disciplina_codigo'], t['ano'], t['periodo'])
+                              for t in turmas}):
+        raise ValueError('A coleta contém turma sem vínculo de professor ou disciplina.')
+    gravadas = ler_tabela(cliente, 'turmas', 'id,professor_id,disciplina_id,ano,periodo')
+    if not esperadas or not chaves(esperadas).issubset(chaves(gravadas)):
+        raise ValueError('Uma ou mais turmas da coleta não foram persistidas.')
+    return True
+
+
 def _supabase():
     """Import tardio: o --dry-run nunca importa supabase_client (nem lê o .env)."""
     from supabase_client import supabase

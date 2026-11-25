@@ -39,3 +39,48 @@ disciplinas dos cartões usam o mesmo recorte. Os links de paginação e o retor
 do perfil preservam a escolha. A comparação, o ranking e os perfis históricos
 continuam acessíveis e suas médias não são alteradas pelo filtro de oferta.
 O seletor funciona com GET, inclusive sem JavaScript.
+
+## Coleta e confirmação operacional (#280)
+
+O scraper aceita `--relatorio coleta.json` e `--finalidade regular|historica|antecipada`.
+O relatório registra todas as unidades de graduação esperadas, o resultado de cada
+uma, linhas puladas, vínculos e assinatura das turmas. O dry-run gera evidência de
+leitura sem consultar ou gravar o Supabase, mas nunca permite ativar o semestre.
+
+No modo de gravação, uma leitura posterior verifica se todos os professores,
+disciplinas e turmas coletados existem com os vínculos corretos no banco. Unidades
+sem turmas são válidas; uma coleta inteiramente vazia não confirma um semestre.
+Linhas puladas por erro impedem a confirmação. Docentes ainda "A DEFINIR" são
+contabilizados e ignorados conforme a regra existente do catálogo.
+Antes da primeira escrita, o workflow exporta o catálogo para `backup-antes/`,
+preservado no artifact da execução; avaliações, comentários e contas não são
+exportados nem modificados por essa rotina.
+
+O workflow **Atualizar dados do SIGAA** tem dois novos campos:
+
+- `finalidade`: regular, histórica ou antecipada. Histórica/antecipada nunca
+  alteram o semestre atual.
+- `confirmar_semestre`: vazio por padrão. Para propor uma ativação, digitar o par
+  exato, como `2026-2`, usar modo **gravar**, todas as unidades e finalidade regular.
+
+Após cobertura completa, integridade, persistência e duplicatas verificadas, o
+workflow executa `python -m scraper.confirmar_semestre coleta.json --confirmar 2026-2 --gravar`.
+Ele gera a configuração para revisão no PR de dados e backup. O semestre só muda
+no site após o merge e deploy desse arquivo. Uma coleta parcial, vazia, falha,
+histórica, antecipada, somente simulada ou com período divergente não o modifica.
+Reimportar período anterior ao já confirmado também não regride a configuração.
+
+Antes de mesclar o PR de ativação, conferir o artifact `scraper-log/coleta.json`,
+os totais, o link da execução gravado na configuração e o diff do backup. A
+configuração é reversível pelo Git; um rollback para `semestre_atual: null` volta
+à consulta de todos os semestres, sem apagar registros do banco.
+
+## Evidência inicial de 2026/2
+
+O [dry-run completo de 25/11/2026](https://github.com/unb-mds/2026-2-AvaliaUnB/actions/runs/45622575991)
+processou 99 unidades de graduação: 69 com turmas e 30 sem turmas, sem unidade
+ou linha pulada por erro. Foram extraídos 2.843 professores, 3.468 disciplinas
+e 6.889 vínculos únicos de turma. Os 112 registros de docente "A DEFINIR" foram
+contabilizados e ignorados conforme a regra existente. Essa execução não gravou
+dados e não comprova, sozinha, que todos os vínculos já estão no banco publicado;
+a ativação exige a verificação de persistência descrita acima.

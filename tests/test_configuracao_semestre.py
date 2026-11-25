@@ -13,6 +13,9 @@ class TestConfiguracaoSemestre(unittest.TestCase):
             self.assertEqual(validar_semestre(2026, periodo), (2026, periodo))
             self.assertEqual(interpretar_semestre(f'2026-{periodo}'), (2026, periodo))
 
+    def test_configuracao_desabilitada_explicitamente_nao_le_arquivo(self):
+        self.assertIsNone(ler_semestre_atual(None))
+
     def test_rejeita_entrada_invalida_sem_coercao(self):
         for ano, periodo in [(26, 2), (True, 2), ('2026', 2), (2026, True),
                              (2026, '2'), (2026, 0), (2026, 5), (10000, 1)]:

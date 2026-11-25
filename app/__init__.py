@@ -25,6 +25,11 @@ def create_app(config=None) -> Flask:
 
     if config:
         app.config.update(config)
+    # Fixtures existentes têm catálogo próprio. A ativação operacional versionada
+    # não deve mudar silenciosamente o semestre dos testes; cenários de oferta
+    # injetam explicitamente um arquivo temporário.
+    if app.testing and 'SEMESTRE_ATUAL_ARQUIVO' not in app.config:
+        app.config['SEMESTRE_ATUAL_ARQUIVO'] = None
     if os.getenv('APP_ENV', '').strip().lower() == 'production' and app.debug:
         raise RuntimeError('O modo DEBUG deve estar desativado em produção.')
     if not app.config['SECRET_KEY'] or not app.config['SECRET_KEY'].strip():

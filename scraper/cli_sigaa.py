@@ -76,4 +76,7 @@ def montar_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="imprime o que seria gravado, sem tocar no banco",
     )
+    parser.add_argument('--relatorio', help='Caminho do relatório JSON de cobertura e integridade')
+    parser.add_argument('--finalidade', choices=('regular', 'historica', 'antecipada'),
+                        default='regular', help='Coletas históricas/antecipadas não ativam semestre')
     return parser

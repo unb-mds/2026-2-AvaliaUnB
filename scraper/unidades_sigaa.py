@@ -2,7 +2,10 @@
 import re
 import unicodedata
 
-from texto_sigaa import normalizar_texto
+try:
+    from .texto_sigaa import normalizar_texto
+except ImportError:
+    from texto_sigaa import normalizar_texto
 
 PREFIXO_POS = re.compile(r"PROGRAMA DE POS[- ]?GRADUACAO\b")
 

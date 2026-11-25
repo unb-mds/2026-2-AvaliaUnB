@@ -22,6 +22,8 @@ def validar_semestre(ano, periodo):
 
 def ler_semestre_atual(caminho=ARQUIVO_SEMESTRE_ATUAL):
     """Ausência/configuração inválida mantém o histórico; não interrompe o site."""
+    if caminho is None:
+        return None
     try:
         dados = json.loads(Path(caminho).read_text(encoding='utf-8'))
         atual = dados['semestre_atual']
