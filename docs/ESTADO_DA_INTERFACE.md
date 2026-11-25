@@ -28,10 +28,11 @@ Supabase publicado.
 
 | Evolução | Situação | Referência |
 |---|---|---|
-| Consulta priorizando ofertas do semestre atual | Decisão híbrida registrada; configuração, filtro e integração da coleta ainda são futuros; o catálogo consulta o histórico completo | #242, #278, #279, #280 |
 | Publicação e aplicação da política de retenção no ambiente | Conferir configuração e execução no destino; a documentação do workflow não comprova implantação | #217 |
 
 ## Decisões vigentes
+
+- O catálogo consulta todos os semestres coletados (modelo A, #242), sem priorizar ofertas atuais. A proposta híbrida não faz parte do planejamento vigente; as médias por semestre permanecem disponíveis.
 
 - Comentários públicos não exibem nome, e-mail, avatar ou rótulo identificador; a autoria permanece privada para as permissões do backend.
 - Comentar exige login com Google, sem confirmação adicional de e-mail.

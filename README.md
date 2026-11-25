@@ -47,7 +47,7 @@ anteriores podem conter apenas parte delas.
 | Conta pessoal | Favoritos, avaliações e comentários próprios | Implementado (#223, #260) |
 | Comentários | Publicação anônima, filtro de conteúdo, edição/exclusão, reações, ordenação e denúncias | Implementado (#212, #213, #214, #215, #258, #260) |
 | Moderação e retenção | Decisões justificadas, contestação e descarte dos registros encerrados após 90 dias | Implementado (#216, #217) |
-| Consulta por oferta | Priorizar o semestre atual e permitir outros períodos | [Decisão híbrida (#242)](docs/DECISAO_HISTORICO_SEMESTRES.md); interface futura |
+| Consulta ao catálogo | Consultar ofertas de todos os semestres coletados, sem filtro de semestre de oferta | Implementado; [modelo A (#242)](docs/DECISAO_HISTORICO_SEMESTRES.md) |
 
 A consulta principal fica em `/professores`; ranking e comparação ficam em
 `/ranking` e `/comparar`. A lista é ordenada pela quantidade de avaliações.
@@ -162,9 +162,9 @@ docker compose up --build
 A aplicação será servida pelo Gunicorn em `http://localhost:8000`.
 O scraper é executado separadamente. A cada semestre, ele roda pelo workflow manual
 *Atualizar dados do SIGAA* no GitHub Actions; veja o [guia do scraper](docs/COMO_USAR_SCRAPER.md).
-As coletas acrescentam ofertas sem apagar o histórico. A opção híbrida da #242
-propõe definir o semestre atual após validação da coleta e manter os
-anteriores consultáveis. A regra das avaliações por turma cursada permanece.
+As coletas acrescentam ofertas sem apagar o histórico. A decisão #242 mantém
+o catálogo histórico completo, sem priorização do semestre atual. A regra das
+avaliações por turma cursada permanece. Consulte o SIGAA para ofertas vigentes.
 
 ### Hospedagem
 

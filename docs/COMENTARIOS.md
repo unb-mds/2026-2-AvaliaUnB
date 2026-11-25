@@ -124,9 +124,9 @@ e comentar depois. Cada ação tem seu próprio formulário e envio.
   edita a avaliação correspondente.
   A pessoa pode publicar vários comentários para a mesma disciplina.
 
-Na [opção híbrida da #242](DECISAO_HISTORICO_SEMESTRES.md), os comentários
+No [modelo A da #242](DECISAO_HISTORICO_SEMESTRES.md), os comentários
 históricos permanecem acessíveis, conforme as regras de moderação e exclusão.
-O filtro de oferta do catálogo não filtra nem apaga comentários. A data da
+Uma nova coleta do catálogo não filtra nem apaga comentários. A data da
 publicação não representa necessariamente o semestre cursado.
 
 ## Fluxos para as telas da #112
