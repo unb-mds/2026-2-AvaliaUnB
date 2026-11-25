@@ -59,15 +59,39 @@ def _possui_disciplinas_diferentes(comparacao):
     return len(set.intersection(*conjuntos)) == 0
 
 
+def _nota_ou_none(valor):
+    """Converte entrada de nota (aceita ponto ou vírgula decimal) no intervalo 0..5."""
+    texto = str(valor or '').strip().replace(',', '.')
+    if not texto:
+        return None
+    try:
+        numero = float(texto)
+    except ValueError:
+        return None
+    if not math.isfinite(numero) or numero < 0 or numero > 5:
+        return None
+    return numero
+
+
+def _minimo_avaliacoes_ou_none(valor):
+    quantidade = _inteiro_ou_none(valor)
+    return quantidade if quantidade is not None and quantidade > 0 else None
+
+
 def criterios():
     return CRITERIOS
 
 
-def catalogo(nome='', disciplina='', departamento='', q=''):
+def catalogo(nome='', disciplina='', departamento='', q='',
+             nota_min='', nota_max='', avaliacoes_min=''):
     """Lista [(professor, disciplinas)] ordenada pela quantidade de avaliações.
     `q` é a busca unificada (professor, disciplina ou departamento)."""
-    return repositorios().professores.catalogo(nome, disciplina, departamento, termo=q)
-
+    return repositorios().professores.catalogo(
+        nome, disciplina, departamento, termo=q,
+        nota_minima=_nota_ou_none(nota_min),
+        nota_maxima=_nota_ou_none(nota_max),
+        avaliacoes_minimas=_minimo_avaliacoes_ou_none(avaliacoes_min),
+    )
 
 PROFESSORES_POR_PAGINA = 100   # mesmo tamanho de página usado em lista_professores.html
 

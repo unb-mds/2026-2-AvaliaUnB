@@ -43,7 +43,7 @@ anteriores podem conter apenas parte delas.
 |---|---|---|
 | R1 — fluxo essencial | Cadastro, login, busca de professores e disciplinas, perfil do professor, avaliação por cinco critérios e consulta de médias | Implementado |
 | R2 — consulta e gestão de avaliações | Ranking, comparação entre dois professores, filtro por departamento, busca que ignora acentos e espaços extras e perfil do usuário com edição e exclusão das próprias avaliações | Implementado |
-| Evolução dos filtros | Faixa de nota e volume de avaliações | Pendente |
+| Evolução dos filtros | Faixa de nota e volume de avaliações | Implementado (#221) |
 | Histórico de semestres | Preservação das turmas, avaliação por turma cursada e evolução de notas | Implementado (#225, #252, #224) |
 | Consulta por oferta | Priorizar o semestre ativo e permitir outros períodos | [Proposta híbrida (#242)](docs/DECISAO_HISTORICO_SEMESTRES.md); implementação futura |
 | Comentários | Listar os 50 mais recentes, filtrar por disciplina, publicar, editar e excluir o próprio comentário anonimamente; reagir com 👍 ou 👎 e denunciar | Implementado ([regras](docs/COMENTARIOS.md)) |

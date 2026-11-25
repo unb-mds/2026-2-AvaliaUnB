@@ -27,10 +27,14 @@ entregas e do planejamento fica no
 
 ## Busca de professores e disciplinas
 
-A página `/professores` aceita os filtros `nome`, `disciplina` e `departamento`
-pela URL. Eles podem ser usados juntos. Nome do professor e nome ou código da
-disciplina aceitam correspondência parcial; departamento exige igualdade
-depois da normalização.
+A página `/professores` aceita os filtros `nome`, `disciplina`, `departamento`,
+`nota_min`, `nota_max` e `avaliacoes_min` pela URL (RF09 — Filtros avançados).
+Eles funcionam isoladamente ou combinados entre si e com a busca unificada `q`.
+Nome do professor e nome ou código da disciplina aceitam correspondência
+parcial; departamento exige igualdade depois da normalização; `nota_min` e
+`nota_max` filtram pela média geral do professor (0 a 5, aceitando ponto ou
+vírgula decimal, excluindo docentes sem avaliações válidas); e `avaliacoes_min`
+exige uma quantidade mínima de avaliações registradas.
 
 ### Ofertas por semestre (proposta #242)
 
@@ -51,11 +55,13 @@ comum (por exemplo, "Ana de Souza"); a ordenação por nome também ignora caixa
 acento.
 
 O seletor **Departamento** é preenchido com os departamentos distintos do
-catálogo completo, em ordem alfabética. Substitui os atalhos fixos de áreas.
-O botão **Filtrar departamento** combina a seleção com a pesquisa atual e
-reinicia a paginação. A busca também preserva o departamento selecionado.
-**Todos os departamentos** remove somente esse filtro; **Limpar filtros**
-restaura a consulta completa. Os formulários funcionam sem JavaScript.
+catálogo completo, em ordem alfabética, acompanhado pelos campos numéricos
+**Nota mínima**, **Nota máxima** e **Mínimo de avaliações**. O botão
+**Filtrar** combina esses critérios com a pesquisa atual e reinicia a
+paginação; a busca por texto também preserva os filtros ativos na URL e na
+navegação de retorno do perfil (`next`). **Todos os departamentos** remove
+somente o filtro de unidade; **Limpar filtros** restaura a consulta completa.
+Os formulários funcionam sem JavaScript.
 
 Em cada cartão da lista, cada disciplina mostra a dificuldade média e a
 quantidade de avaliações daquela disciplina, ou "Sem avaliações ainda" quando
@@ -283,9 +289,9 @@ catálogo. Se ninguém atingir o mínimo, a página informa esse estado.
 
 ## Funcionalidades planejadas
 
-Filtros por faixa de nota e volume de avaliações, outros gráficos
-e moderação ainda não têm fluxo implementado. Reações, denúncias e a
-ordenação de comentários escolhida pela pessoa já estão disponíveis.
+Outros gráficos e moderação ainda não têm fluxo implementado. Reações,
+denúncias e a ordenação de comentários escolhida pela pessoa já estão
+disponíveis.
 
 A [proposta de banco para comentários](Modelo%20de%20Dados.md#6-proposta-tabela-comentarios)
 já está publicada. A [especificação](COMENTARIOS.md) reúne anonimato,
