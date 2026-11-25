@@ -1,63 +1,59 @@
-# Diagramas de Arquitetura
+# Arquitetura
 
-Os diagramas abaixo representam a arquitetura implementada na `main`,
-conferida em 22/11/2026. Funcionalidades pendentes ficam no
-[estado da interface e planejamento](ESTADO_DA_INTERFACE.md), com suas issues.
+Os diagramas representam a arquitetura implementada na `main`, conferida em
+24/11/2026. O estado de cada fluxo e as evoluções planejadas estão no
+[inventário da interface](ESTADO_DA_INTERFACE.md).
 
-=== "Contexto"
+## Contexto
 
-    ![Contexto do AvaliaUnB: consulta pública, participação com Google e coleta separada do SIGAA](diagrama-contexto.svg)
+![Contexto do AvaliaUnB: consulta pública, participação autenticada e coleta do SIGAA](diagrama-contexto.svg)
 
-    Visitantes consultam o catálogo, os perfis, o ranking e a comparação.
-    Entrar com Google pelo Supabase Auth permite avaliar, comentar,
-    denunciar e gerenciar favoritos. O scraper alimenta o catálogo pelo SIGAA.
+Visitantes consultam catálogo, perfis, médias, ranking, comparação e comentários.
+Com Google, estudantes avaliam turmas cursadas, comentam, reagem, denunciam e
+gerenciam favoritos. O Supabase Auth mantém a sessão; o scraper busca ofertas no
+SIGAA e grava o catálogo no PostgreSQL do Supabase.
 
-=== "Componentes da aplicação"
+## Componentes da aplicação
 
-    ![Navegador, templates Jinja2, rotas Flask, controllers, repositórios e Supabase](diagrama-componentes.svg)
+![Navegador, templates Jinja2, rotas Flask, controllers, repositórios e Supabase](diagrama-componentes.svg)
 
-    A aplicação renderiza HTML no servidor. Rotas delegam sessão, validações,
-    notas, comentários e denúncias aos controllers e repositórios. A autoria
-    dos comentários permanece privada; o navegador não recebe a service key.
-    A área de moderação da #216 não faz parte destes componentes entregues.
+A aplicação renderiza HTML no servidor. Rotas delegam autenticação, validação,
+consultas, avaliações, comentários e moderação aos controllers e repositórios.
+A autoria dos comentários e as decisões de moderação permanecem privadas no
+backend. O navegador não recebe a chave de serviço do Supabase.
 
-=== "Tech Stack"
+## Tech stack
 
-    ![Stack atual: Jinja2, HTML, CSS, JavaScript, Python, Flask, PostgreSQL e Supabase Auth](tech-stack.svg)
+![Stack atual: Jinja2, HTML, CSS, JavaScript, Python, Flask, PostgreSQL, Supabase Auth e Selenium](tech-stack.svg)
 
-    Não há build de frontend separado. O scraper Python/Selenium é executado
-    fora das requisições web, com atualização agendada no GitHub Actions.
-    O PostgreSQL do Supabase é a persistência atual.
+Não há build de frontend separado. A aplicação web usa Python e Flask; os dados
+e as contas usam Supabase/PostgreSQL e Supabase Auth. A coleta do SIGAA roda
+separada da aplicação web, inclusive pelo workflow do GitHub Actions.
 
-## Jornada e histórias confirmadas
+## Histórias confirmadas
 
-| Atividade | História de usuário | Onde conferir |
+| Atividade | História | Onde conferir |
 |---|---|---|
-| Explorar | Como visitante, quero buscar por professor, disciplina ou departamento e abrir seus resultados. | `/professores` |
-| Consultar | Quero ver as médias por disciplina/semestre e a evolução em gráfico ou tabela. | `/professores/<id>` |
-| Comparar | Quero comparar dois ou mais professores da mesma disciplina ou em seleção livre, com o recorte explícito. | `/comparar` |
-| Ranking | Quero consultar professores elegíveis e filtrar por departamento. | `/ranking` |
-| Acessar | Quero entrar com Google e acessar minha conta; a consulta pública funciona sem entrar. | `/login`, `/perfil`, `/logout` |
-| Avaliar | Quero registrar uma avaliação por turma cursada e depois editar ou excluir minhas notas. | `/avaliar/<id>` e `/perfil` |
-| Comentar | Quero publicar relatos sem identificação pública e editar/excluir somente os meus, no professor ou no perfil pessoal. | `/professores/<id>#comentarios` e `/perfil#meus-comentarios` |
-| Denunciar | Quero denunciar em privado um comentário de outra pessoa. | `/comentarios/<id>/denunciar` |
-| Favoritar | Quero salvar professores numa lista pessoal e removê-los quando desejar. | Perfil do professor e `/perfil` |
+| Explorar | Buscar por professor, disciplina ou departamento e abrir resultados | `/professores` |
+| Consultar | Ver médias por disciplina/semestre e evolução em gráfico ou tabela | `/professores/<id>` |
+| Comparar | Comparar professores na mesma disciplina ou em seleção livre | `/comparar` |
+| Avaliar | Registrar notas para uma turma cursada e depois editar ou excluir | `/avaliar/<id>` e `/perfil` |
+| Comentar | Publicar sem identificação pública e gerenciar os próprios relatos | Perfil do professor e `/perfil` |
+| Moderar | Tratar denúncias e contestações com justificativa | `/moderacao` |
+| Favoritar | Salvar professores numa lista pessoal e removê-los quando quiser | Perfil do professor e `/perfil` |
 
-Uma avaliação por estrelas é identificada por conta, professor, disciplina,
-ano e período. Comentários e notas não dependem um do outro. O acesso atual
-e o planejamento futuro estão separados no [story map e estado da interface](ESTADO_DA_INTERFACE.md).
+O catálogo conserva ofertas históricas. A decisão híbrida sobre priorizar o
+semestre ativo e permitir a consulta dos anteriores está registrada em
+[DECISAO_HISTORICO_SEMESTRES.md](DECISAO_HISTORICO_SEMESTRES.md); essa seleção
+de ofertas ainda não integra a interface.
 
-## FigJam e histórico
+## Histórico visual
 
-O [FigJam do projeto](https://www.figma.com/board/PgqkPopVXOiSqm9gD5RRNv/AvaliaAi---Template-MDS?node-id=0-1)
-acompanha esta revisão. O story map diferencia implementado de planejado;
-like/dislike (#212), ordenação (#213), filtro automático (#214), moderação
-(#216) e retenção (#217) não são apresentados como recursos entregues.
-Os PNGs antigos e wireframes históricos são acervo de planejamento; os SVGs
-desta página são a referência atual dos diagramas versionados.
+Os PNGs antigos e wireframes são acervo de planejamento. Os diagramas SVG
+acima são a referência atual versionada. O [FigJam do projeto](https://www.figma.com/board/PgqkPopVXOiSqm9gD5RRNv/AvaliaAi---Template-MDS?node-id=0-1)
+acompanha o story map e as decisões; os estados futuros dos protótipos não
+representam funcionalidades publicadas.
 
-## Aprofundamento
-
-Consulte o [backend](BACKEND.md), o [frontend](FRONTEND.md), o
-[modelo de dados](Modelo%20de%20Dados.md), o [scraper](COMO_USAR_SCRAPER.md)
+Para detalhes, consulte o [backend](BACKEND.md), o [frontend](FRONTEND.md),
+o [modelo de dados](Modelo%20de%20Dados.md), o [guia do scraper](COMO_USAR_SCRAPER.md)
 e o [mapa da documentação](GUIA_DOCUMENTACAO.md).

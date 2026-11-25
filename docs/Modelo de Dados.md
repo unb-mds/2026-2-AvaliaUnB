@@ -1,7 +1,7 @@
 # Modelo de dados do AvaliaUnB (Supabase / PostgreSQL)
 
 > Issue #109. Depende da #90 (esquema versionado em `docs/migrations/`).
-> O esquema e as políticas estão versionados em SQL; sua aplicação em cada ambiente deve ser conferida. A tabela `comentarios` está versionada em `docs/migrations/002_comentarios.sql`, existe no banco e é usada pelo perfil do professor; as denúncias estão em `docs/migrations/005_denuncias_comentarios.sql` (seção 7) e os favoritos em `docs/migrations/006_favoritos.sql` (seção 8); as reações continuam **apenas proposta**, sem migração.
+> O esquema e as políticas estão versionados em SQL; sua aplicação em cada ambiente deve ser conferida. A tabela `comentarios` está versionada em `docs/migrations/002_comentarios.sql`, existe no banco e é usada pelo perfil do professor; as denúncias estão em `docs/migrations/005_denuncias_comentarios.sql` (seção 7), os favoritos em `docs/migrations/006_favoritos.sql` (seção 8) e as reações em [`20261123100000_reacoes.sql`](migrations/20261123100000_reacoes.sql).
 
 ## 1. Visão geral
 
@@ -72,6 +72,7 @@ Alimentada pelo scraper do SIGAA.
 | `criado_em` | `TIMESTAMPTZ` | default `NOW()` |
 
 - **Unicidade:** `uq_professores_nome` em `(nome)`, criada por [`004_professores_unicos.sql`](migrations/004_professores_unicos.sql) no lugar da antiga `uq_professores_nome_departamento` em `(nome, departamento)` (issue #235).
+- **Grafia dos textos:** `nome` e `departamento` são gravados em grafia comum, com acentos (por exemplo, `Ana de Souza`), e não mais em CAIXA ALTA. O importador converte na extração e os dados antigos são convertidos por `converter-nomes` (issue #236). A unicidade de `nome` diferencia caixa e acento no banco; a busca e a ordenação do app não. Veja [Nomes em grafia comum](COMO_USAR_SCRAPER.md#nomes-em-grafia-comum).
 
 ### 2.2 `disciplinas`
 
@@ -85,6 +86,7 @@ Alimentada pelo scraper do SIGAA.
 | `criado_em` | `TIMESTAMPTZ` | default `NOW()` |
 
 - **Unicidade:** `uq_disciplinas_codigo` em `(codigo)`.
+- **Grafia dos textos:** `nome` é gravado em grafia comum, com acentos (por exemplo, `Cálculo 1`). A chave de conflito do importador é `codigo`, então `nome` é sobrescrito a cada coleta. Veja [Nomes em grafia comum](COMO_USAR_SCRAPER.md#nomes-em-grafia-comum).
 
 ### 2.3 `turmas`
 
@@ -100,6 +102,16 @@ Vínculo entre professor e disciplina em um semestre. Alimentada pelo scraper.
 | `criado_em` | `TIMESTAMPTZ` | default `NOW()` |
 
 - **Unicidade:** `uq_turmas_prof_disc_ano_periodo` em `(professor_id, disciplina_id, ano, periodo)`. É a chave usada pelo scraper para não duplicar turmas.
+
+- **Histórico:** coletas de períodos diferentes acrescentam vínculos e não
+  substituem os anteriores. Reexecutar a coleta do mesmo período reaproveita a
+  chave composta. Professores e disciplinas de períodos antigos continuam
+  disponíveis e os vínculos das avaliações são preservados.
+- **Decisão #242 (proposta C):** manter esse esquema; o período ativo deverá ser
+  uma configuração explícita validada após a coleta, não uma exclusão de turmas
+  nem o maior par presente no banco. A configuração ainda não existe no SQL
+  versionado. O modelo e a validação dessa configuração ficam para a futura
+  implementação da [decisão](DECISAO_HISTORICO_SEMESTRES.md).
 
 ### 2.4 `perfis`
 
@@ -136,6 +148,12 @@ Avaliação por critérios objetivos, com notas inteiras de 1 a 5.
 - **Unicidade:** `uq_avaliacoes_usuario_prof_disc_semestre` em `(usuario_id, professor_id, disciplina_id, ano, periodo)`, desde a migração [`007_avaliacao_por_semestre.sql`](migrations/007_avaliacao_por_semestre.sql) (issue #252). Cada usuário avalia uma vez cada **turma cursada** (professor + disciplina + semestre). Antes dela, a chave era `uq_avaliacoes_usuario_prof_disc` em `(usuario_id, professor_id, disciplina_id)`, sem o semestre.
 - **Semestre:** `ano`/`periodo` é a turma escolhida no formulário. O backend confere que existe uma linha em `turmas` para o professor, a disciplina e o semestre (não há FK composta). Avaliações anteriores à #252 têm o semestre da turma mais recente do par na época.
 - **Índice:** `idx_avaliacoes_professor_semestre (professor_id, ano, periodo)` atende o filtro de semestre das médias e o gráfico de evolução.
+
+- **Retenção por semestre:** o período de oferta ativo não altera a chave,
+  o semestre cursado ou a visibilidade de avaliações antigas. Não é necessária
+  uma nova migração de avaliações para a opção C: a #252 já cobre a unicidade.
+  Comentários permanecem vinculados ao professor e à disciplina, sem coluna de
+  semestre cursado; a data de publicação não é equivalente à turma cursada.
 
 ### 2.6 View `vw_professor_disciplina`
 
@@ -232,10 +250,11 @@ que as políticas já foram aplicadas em cada ambiente Supabase.
 
 A aplicação Flask em `main` ainda cria clientes com `SUPABASE_SERVICE_KEY`.
 O papel `service_role` ignora o RLS, portanto as permissões no código Flask
-continuam essenciais. A adoção da chave pública e de um token de usuário é
-acompanhada nas issues [#124](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/124),
+continuam essenciais. A adoção da chave pública e de um token de usuário foi
+adiada para depois do lançamento nas issues [#124](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/124),
 [#129](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/129) e
 [#130](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/130).
+O PR #141 foi revertido pelo PR #157 por regressão em produção.
 
 As políticas atuais da migração são a **base versionada**, não uma comprovação
 de isolamento suficiente: antes de migrar perfis, definir exatamente quais
@@ -284,9 +303,11 @@ do conteúdo atual da migração.
 > **Status: a tabela `comentarios` está implementada** pela migração
 > [`002_comentarios.sql`](migrations/002_comentarios.sql), que é a fonte de
 > verdade da tabela (inclui RLS e permissões por coluna, além do que o bloco
-> abaixo mostra) e é usada pelo perfil do professor. O restante desta seção,
-> em especial as reações (`comentarios_reacoes`), continua **proposta para
-> revisão do grupo, sem migração**.
+> abaixo mostra) e é usada pelo perfil do professor. `comentarios_reacoes` foi
+> implementada na #212 pela migração `20261123100000_reacoes.sql`. O número 004
+> já pertence à migração de professores únicos; foi usado um identificador por
+> data para evitar colisão. O backend persiste somente uma linha por comentário
+> e conta e expõe apenas totais e a reação da própria sessão.
 
 ### 6.1 Decisões de projeto
 
@@ -367,8 +388,8 @@ REVOKE ALL ON comentarios_reacoes FROM PUBLIC, anon, authenticated;
    ano e período, conforme a seção 2.5 e a migração 007 (#252).
 3. **Leitura pública sem identificação.** O backend lista comentários visíveis com
    ID do comentário, texto, disciplina e datas. A ordenação atual usa a data
-   da primeira publicação (`criado_em`). Contagens, reações e ordenação por
-   curtidas são planejadas nas #212 e #213, conforme a [especificação](COMENTARIOS.md).
+   da primeira publicação (`criado_em`). Reações e ordenação por curtidas estão
+   implementadas nas #212 e #213, conforme a [especificação](COMENTARIOS.md).
    O perfil do autor não é consultado. A resposta não inclui `usuario_id` nem
    `username`, conforme o [fluxo de privacidade](COMENTARIOS.md). A migração
    [`20261122155752_anonimato_comentarios.sql`](migrations/20261122155752_anonimato_comentarios.sql)
@@ -376,10 +397,10 @@ REVOKE ALL ON comentarios_reacoes FROM PUBLIC, anon, authenticated;
    as colunas públicas. Consultas diretas devem especificar essas colunas;
    `SELECT *`, filtros e junções por `usuario_id` são bloqueados. O vínculo
    privado, a escrita por autor, o RLS e o acesso do backend permanecem.
-4. **Moderação planejada (#216).** Comentários são publicados após as
-   validações atuais; denúncias já ficam em tabela privada (#215). A área
-   restrita, as decisões de ocultar/restaurar e as contestações estão em revisão
-   no PR #255; não há fila de pré-aprovação implementada na `main`.
+4. **Moderação (#216).** Comentários são publicados após as validações; denúncias
+   ficam em tabela privada (#215). A área restrita, as decisões justificadas de
+   manter/ocultar/restaurar e as contestações estão implementadas. Não há fila
+   de pré-aprovação: a moderação atua sobre denúncias e contestações.
 
 ### 6.4 Onde cada regra é aplicada
 
@@ -390,14 +411,14 @@ REVOKE ALL ON comentarios_reacoes FROM PUBLIC, anon, authenticated;
 | Só o autor edita ou apaga | O backend compara a sessão com o autor. A `service_role` ignora o RLS. |
 | Identidade do autor e de quem reage | O servidor usa a sessão verificada e não aceita `usuario_id` enviado pelo cliente. |
 | Uma denúncia ativa por conta e comentário | O índice único parcial garante a unicidade. O backend confere antes, recusa o próprio comentário e não expõe o denunciante (seção 7). |
-| Uma reação por conta e comentário (planejado, #212) | A proposta usa chave primária e validação de comentário visível e autor diferente; ainda não há entrega desse fluxo. |
-| Filtro antes de publicar ou editar (planejado, #214) | O filtro deve bloquear violações claras antes de gravar. Casos incertos seguem a C10; não há fila de pré-aprovação na main. |
+| Uma reação por conta e comentário (#212) | Chave composta e backend validam comentário visível, sessão autenticada e autor diferente. |
+| Filtro antes de publicar ou editar (#214) | O filtro bloqueia violações claras antes de gravar. Casos incertos passam e podem seguir para moderação após denúncia; não há fila de pré-aprovação. |
 
 ## 7. Denúncias de comentários (`denuncias_comentarios`)
 
 > Issue #215 (RF10, decisão C06). Versionada em
 > [`005_denuncias_comentarios.sql`](migrations/005_denuncias_comentarios.sql).
-> O painel do moderador fica para a #216.
+> O painel do moderador foi implementado na #216 e a rotina de descarte na #217.
 
 | Coluna | Tipo | Regra |
 |---|---|---|
@@ -421,9 +442,45 @@ REVOKE ALL ON comentarios_reacoes FROM PUBLIC, anon, authenticated;
   exige login e CSRF, limita a 10 envios por hora por usuário, recusa com 404 o
   comentário oculto, inexistente ou do próprio usuário, e usa o denunciante da
   sessão (um `usuario_id` enviado no formulário é ignorado).
-- **Retenção:** a proposta da C08 é apagar o registro até 90 dias após encerrar o
-  caso; a rotina de descarte fica para a moderação (#216).
+- **Retenção (Issue #217):** conforme a decisão C08 e a LGPD, denúncias, decisões
+  de moderação e contestações encerradas há mais de 90 dias são descartadas
+  automaticamente pela função SQL `descartar_registros_moderacao_expirados`
+  ([`009_retencao_moderacao_90_dias.sql`](migrations/009_retencao_moderacao_90_dias.sql)),
+  executada diariamente pelo workflow `.github/workflows/retencao_moderacao.yml`.
+  A rotina nunca apaga comentários publicados e preserva os registros enquanto o
+  comentário associado permanecer ocultado (`comentarios.ocultado_em IS NOT NULL`).
 
+## Área de moderação e contestações (Issue #216)
+
+- **Migração:** `docs/migrations/008_moderacao_comentarios.sql`
+- **Tabelas privadas (RLS sem políticas para `anon`/`authenticated`; acesso exclusivo via `service_role`):**
+  - `moderadores`: lista explícita de `usuario_id` com permissão de moderação (nasce vazia; nenhum usuário tem acesso por padrão).
+  - `moderacoes_comentarios`: histórico de decisões (`manter`, `ocultar`, `restaurar`), sempre com `moderador_id` (`ON DELETE SET NULL` para preservar o histórico caso o moderador exclua a conta) e `justificativa` obrigatória (2 a 1.000 caracteres).
+  - `contestacoes_comentarios`: pedidos privados de revisão enviados pelo autor de um comentário ocultado (uma contestação ativa por comentário).
+- **Rotas e permissões:**
+  - `GET /moderacao` e `POST /moderacao/comentarios/<id>/decidir`: protegidas por `@moderador_required` (visitante recebe 302/401; usuário comum recebe 403).
+  - `GET/POST /comentarios/<id>/contestar`: protegida por `@login_required` e restrita ao próprio autor de um comentário ocultado (terceiros recebem 404).
+
+### Como cadastrar moderadores (SQL Editor do Supabase)
+
+A tabela `moderadores` nasce vazia. Para conceder acesso à equipe no SQL Editor do Supabase, insira os perfis desejados pelo `username`:
+
+```sql
+INSERT INTO moderadores (usuario_id)
+SELECT id
+FROM perfis
+WHERE username IN ('username_membro_1', 'username_membro_2')
+ON CONFLICT (usuario_id) DO NOTHING;
+```
+
+Para revogar o acesso de um moderador sem apagar o histórico de decisões já registradas:
+
+```sql
+DELETE FROM moderadores
+WHERE usuario_id = (SELECT id FROM perfis WHERE username = 'username_membro');
+```
+
+  
 ## 8. Professores favoritos (`favoritos`)
 
 > Issue #223 (RF11). Versionada em [`006_favoritos.sql`](migrations/006_favoritos.sql).
@@ -456,11 +513,12 @@ REVOKE ALL ON comentarios_reacoes FROM PUBLIC, anon, authenticated;
    - `SUPABASE_SERVICE_KEY`: chave `service_role` em *Project Settings → API*. É secreta: não commitar e não expor em templates.
    - `FLASK_DEBUG`: `0`, ou `1` somente em desenvolvimento local.
 4. Executar o scraper do SIGAA para popular `professores`, `disciplinas` e `turmas`.
-5. Executar `docs/migrations/002_comentarios.sql`, que depende do esquema inicial, para criar a tabela `comentarios`. Reações e moderação ainda não têm migração (seção 6).
+5. Executar `docs/migrations/002_comentarios.sql`, que depende do esquema inicial, para criar a tabela `comentarios`.
 6. Executar `docs/migrations/003_emails_verificados.sql` e `docs/migrations/004_professores_unicos.sql`. A 004 troca a chave do professor para `UNIQUE (nome)`; num banco vazio ela só faz essa troca.
 7. Executar `docs/migrations/005_denuncias_comentarios.sql` para criar a tabela privada de denúncias (seção 7).
 8. Executar `docs/migrations/006_favoritos.sql` para criar a tabela de favoritos (seção 8).
 9. Executar `docs/migrations/007_avaliacao_por_semestre.sql` para permitir uma avaliação por turma cursada (seção 2.5).
+10. Aplicar `docs/migrations/20261122155752_anonimato_comentarios.sql` e `docs/migrations/20261123100000_reacoes.sql` para privacidade e reações. A chave composta evita duplicação, `valor` aceita somente 1 ou -1, e a exclusão do comentário ou da conta remove as reações em cascata. A tabela de reações é privada e acessada pelo backend.
 
 Veja também: [guia do backend](BACKEND.md), [guia do scraper](COMO_USAR_SCRAPER.md) e [mapa da documentação](GUIA_DOCUMENTACAO.md).
 

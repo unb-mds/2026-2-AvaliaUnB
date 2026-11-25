@@ -100,6 +100,40 @@
 }
 
 /* Editar e Excluir, discretos */
+.comentario-reacoes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--espaco-2);
+    margin-top: var(--espaco-3);
+}
+
+.comentario-reacoes form { margin: 0; }
+.comentario-reacoes .reacao {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 var(--espaco-2);
+    border: 1px solid var(--cor-divisor);
+    border-radius: var(--raio-pilula);
+    background: transparent;
+    color: var(--cor-texto);
+    font: inherit;
+    text-decoration: none;
+}
+.comentario-reacoes button, .comentario-reacoes a { cursor: pointer; }
+.comentario-reacoes [aria-pressed="true"] {
+    background: var(--cor-principal-suave);
+    border-color: var(--cor-principal);
+    color: var(--cor-principal);
+}
+.comentario-reacoes :is(button, a):focus-visible {
+    outline: 2px solid var(--cor-principal);
+    outline-offset: 2px;
+}
+
 .comentario-acoes {
     display: flex;
     flex-wrap: wrap;
@@ -278,6 +312,7 @@
 @media (min-width: 601px) {
     .comentarios .filtros {
         flex-direction: row;
+        flex-wrap: wrap;
         align-items: flex-end;
     }
 

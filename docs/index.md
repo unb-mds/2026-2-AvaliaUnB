@@ -24,6 +24,10 @@ Plataforma de consulta, comparação e avaliação de professores e disciplinas 
 
 ## O que o AvaliaUnb faz
 
+O histórico de avaliações por turma cursada permite comparar os semestres.
+A [decisão sobre consulta híbrida (#242)](DECISAO_HISTORICO_SEMESTRES.md)
+propõe priorizar ofertas do período ativo sem perder esse histórico.
+
 <div class="grid cards" markdown>
 
 - :material-magnify: **Busca**
@@ -65,7 +69,7 @@ Plataforma de consulta, comparação e avaliação de professores e disciplinas 
 </div>
 
 Consulte o [estado da interface e das issues](ESTADO_DA_INTERFACE.md) para
-distinguir funcionalidades implementadas de evoluções planejadas, como like/dislike.
+acompanhar funcionalidades implementadas e evoluções ainda planejadas.
 
 ## Por que ele existe
 

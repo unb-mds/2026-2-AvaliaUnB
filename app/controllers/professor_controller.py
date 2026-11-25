@@ -3,6 +3,7 @@ import math
 
 from flask import abort, current_app, request, url_for
 
+from app.filtro_comentarios import mensagem_bloqueio, verificar_comentario
 from app.grafico import MAXIMO_SEMESTRES_GRAFICO, montar_grafico
 from app.repositorio import (CRITERIOS_RANKING, LIMITE_COMENTARIOS, LIMITE_SUGESTOES,
                              MAXIMO_SUGESTOES, MINIMO_AVALIACOES_RANKING,
@@ -58,15 +59,39 @@ def _possui_disciplinas_diferentes(comparacao):
     return len(set.intersection(*conjuntos)) == 0
 
 
+def _nota_ou_none(valor):
+    """Converte entrada de nota (aceita ponto ou vírgula decimal) no intervalo 0..5."""
+    texto = str(valor or '').strip().replace(',', '.')
+    if not texto:
+        return None
+    try:
+        numero = float(texto)
+    except ValueError:
+        return None
+    if not math.isfinite(numero) or numero < 0 or numero > 5:
+        return None
+    return numero
+
+
+def _minimo_avaliacoes_ou_none(valor):
+    quantidade = _inteiro_ou_none(valor)
+    return quantidade if quantidade is not None and quantidade > 0 else None
+
+
 def criterios():
     return CRITERIOS
 
 
-def catalogo(nome='', disciplina='', departamento='', q=''):
+def catalogo(nome='', disciplina='', departamento='', q='',
+             nota_min='', nota_max='', avaliacoes_min=''):
     """Lista [(professor, disciplinas)] ordenada pela quantidade de avaliações.
     `q` é a busca unificada (professor, disciplina ou departamento)."""
-    return repositorios().professores.catalogo(nome, disciplina, departamento, termo=q)
-
+    return repositorios().professores.catalogo(
+        nome, disciplina, departamento, termo=q,
+        nota_minima=_nota_ou_none(nota_min),
+        nota_maxima=_nota_ou_none(nota_max),
+        avaliacoes_minimas=_minimo_avaliacoes_ou_none(avaliacoes_min),
+    )
 
 PROFESSORES_POR_PAGINA = 100   # mesmo tamanho de página usado em lista_professores.html
 
@@ -202,7 +227,7 @@ def _carregar_comparacao_legada(dados):
     repos = repositorios()
     catalogo_completo = repos.professores.catalogo()
     professores = sorted((p for p, _ in catalogo_completo),
-                         key=lambda p: (p['nome'] or '', p['id']))
+                         key=lambda p: (normalizar_busca(p['nome']), p['id']))
     por_id = {p['id']: p for p in professores}
     disciplinas_por_id = {p['id']: vinculos for p, vinculos in catalogo_completo}
     selecionados, erros = {}, {}
@@ -245,7 +270,7 @@ def carregar_comparacao(dados):
     catalogo_completo = repos.professores.catalogo()
     todos_professores_lista = sorted(
         (p for p, _ in catalogo_completo),
-        key=lambda p: (p['nome'] or '', p['id']),
+        key=lambda p: (normalizar_busca(p['nome']), p['id']),
     )
     todos_professores = {str(p['id']): p for p in todos_professores_lista}
     disciplinas_por_professor = {str(p['id']): vinculos for p, vinculos in catalogo_completo}
@@ -266,7 +291,7 @@ def carregar_comparacao(dados):
 
     if modo != 'livre' and not disciplina_id and professor_previo:
         _, vinculos_previos = professor_previo
-        for d in sorted(vinculos_previos, key=lambda item: (item['nome'] or '', item['id'])):
+        for d in sorted(vinculos_previos, key=lambda item: (normalizar_busca(item['nome']), item['id'])):
             d_id = str(d['id'])
             total_na_disciplina = sum(
                 1 for _, v in catalogo_completo if any(str(vinc['id']) == d_id for vinc in v)
@@ -325,7 +350,7 @@ def carregar_comparacao(dados):
                       for p in campos if p in todos_professores}
 
         return dict(
-            disciplinas=sorted(disciplinas.values(), key=lambda d: (d['nome'] or '', d['id'])),
+            disciplinas=sorted(disciplinas.values(), key=lambda d: (normalizar_busca(d['nome']), d['id'])),
             disciplina=None,
             professores=opcoes,
             escolhidos=escolhidos,
@@ -379,9 +404,9 @@ def carregar_comparacao(dados):
                     for p in ids
                 ])
 
-    return dict(disciplinas=sorted(disciplinas.values(), key=lambda d: (d['nome'] or '', d['id'])),
+    return dict(disciplinas=sorted(disciplinas.values(), key=lambda d: (normalizar_busca(d['nome']), d['id'])),
                 disciplina=disciplina, professores=sorted(professores.values(),
-                    key=lambda p: (p['nome'] or '', p['id'])),
+                    key=lambda p: (normalizar_busca(p['nome']), p['id'])),
                 selecao_previa=selecao_previa, campos=(selecionados + ['', ''])[:max(2, len(selecionados))],
                 erros=erros, comparacao=comparacao, criterios=CRITERIOS,
                 disciplinas_diferentes=False, modo_livre=False, modo_legado=False,
@@ -444,6 +469,14 @@ def filtro_de_comentarios(bruto, disciplinas):
     return disciplina_id if any(d['id'] == disciplina_id for d in disciplinas) else None
 
 
+ORDENS_COMENTARIOS = ('recentes', 'antigos', 'curtidos', 'reacoes')
+
+
+def ordem_de_comentarios(bruto):
+    """Ordem da lista de comentários: o valor se for conhecido, senão 'recentes' (sem erro)."""
+    return bruto if bruto in ORDENS_COMENTARIOS else 'recentes'
+
+
 def disciplina_das_medias(disciplinas, bruto):
     """Disciplina das médias a mostrar depois de um POST: a informada se for do professor,
     senão a primeira (sem 404, ao contrário de carregar_perfil)."""
@@ -463,8 +496,12 @@ def listar_disciplinas(professor_id):
     return repositorios().professores.listar_disciplinas(professor_id)
 
 
-def validar_novo_comentario(disciplinas, disciplina_bruta, texto):
-    """(disciplina_id ou None, erros): a disciplina precisa ser uma das do professor."""
+def validar_novo_comentario(disciplinas, disciplina_bruta, texto, acao='publicado'):
+    """(disciplina_id ou None, erros): a disciplina precisa ser uma das do professor.
+
+    Depois da validação de tamanho roda o filtro automático (issue #214); `acao` ('publicado'
+    ou 'salvo') só ajusta a mensagem. O texto bloqueado não é registrado nem devolvido no erro.
+    """
     erros = {}
     disciplina_id = _inteiro_ou_none(disciplina_bruta)
     if not any(d['id'] == disciplina_id for d in disciplinas):
@@ -473,6 +510,10 @@ def validar_novo_comentario(disciplinas, disciplina_bruta, texto):
     _, erro = validar_comentario(texto)
     if erro:
         erros['texto'] = erro
+    else:
+        categoria = verificar_comentario(texto)
+        if categoria:
+            erros['texto'] = mensagem_bloqueio(categoria, acao)
     return disciplina_id, erros
 
 
@@ -541,16 +582,29 @@ def carregar_comentarios_usuario(usuario):
                 erro_comentarios_usuario=False)
 
 
-def carregar_comentarios(professor_id, disciplinas, filtro_bruto, usuario):
+def definir_reacao(comentario_id, usuario, valor):
+    comentario = repositorios().comentarios.buscar_visivel(comentario_id)
+    if comentario is None or comentario['usuario_id'] == usuario['id']:
+        abort(404)
+    repositorios().reacoes.definir(comentario_id, usuario['id'], valor)
+    return comentario['professor_id']
+
+
+def carregar_comentarios(professor_id, disciplinas, filtro_bruto, usuario, ordem_bruta=None):
     """Contexto da seção de comentários do perfil. Nunca levanta: se a consulta falhar,
     registra o erro e devolve erro_comentarios=True para o resto do perfil continuar."""
     filtro = filtro_de_comentarios(filtro_bruto, disciplinas)
+    ordem = ordem_de_comentarios(ordem_bruta)
     contexto = dict(comentarios=[], ha_mais=False, filtro_comentarios=filtro,
+                    ordem_comentarios=ordem,
                     erro_comentarios=False, limite_comentarios=LIMITE_COMENTARIOS)
     try:
         comentarios, ha_mais = repositorios().comentarios.listar_por_professor(
-            professor_id, filtro, usuario['id'] if usuario else None)
+            professor_id, filtro, usuario['id'] if usuario else None, ordem)
+        resumo = repositorios().reacoes.resumo([c['id'] for c in comentarios],
+                                              usuario['id'] if usuario else None)
         for comentario in comentarios:
+            comentario.update(resumo[comentario['id']])
             comentario['data'] = ComentarioRepository.formatar_data(comentario['criado_em'])
     except Exception:
         current_app.logger.exception('Falha ao carregar os comentários do professor %s', professor_id)

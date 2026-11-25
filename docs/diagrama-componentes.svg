@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 430" role="img" aria-labelledby="titulo descricao">
   <title id="titulo">Componentes da aplicação AvaliaUnB</title>
-  <desc id="descricao">O navegador troca requisições HTTP e páginas Jinja2 com as rotas Flask. As rotas chamam os controllers e validadores, que acessam os repositórios e o cliente Supabase. O Supabase fornece PostgreSQL e Auth. A autoria dos comentários permanece privada no backend. Moderação e reações não integram esta entrega.</desc>
+  <desc id="descricao">O navegador troca requisições HTTP e páginas Jinja2 com as rotas Flask. As rotas chamam controllers e validadores para sessão, notas, comentários, reações, denúncias e moderação. Os repositórios acessam PostgreSQL e Auth no Supabase. A autoria dos comentários e as decisões de moderação permanecem privadas no backend.</desc>
   <defs>
     <marker id="seta" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
       <path d="M0 0L10 5 0 10Z" fill="#4b6380"/>

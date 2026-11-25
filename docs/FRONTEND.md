@@ -3,7 +3,7 @@
 O AvaliaUnB usa Flask e templates Jinja2 em `app/templates/`, com HTML,
 CSS e JavaScript em `app/static/`. Links e formulários funcionam no servidor;
 não é necessário um build de frontend separado. Este inventário descreve a
-`main` conferida em 22/11/2026. O [estado da interface](ESTADO_DA_INTERFACE.md)
+`main` conferida em 24/11/2026. O [estado da interface](ESTADO_DA_INTERFACE.md)
 separa o que está implementado das evoluções previstas nas issues.
 
 ## Páginas e recursos atuais
@@ -24,6 +24,8 @@ antiga em `static/` não significa que ela seja carregada pela página atual.
 | `editar_comentario.html` | Disciplina e texto preenchidos; Salvar e Cancelar | `indicadores.css` |
 | `excluir_comentario.html` | Confirmação antes de excluir o próprio comentário | `indicadores.css` |
 | `denunciar_comentario.html` | Motivo e explicação privada; confirmação de envio | `indicadores.css` |
+| `moderacao.html` | Fila restrita de denúncias e contestações; decisões justificadas | Tema compartilhado |
+| `contestar_comentario.html` | Contestação privada de decisão de moderação | Tema compartilhado |
 | `perfil.html` | Conta, favoritos, Meus comentários e Minhas Avaliações | Topo compartilhado |
 | `comparacao.html` | Mesma disciplina ou seleção livre entre disciplinas diferentes | `indicadores.css`, `campo-busca.js` |
 | `ranking.html` | Classificação por média, quantidade e filtro de departamento | Tema compartilhado |
@@ -79,9 +81,10 @@ separada na #263 / PR #264, sem mudar a logo do cabeçalho.
 
 ## Implementação e planejamento dos comentários
 
-Listar, publicar, editar, excluir, denunciar e usar Meus comentários já têm
-fluxos. Like/dislike (#212), escolha da ordenação (#213), filtro automático
-(#214), moderação (#216) e retenção (#217) são evoluções planejadas ou em PR.
+Listar, publicar, editar, excluir, reagir (#212), ordenar (#213), filtrar
+automaticamente o texto (#214), denunciar (#215), moderar/contestar (#216) e
+reter os registros de moderação pelo prazo aprovado (#217) têm fluxos
+implementados.
 As [telas de comentários](TELAS_COMENTARIOS.md) são protótipos funcionais;
 não representam capturas fiéis da interface atual. Seus estados futuros
 não devem ser confundidos com funcionalidades disponíveis.

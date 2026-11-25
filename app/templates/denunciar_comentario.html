@@ -41,6 +41,7 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="next" value="{{ next_url }}">
             {% if filtro_comentarios %}<input type="hidden" name="comentarios_disciplina" value="{{ filtro_comentarios }}">{% endif %}
+            {% if ordem_comentarios and ordem_comentarios != 'recentes' %}<input type="hidden" name="ordem" value="{{ ordem_comentarios }}">{% endif %}
 
             <fieldset class="campo motivos-denuncia"
                       {% if erros.motivo %}aria-invalid="true" aria-describedby="erro-motivo-denuncia"{% endif %}>

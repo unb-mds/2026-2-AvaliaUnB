@@ -1,0 +1,24 @@
+{# Reações 👍/👎 ao comentário (issues #212 e #270). Ícones em SVG com currentColor,
+   para seguir a paleta do tema; o nome e o total ficam no aria-label. #}
+{% macro icone_reacao(valor) -%}
+<svg class="reacao-icone{% if valor < 0 %} reacao-icone-negativa{% endif %}" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3Z"/><path d="M7 10l4-7a2.5 2.5 0 0 1 2.5 2.5V9h5.2a2 2 0 0 1 2 2.3l-1.3 7.9a2 2 0 0 1-2 1.8H7"/></svg>
+{%- endmacro %}
+<div class="comentario-reacoes" role="group" aria-label="Reações ao comentário">
+    {% for valor, nome, total in [(1, 'Curtir', c.curtidas), (-1, 'Descurtir', c.descurtidas)] %}
+        {% set selecionado = c.minha_reacao == valor %}
+        {% if c.e_meu %}
+            <span class="reacao reacao-leitura" aria-label="{{ nome }}: {{ total }}">{{ icone_reacao(valor) }}<span class="reacao-total" aria-hidden="true">{{ total }}</span></span>
+        {% elif not usuario %}
+            <a class="reacao" href="{{ login_url }}" aria-label="Entrar para {{ nome|lower }} ({{ total }})">{{ icone_reacao(valor) }}<span class="reacao-total" aria-hidden="true">{{ total }}</span></a>
+        {% else %}
+            <form method="post" action="{{ url_for('professores.reagir_comentario', comentario_id=c.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="next" value="{{ next_url }}">
+                {% if filtro_comentarios %}<input type="hidden" name="comentarios_disciplina" value="{{ filtro_comentarios }}">{% endif %}
+                {% if ordem_comentarios and ordem_comentarios != 'recentes' %}<input type="hidden" name="ordem" value="{{ ordem_comentarios }}">{% endif %}
+                {% if disciplina %}<input type="hidden" name="disciplina_medias" value="{{ disciplina.id }}">{% endif %}
+                <button class="reacao" type="submit" name="valor" value="{{ 0 if selecionado else valor }}" aria-label="{{ nome }} ({{ total }})" aria-pressed="{{ 'true' if selecionado else 'false' }}">{{ icone_reacao(valor) }}<span class="reacao-total" aria-hidden="true">{{ total }}</span></button>
+            </form>
+        {% endif %}
+    {% endfor %}
+</div>

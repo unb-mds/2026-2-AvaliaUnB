@@ -65,11 +65,23 @@ Os caminhos da tabela são relativos à raiz do repositório.
 | POST | `/professores/<int:professor_id>/comentarios` | Autenticado | Publica um comentário em uma disciplina vinculada ao professor; limite de 10 por hora por usuário |
 | GET, POST | `/comentarios/<int:comentario_id>/editar` | Autor autenticado | Formulário e atualização do texto e da disciplina do próprio comentário |
 | GET, POST | `/comentarios/<int:comentario_id>/excluir` | Autor autenticado | GET mostra a confirmação; POST exclui o próprio comentário |
+| POST | `/comentarios/<int:comentario_id>/reacao` | Autenticado + CSRF | Registra, troca ou remove a reação da conta |
+| GET, POST | `/comentarios/<int:comentario_id>/denunciar` | Autenticado | Formulário e envio privado de denúncia de comentário alheio |
+| GET | `/moderacao` | Moderador autorizado | Consulta denúncias e contestações pendentes |
+| POST | `/moderacao/comentarios/<int:comentario_id>/decidir` | Moderador autorizado + CSRF | Mantém, oculta ou restaura com justificativa |
+| GET, POST | `/comentarios/<int:comentario_id>/contestar` | Autor autenticado | Envia contestação privada de uma decisão de moderação |
 
 O perfil e o formulário de avaliação recebem também `next` para manter a URL
 de retorno da busca. A validação desse parâmetro está em `app/seguranca.py`;
 o bloqueio de barra invertida foi integrado no
 [PR #133](https://github.com/unb-mds/2026-2-AvaliaUnB/pull/133).
+
+**Semestre de oferta (proposta #242):** o futuro parâmetro de consulta do
+catálogo deverá ser distinto do `semestre` das médias e da avaliação. Não muda
+o significado das rotas existentes nem restringe avaliações históricas.
+O ranking e as médias gerais continuam agregando avaliações válidas de todos
+os períodos. Consulte a [decisão](DECISAO_HISTORICO_SEMESTRES.md); nesta
+issue não há mudança de contrato de rota ou API.
 
 Os formulários e as páginas de comentário preservam `next` e
 `comentarios_disciplina` (e, ao publicar, a disciplina das médias, enviada no
@@ -108,7 +120,7 @@ depende da configuração `COOKIE_SECURE`, habilitada fora do debug.
 necessário e guarda o usuário em `flask.g` durante a requisição. O hook
 `after_request` envia os cookies renovados. O logout solicita a revogação ao
 Supabase e remove os cookies. A falha de revogação com token de acesso expirado
-foi registrada na auditoria e é tratada na
+foi registrada na auditoria e corrigida na
 [issue #126](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/126).
 
 `login_required` redireciona navegadores sem sessão para `/login`; clientes que
@@ -129,6 +141,7 @@ por `repositorios()` dentro do contexto Flask.
 - `ComentarioRepository`: listagem, busca, criação, edição e exclusão de
   comentários (veja a seção [Comentários](#comentarios)).
 - `DenunciaRepository`: denúncias privadas de comentários.
+- `ReacaoRepository`: reação por comentário e conta, contagens e seleção da sessão.
 - `FavoritoRepository`: lista pessoal de professores favoritos (adicionar,
   remover, consultar e listar por usuário).
 
@@ -138,7 +151,9 @@ independente. A aplicação atual usa `SUPABASE_URL` e `SUPABASE_SERVICE_KEY`
 no servidor. A
 [auditoria concluída na #111](AUDITORIA_SEGURANCA.md)
 identificou a necessidade de reduzir o uso da service key; a migração para
-chave pública com RLS é acompanhada nas issues #124, #129 e #130.
+chave pública com RLS (#124, #129 e #130) foi adiada para depois do lançamento,
+pois o PR #141 causou regressão em produção e foi revertido pelo PR #157.
+A autorização continua sendo responsabilidade do backend.
 
 Consultas extensas usam paginação em lotes de mil registros. O catálogo é
 armazenado em memória por processo por até cinco minutos; registrar, editar ou
@@ -173,9 +188,8 @@ vem antes. Cada sugestão traz `tipo`, `tipo_rotulo`, `texto`, `detalhe` e a
 
 Cada avaliação contém didática, clareza, organização, disponibilidade e
 dificuldade, com notas inteiras de um a cinco. A aplicação verifica o vínculo
-e permite uma avaliação por usuário, professor, disciplina, ano e período.
-A pessoa escolhe uma turma cursada disponível; clientes sem semestre mantêm
-a turma mais recente como padrão (issue #252).
+entre professor e disciplina e permite uma avaliação por usuário para esse par.
+Ano e período são obtidos do vínculo de turma mais recente disponível para o par.
 
 No perfil do professor, as médias correspondem à disciplina selecionada. Na
 comparação, são agregadas todas as disciplinas e períodos para cada professor.
@@ -194,17 +208,22 @@ O
 [modelo de dados e a proposta de comentários](Modelo%20de%20Dados.md)
 foram publicados na [issue #109](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/109).
 Este guia descreve as operações do backend, incluindo os comentários abaixo; as
-regras futuras de reações e moderação serão consolidadas e revisadas
+regras de comentários, reações, denúncia e moderação são consolidadas e revisadas
 na [issue #116](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/116).
 
 ## Comentários
 
-O perfil do professor lista, e usuários autenticados publicam, editam e excluem,
-comentários sobre a experiência com um professor em uma disciplina que ele
-ministra. As regras de negócio estão em [Comentários](COMENTARIOS.md). Denúncias
-privadas já têm backend (#215). Reações (#212), ordenação escolhida (#213),
-filtro automático (#214), moderação (#216) e retenção (#217) seguem planejados
-ou em revisão, conforme o [estado da interface](ESTADO_DA_INTERFACE.md).
+O perfil do professor lista comentários anônimos; usuários autenticados podem
+publicar, editar, excluir, reagir e denunciar. O filtro automático é aplicado
+antes de publicar ou editar. Moderadores autorizados tratam denúncias e
+contestações na área restrita, com decisões justificadas. As regras e limites
+estão em [Comentários](COMENTARIOS.md).
+
+`POST /comentarios/<id>/reacao` exige login e CSRF. Aceita `valor` 1, -1 ou 0
+(remover). O servidor verifica visibilidade e autoria e usa a conta da sessão.
+`ReacaoRepository` usa upsert pela chave composta e exclusão restrita à conta.
+O controller enriquece a listagem com `curtidas`, `descurtidas` e `minha_reacao`,
+sem devolver identificadores de quem reagiu. A resposta redireciona ao perfil.
 
 **Repositório.** `ComentarioRepository` (em `app/repositorio.py`) acessa a
 tabela `comentarios`. Como o backend usa a service key, que ignora RLS, a
@@ -218,9 +237,6 @@ autoria e o vínculo entre professor e disciplina são conferidos no servidor:
   Cada comentário tem apenas `id`, `texto`, `disciplina_nome`,
   `disciplina_codigo`, `criado_em`, `editado` e `e_meu`, este calculado no
   servidor. O `usuario_id` não integra o resultado da listagem pública.
-- `listar_do_usuario(usuario_id)` lista os 50 comentários publicados mais recentes
-  da conta autenticada, com professor e disciplina, para Meus comentários no
-  perfil pessoal; não altera o contrato JSON de `/perfil`.
 - `buscar_do_usuario(comentario_id, usuario_id)` devolve o comentário se for
   do usuário, ou `None`.
 - `criar(usuario_id, professor_id, disciplina_id, texto)` e

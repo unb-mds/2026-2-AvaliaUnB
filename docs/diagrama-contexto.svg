@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 405" role="img" aria-labelledby="titulo descricao">
   <title id="titulo">Diagrama de contexto do AvaliaUnB</title>
-  <desc id="descricao">Visitantes consultam o catálogo, médias, comparação e comentários. Com Google, estudantes avaliam turmas, comentam, denunciam e gerenciam favoritos. O Supabase Auth gerencia a sessão e usa a conta Google como provedor de login. O scraper coleta os dados do SIGAA para o catálogo.</desc>
+  <desc id="descricao">Visitantes consultam catálogo, médias, comparação, ranking e comentários. Com Google, estudantes avaliam turmas, comentam, reagem, denunciam e gerenciam favoritos. Moderadores autorizados tratam denúncias e contestações. O Supabase Auth gerencia a sessão e o scraper coleta dados do SIGAA para o catálogo.</desc>
   <defs>
     <marker id="seta" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse">
       <path d="M0 0L10 5 0 10Z" fill="#4b6380"/>

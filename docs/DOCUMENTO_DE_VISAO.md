@@ -102,7 +102,7 @@ O sistema é estruturado em uma arquitetura modular em camadas:
 
 - **Camada de Apresentação (Frontend / Client UI):** Interface web construída com HTML5/CSS3/JS e templates renderizados dinamicamente via Jinja2.
 - **Camada de Controle (Controllers):** Contém o *Autenticação Controller* (gestão de sessões e segurança), *Avaliação Controller* (cálculo de notas e validação) e *Professor/Turma Controller* (consultas, buscas e filtros).
-- **Camada de Serviços e Repositórios:** Inclui os repositórios de usuários, professores, avaliações e comentários, integrados ao Supabase, e o scraper SIGAA executado separadamente. A persistência de comentários (listar, publicar, editar e excluir) está implementada; reações, filtro automático, denúncia e moderação ainda são propostas.
+- **Camada de Serviços e Repositórios:** Inclui repositórios de usuários, professores, avaliações, comentários, reações, denúncias e moderação, integrados ao Supabase, e o scraper SIGAA executado separadamente. Listagem anônima, publicação, edição/exclusão, reações, filtro automático, denúncias, moderação, contestações e retenção estão implementados na `main`; consulte [Estado da interface](ESTADO_DA_INTERFACE.md).
 - **Camada de Dados:** Supabase (PostgreSQL e Auth); cookies do navegador guardam tokens de autenticação. O catálogo pode ser mantido em cache por processo no backend.
 
 ---
@@ -128,6 +128,12 @@ Consulte [Funcionalidades](FUNCIONALIDADES.md) para saber o que já existe e
 | **RF10** | Moderação de Avaliações | Permitir a denúncia e remoção de comentários com linguagem ofensiva. | Média (R2) |
 | **RF11** | Favoritar Professores | Salvar professores na lista pessoal do usuário para acompanhamento rápido. | Baixa (R2) |
 | **RF12** | Gráficos de Desempenho | Apresentar gráficos visuais da evolução das notas do professor ao longo dos semestres. | Baixa (R2) |
+
+A [decisão #242](DECISAO_HISTORICO_SEMESTRES.md) propõe preservar o histórico
+necessário a RF04 e RF12 e priorizar o semestre de oferta ativo em RF03.
+O histórico permanece consultável; a apresentação por período não redefine
+as notas, as médias ou os critérios de ranking. A implementação da nova
+apresentação é uma etapa posterior à ratificação da decisão.
 
 ---
 

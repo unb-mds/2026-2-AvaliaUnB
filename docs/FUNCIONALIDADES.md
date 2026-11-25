@@ -6,7 +6,7 @@ No próprio comentário, **Editar** e **Excluir** ficam juntos, como botões
 em contorno com área de toque mínima de 44 px. Só o autor autenticado recebe
 essas ações. Editar abre o texto e a disciplina já preenchidos; salvar ou
 cancelar retorna aos comentários do professor, mantendo o filtro de comentários,
-a disciplina das médias e o destino de volta à busca. Excluir continua exigindo
+a ordem, a disciplina das médias e o destino de volta à busca. Excluir continua exigindo
 confirmação.
 
 O perfil pessoal (`/perfil`) também oferece **Meus comentários**, com os 50
@@ -27,21 +27,41 @@ entregas e do planejamento fica no
 
 ## Busca de professores e disciplinas
 
-A página `/professores` aceita os filtros `nome`, `disciplina` e `departamento`
-pela URL. Eles podem ser usados juntos. Nome do professor e nome ou código da
-disciplina aceitam correspondência parcial; departamento exige igualdade
-depois da normalização.
+A página `/professores` aceita os filtros `nome`, `disciplina`, `departamento`,
+`nota_min`, `nota_max` e `avaliacoes_min` pela URL (RF09 — Filtros avançados).
+Eles funcionam isoladamente ou combinados entre si e com a busca unificada `q`.
+Nome do professor e nome ou código da disciplina aceitam correspondência
+parcial; departamento exige igualdade depois da normalização; `nota_min` e
+`nota_max` filtram pela média geral do professor (0 a 5, aceitando ponto ou
+vírgula decimal, excluindo docentes sem avaliações válidas); e `avaliacoes_min`
+exige uma quantidade mínima de avaliações registradas.
+
+### Ofertas por semestre (proposta #242)
+
+Hoje a busca consulta todas as ofertas históricas. A opção híbrida propõe
+priorizar o semestre ativo na busca e no catálogo, com opções de outros
+períodos e de todos os semestres. Um professor sem oferta atual ainda pode ser
+consultado no histórico e pelo link de perfil. A seleção deve ser explícita,
+com estado vazio próprio, e não alterar as notas históricas do professor.
+O novo filtro de oferta ainda não está implementado; ele é independente do
+filtro de médias e do semestre cursado já existentes. Veja a
+[decisão #242](DECISAO_HISTORICO_SEMESTRES.md).
 
 A normalização ignora acentos, maiúsculas e espaços extras. A lista é ordenada
 pela quantidade de avaliações, com desempate por nome e identificador.
 Essa ordenação é diferente do ranking, que usa a média das notas.
+Os nomes de professores, disciplinas e departamentos são armazenados em grafia
+comum (por exemplo, "Ana de Souza"); a ordenação por nome também ignora caixa e
+acento.
 
 O seletor **Departamento** é preenchido com os departamentos distintos do
-catálogo completo, em ordem alfabética. Substitui os atalhos fixos de áreas.
-O botão **Filtrar departamento** combina a seleção com a pesquisa atual e
-reinicia a paginação. A busca também preserva o departamento selecionado.
-**Todos os departamentos** remove somente esse filtro; **Limpar filtros**
-restaura a consulta completa. Os formulários funcionam sem JavaScript.
+catálogo completo, em ordem alfabética, acompanhado pelos campos numéricos
+**Nota mínima**, **Nota máxima** e **Mínimo de avaliações**. O botão
+**Filtrar** combina esses critérios com a pesquisa atual e reinicia a
+paginação; a busca por texto também preserva os filtros ativos na URL e na
+navegação de retorno do perfil (`next`). **Todos os departamentos** remove
+somente o filtro de unidade; **Limpar filtros** restaura a consulta completa.
+Os formulários funcionam sem JavaScript.
 
 Em cada cartão da lista, cada disciplina mostra a dificuldade média e a
 quantidade de avaliações daquela disciplina, ou "Sem avaliações ainda" quando
@@ -76,7 +96,7 @@ e a tela de avaliar uma nova avaliação tem uma linha convidando a comentar, co
 link para essa seção, fora do formulário de notas.
 
 Cada usuário autenticado pode registrar uma avaliação por combinação de
-professor, disciplina e semestre cursado, com notas inteiras de um a cinco para os cinco critérios:
+professor e disciplina, com notas inteiras de um a cinco para os cinco critérios:
 
 | Critério | Interpretação |
 |---|---|
@@ -109,6 +129,10 @@ professor, disciplina e semestre cursado, com notas inteiras de um a cinco para 
 - **Edição:** mostra a turma ("Turma de 2026/1"), mas não permite trocá-la; para
   mudar o semestre, a pessoa exclui e avalia de novo.
 
+A [decisão #242](DECISAO_HISTORICO_SEMESTRES.md) preserva esse comportamento:
+o futuro padrão de oferta atual não limita a escolha da turma cursada. Não há
+remoção automática de avaliações ou comentários ao trocar o período de oferta.
+
 ### Médias: todos os semestres ou um semestre
 
 - O **topo do perfil** (nota grande e estrelas) é sempre a média de todas as
@@ -116,7 +140,7 @@ professor, disciplina e semestre cursado, com notas inteiras de um a cinco para 
 - Em **Médias Consolidadas**, o padrão **Todos** é a média de todas as avaliações
   da disciplina escolhida. Os botões de semestre (parâmetro `semestre=2026-2`)
   mostram só as avaliações daquela turma; o resumo indica o recorte
-  ("CÁLCULO 1 · 2025/2 · 3 avaliações"). Semestre inválido volta para Todos. Os
+  ("Cálculo 1 · 2025/2 · 3 avaliações"). Semestre inválido volta para Todos. Os
   botões só aparecem quando a disciplina tem mais de uma turma.
 - O botão **Avaliar este Professor** leva o semestre filtrado para o formulário.
 
@@ -152,9 +176,14 @@ avaliações de produção até 21/11/2026 estão em 2026/2).
 
 O perfil do professor tem uma seção **Comentários**, separada das notas.
 
-- **Listagem:** mostra os 50 comentários mais recentes (ordem fixa: mais
-  recentes primeiro) e avisa "Mostrando os 50 comentários mais recentes." quando
-  há mais. O "ver mais" e a escolha da ordem (issue #213) ficam para depois.
+- **Listagem:** mostra os 50 primeiros comentários na ordem escolhida e avisa
+  "Mostrando os 50 primeiros comentários." quando há mais. Não há paginação; o
+  "ver mais" fica para depois.
+- **Ordem:** o parâmetro `ordem` aceita `recentes` (padrão), `antigos`, `curtidos`
+  (maior número de 👍) e `reacoes` (maior total de 👍 + 👎). Em empate, o mais
+  recente vem primeiro; em `antigos`, o mais antigo. Valor inválido volta a
+  `recentes`, sem erro. Combina com `comentarios_disciplina` e é mantida ao
+  publicar, editar, excluir, denunciar e reagir (issues #212, #213 e #215).
 - **Filtro:** o parâmetro `comentarios_disciplina` filtra por disciplina. Vazio ou
   inválido volta a "Todas as disciplinas", sem erro. Ele é independente do
   `disciplina_id`, que escolhe as médias.
@@ -166,6 +195,12 @@ O perfil do professor tem uma seção **Comentários**, separada das notas.
   verificado). Texto de 2 a 1.000 caracteres e uma disciplina ministrada pelo
   professor. O autor vem da sessão. Há um limite de 10 comentários por hora por
   usuário, separado do das avaliações.
+- **Filtro automático:** ao publicar e ao editar, o texto é verificado no
+  servidor, depois da validação de tamanho. Dados pessoais (e-mail, telefone,
+  CPF e matrícula), links e palavrões ou ofensas são recusados com HTTP 400, o
+  texto digitado é preservado e a mensagem junto ao campo informa só a
+  categoria. Na edição, o comentário original não muda. Veja a
+  [especificação](COMENTARIOS.md).
 - **Editar e excluir:** só o autor, nas páginas `/comentarios/<id>/editar` e
   `/comentarios/<id>/excluir` (a exclusão passa por uma confirmação). O
   comentário de outra pessoa, ou inexistente, responde HTTP 404.
@@ -174,10 +209,7 @@ O perfil do professor tem uma seção **Comentários**, separada das notas.
   exige aplicar a [migração de privacidade](migrations/20261122155752_anonimato_comentarios.sql)
   depois das migrações existentes. Login e permissões do autor continuam necessários.
 
-Denúncias privadas já estão implementadas (#215). Like/dislike (#212),
-ordenação escolhida pela pessoa (#213), filtro automático (#214), moderação
-(#216) e retenção (#217) permanecem planejados ou em revisão; veja o
-[estado da interface](ESTADO_DA_INTERFACE.md) e as [regras dos comentários](COMENTARIOS.md).
+Reações, denúncia, moderação e ocultação não fazem parte desta entrega; veja as [regras dos comentários](COMENTARIOS.md).
 
 ## Perfil do usuário
 
@@ -218,9 +250,8 @@ comparação por disciplina (quando há outro docente na mesma matéria) ou para
 seleção livre. A lista de professores selecionados pode ser ajustada pelos
 botões **Adicionar professor** e **Remover professor**.
 
-No modo por disciplina, as médias consideram apenas a disciplina escolhida;
-no modo livre, consideram todas as disciplinas. Cada avaliação válida tem
-o mesmo peso, em qualquer período. Os dados são consultados a cada
+As médias consideram apenas a disciplina escolhida, com o mesmo peso por
+avaliação válida em qualquer período. Os dados são consultados a cada
 comparação e exibidos com duas casas decimais. Professores sem avaliações
 válidas aparecem com um aviso. No celular, a tabela rola na horizontal e
 mantém a coluna dos critérios visível.
@@ -234,6 +265,8 @@ todos os professores empatados recebem o destaque.
 
 Links antigos com `professor_1` e `professor_2` continuam mostrando as médias
 gerais do par e oferecem acesso à comparação por disciplina.
+
+## Ranking de professores (RF07)
 
 ## Ranking de professores (RF07)
 
@@ -256,14 +289,11 @@ catálogo. Se ninguém atingir o mínimo, a página informa esse estado.
 
 ## Funcionalidades planejadas
 
-Like/dislike (#212), ordenação escolhida pela pessoa (#213), filtro automático
-(#214), moderação (#216), retenção (#217) e filtros por faixa de nota e volume
-(#221) permanecem planejados ou em revisão. O gráfico de evolução (#224),
-os favoritos (#223) e as denúncias (#215) já têm implementação.
-
-A [especificação de comentários](COMENTARIOS.md) e o
-[estado da interface](ESTADO_DA_INTERFACE.md) separam regras entregues e futuras.
-Nenhuma evolução planejada deve reintroduzir a identificação pública do autor.
+A priorização do semestre ativo no catálogo e a seleção de outros períodos
+continuam como evolução futura da decisão híbrida #242. As avaliações e ofertas
+históricas permanecem disponíveis. Confira o [estado da interface](ESTADO_DA_INTERFACE.md)
+e a [decisão sobre histórico](DECISAO_HISTORICO_SEMESTRES.md) antes de tratar
+uma proposta como implementação existente.
 
 Relacionado: [visão e requisitos](DOCUMENTO_DE_VISAO.md), [backend](BACKEND.md),
 [frontend](FRONTEND.md) e [mapa da documentação](GUIA_DOCUMENTACAO.md).

@@ -1,5 +1,6 @@
 {% from '_macros.html' import icone_seta, nota, barra_dificuldade %}
 {% from '_acoes_comentario.html' import acoes_comentario %}
+{% set ordem_url = ordem_comentarios if ordem_comentarios != 'recentes' else None %}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{ professor.nome }} - AvaliaUnb</title><link rel="stylesheet" href="{{ url_for('static', filename='indicadores.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='evolucao.css') }}">{% include '_tema.html' %}</head>
@@ -11,7 +12,7 @@
         {% set ns = namespace(soma=0, n=0) %}
         {% for c in criterios if c != 'dificuldade' and geral.quantidade %}{% set ns.soma = ns.soma + geral.medias[c] %}{% set ns.n = ns.n + 1 %}{% endfor %}
         <header class="profile-top">
-            <div class="profile-avatar" aria-hidden="true">{% for parte in professor.nome.split()[:2] %}{{ parte[0] }}{% endfor %}</div>
+            <div class="profile-avatar" aria-hidden="true">{{ professor.nome|iniciais }}</div>
             <div class="profile-title">
                 <h1>{{ professor.nome }}</h1>
                 <p>{{ professor.departamento }}</p>
@@ -57,6 +58,7 @@
                 <form method="get" class="filtro-disciplina">
             <input type="hidden" name="next" value="{{ next_url }}">
             {% if filtro_comentarios %}<input type="hidden" name="comentarios_disciplina" value="{{ filtro_comentarios }}">{% endif %}
+            {% if ordem_comentarios and ordem_comentarios != 'recentes' %}<input type="hidden" name="ordem" value="{{ ordem_comentarios }}">{% endif %}
             <div class="campo campo-busca">
                 <label for="disciplina_id">Disciplina</label>
 
@@ -79,10 +81,10 @@
             {% if semestres_medias|length > 1 %}
             <nav class="filters semestre-filtro" aria-label="Semestre das médias">
                 <a class="filter{% if not semestre_medias %} active{% endif %}"{% if not semestre_medias %} aria-current="true"{% endif %}
-                   href="{{ url_for('professores.perfil', professor_id=professor.id, next=next_url, disciplina_id=disciplina.id, comentarios_disciplina=filtro_comentarios, _anchor='titulo-medias') }}">Todos</a>
+                   href="{{ url_for('professores.perfil', professor_id=professor.id, next=next_url, disciplina_id=disciplina.id, comentarios_disciplina=filtro_comentarios, ordem=ordem_url, _anchor='titulo-medias') }}">Todos</a>
                 {% for s in semestres_medias %}
                 <a class="filter{% if s.valor == semestre_medias_valor %} active{% endif %}"{% if s.valor == semestre_medias_valor %} aria-current="true"{% endif %}
-                   href="{{ url_for('professores.perfil', professor_id=professor.id, next=next_url, disciplina_id=disciplina.id, comentarios_disciplina=filtro_comentarios, semestre=s.valor, _anchor='titulo-medias') }}">{{ s.rotulo }}</a>
+                   href="{{ url_for('professores.perfil', professor_id=professor.id, next=next_url, disciplina_id=disciplina.id, comentarios_disciplina=filtro_comentarios, ordem=ordem_url, semestre=s.valor, _anchor='titulo-medias') }}">{{ s.rotulo }}</a>
                 {% endfor %}
             </nav>
             {% endif %}
@@ -131,7 +133,7 @@
                         {% for chave, titulo in criterios_evolucao.items() %}
                         <a class="filter{% if chave == evolucao.criterio %} active{% endif %}"
                            {% if chave == evolucao.criterio %}aria-current="true"{% endif %}
-                           href="{{ url_for('professores.perfil', professor_id=professor.id, next=next_url, disciplina_id=disciplina.id if disciplina else None, comentarios_disciplina=filtro_comentarios, evolucao_criterio=None if chave == 'geral' else chave, _anchor='evolucao') }}">{{ 'Disponibilidade' if chave == 'disponibilidade' else titulo }}</a>
+                           href="{{ url_for('professores.perfil', professor_id=professor.id, next=next_url, disciplina_id=disciplina.id if disciplina else None, comentarios_disciplina=filtro_comentarios, ordem=ordem_url, evolucao_criterio=None if chave == 'geral' else chave, _anchor='evolucao') }}">{{ 'Disponibilidade' if chave == 'disponibilidade' else titulo }}</a>
                         {% endfor %}
                     </nav>
                     {% set primeiro = g.pontos[0] %}{% set ultimo = g.pontos[-1] %}
@@ -202,6 +204,7 @@
                 <input type="hidden" name="next" value="{{ next_url }}">
                 {% if disciplina %}<input type="hidden" name="disciplina_medias" value="{{ disciplina.id }}">{% endif %}
                 {% if filtro_comentarios %}<input type="hidden" name="comentarios_disciplina" value="{{ filtro_comentarios }}">{% endif %}
+            {% if ordem_comentarios and ordem_comentarios != 'recentes' %}<input type="hidden" name="ordem" value="{{ ordem_comentarios }}">{% endif %}
 
 
 
@@ -252,6 +255,14 @@
                         {% endfor %}
                     </select>
                 </div>
+                <div class="campo">
+                    <label for="ordem">Ordenar por</label>
+                    <select name="ordem" id="ordem">
+                        {% for valor, rotulo in [('recentes', 'Mais recentes'), ('antigos', 'Mais antigos'), ('curtidos', 'Mais curtidos'), ('reacoes', 'Mais reações')] %}
+                        <option value="{{ valor }}" {% if valor == ordem_comentarios %}selected{% endif %}>{{ rotulo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
                 <button type="submit" class="botao botao-secundario">Filtrar</button>
             </form>
             {% endif %}
@@ -268,18 +279,19 @@
                         {% if c.editado %}<span class="comentario-editado">(editado)</span>{% endif %}
                     </p>
                     <p class="comentario-texto">{% for linha in c.texto.splitlines() %}{{ linha }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>
+                    {% include '_reacoes_comentario.html' %}
                     {% if c.e_meu %}
-                    {{ acoes_comentario(c.id, next_url, filtro_comentarios, disciplina.id if disciplina else None) }}
+                    {{ acoes_comentario(c.id, next_url, filtro_comentarios, disciplina.id if disciplina else None, ordem=ordem_url) }}
                     {% elif usuario %}
                     <p class="comentario-acoes">
-                        <a class="acao-denunciar" href="{{ url_for('professores.denunciar_comentario', comentario_id=c.id, next=next_url, comentarios_disciplina=filtro_comentarios) }}">Denunciar</a>
+                        <a class="acao-denunciar" href="{{ url_for('professores.denunciar_comentario', comentario_id=c.id, next=next_url, comentarios_disciplina=filtro_comentarios, ordem=ordem_url) }}">Denunciar</a>
                     </p>
                     {% endif %}
                 </article></li>
                 {% endfor %}
             </ul>
             {% if ha_mais %}
-            <p class="ajuda comentarios-limite">Mostrando os {{ limite_comentarios }} comentários mais recentes.</p>
+            <p class="ajuda comentarios-limite">Mostrando os {{ limite_comentarios }} primeiros comentários.</p>
             {% endif %}
             {% else %}
             <p class="mensagem" role="status">

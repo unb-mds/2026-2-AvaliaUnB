@@ -1,6 +1,6 @@
 # Design system
 
-Referência da interface editorial atual do AvaliaUnB, conferida em 22/11/2026
+Referência da interface editorial atual do AvaliaUnB, conferida em 24/11/2026
 na revisão da #170. Os protótipos antigos da #112 são histórico de exploração;
 a paleta azul e a home “Bem-vindo” não descrevem a interface atual. O
 [inventário do frontend](FRONTEND.md) lista os recursos realmente carregados,
@@ -97,7 +97,7 @@ complementares. A aba ativa usa `aria-current`.
 | Perfil pessoal | Conta, Favoritos, Meus comentários e Minhas Avaliações |
 | Evolução | Gráfico SVG por semestre e tabela alternativa; mensagem com um só semestre ou sem dados |
 | Mensagem | Diferencia resultado vazio, erro, ausência de notas e validação do formulário |
-| Reação (planejada, #212) | Polegares em contorno, com contagens, troca/remoção e sem voto no próprio comentário |
+| Reação (#212, estilo #270) | Polegares com contagens, troca/remoção e sem voto no próprio comentário; seleção indicada por ícone preenchido e `aria-pressed` |
 
 ## Barra de dificuldade
 
