@@ -10,6 +10,14 @@ ser registrada. Esta decisão não
 
 ## Contexto e diagnóstico
 
+O diagnóstico abaixo registra a base anterior à implementação das #278–#280.
+Os PRs [#282](https://github.com/unb-mds/2026-2-AvaliaUnB/pull/282),
+[#283](https://github.com/unb-mds/2026-2-AvaliaUnB/pull/283) e
+[#284](https://github.com/unb-mds/2026-2-AvaliaUnB/pull/284) entregam, separadamente,
+configuração explícita, filtro de ofertas e validação operacional. O
+[guia de semestres](SEMESTRE_ATUAL.md) descreve a ativação; entregar o código não
+confirma automaticamente o semestre de produção.
+
 O workflow da #225 coleta um par de ano e período por execução; a persistência
 reaproveita professores e disciplinas e faz upsert de turmas por professor,
 disciplina, ano e período. O catálogo e os backups preservam os períodos anteriores.

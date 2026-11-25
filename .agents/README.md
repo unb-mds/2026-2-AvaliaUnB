@@ -1,5 +1,19 @@
 # Agentes de IA utilizados
 
+## Semestre atual e preservação do histórico (novembro de 2026, #278–#280)
+
+| Item | Detalhe |
+|---|---|
+| Ferramenta | Codex |
+| Pedido | Implementar a decisão híbrida da #242, com testes e validação da coleta de 2026/2 para a entrega |
+| Resultado | PR #282 para configuração, #283 para filtro de ofertas e #284 para validação operacional; um PR por issue |
+| Decisão técnica | Arquivo versionado para configuração, sem migração; histórico preservado, confirmação explícita após coleta completa e persistência conferida |
+| Verificação | Suíte local (716 testes), MkDocs estrito, Bandit, YAML, sintaxe do JavaScript e navegador nos temas claro/escuro e viewport móvel com dados fictícios; resultados remotos e da coleta nos PRs |
+
+A coleta completa inicial foi simulada sem gravar no banco. A execução de gravação
+e sua validação têm evidências próprias nos PRs e no workflow; o simples resultado
+do dry-run não comprova que todos os vínculos existem no ambiente publicado.
+
 Registro das ferramentas de IA usadas no projeto, para transparência e reprodutibilidade.
 A visão geral, com as ferramentas de cada integrante e as regras seguidas, está em
 [`docs/USO_DE_IA.md`](../docs/USO_DE_IA.md).

@@ -1,5 +1,9 @@
 # Conferência do FigJam — issue #170
 
+Este registro descreve a conferência na base `cea8ece`, antes da implementação
+das #278–#280. Para o comportamento posterior do filtro de ofertas, consulte
+[Semestre atual e consulta histórica](SEMESTRE_ATUAL.md).
+
 Referência de código: `cea8eced5b7f222ddd9d863a3a33c0d7a7fed560` da `main`,
 conferida em 25/11/2026. A revisão de alinhamento documental do
 [board canônico](https://www.figma.com/board/PgqkPopVXOiSqm9gD5RRNv/AvaliaAi---Template-MDS?node-id=0-1)

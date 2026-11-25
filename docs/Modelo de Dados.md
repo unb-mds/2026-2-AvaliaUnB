@@ -107,11 +107,11 @@ Vínculo entre professor e disciplina em um semestre. Alimentada pelo scraper.
   substituem os anteriores. Reexecutar a coleta do mesmo período reaproveita a
   chave composta. Professores e disciplinas de períodos antigos continuam
   disponíveis e os vínculos das avaliações são preservados.
-- **Decisão #242 (proposta C):** manter esse esquema; o semestre atual deverá ser
-  uma configuração explícita validada após a coleta, não uma exclusão de turmas
-  nem o maior par presente no banco. A configuração ainda não existe no SQL
-  versionado. O modelo e a validação dessa configuração ficam para a futura
-  implementação da [decisão](DECISAO_HISTORICO_SEMESTRES.md).
+- **Decisão #242 (opção C):** o esquema e o histórico são preservados. O semestre
+  atual é explícito em `config/semestre_atual.json` (#278), sem nova tabela ou
+  migração. A confirmação exige cobertura e persistência validadas (#280) e
+  revisão/deploy do arquivo. Sem definição, vale a consulta histórica; a data ou
+  o maior par no banco não ativam períodos. Veja o [guia](SEMESTRE_ATUAL.md).
 
 ### 2.4 `perfis`
 

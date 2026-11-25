@@ -387,11 +387,27 @@ Ao trocar de semestre, atualize também os padrões de `--ano` e `--periodo` em
 
 ### Segurança das chaves
 
+### Confirmação do semestre atual (#280)
+
+Para atualizar o padrão da Consulta após uma coleta completa, use finalidade
+**regular**, modo **gravar**, deixe `unidades` vazio e preencha
+`confirmar_semestre` com o par exato (por exemplo, `2026-2`). O workflow salva
+backup antes de escrever e gera `coleta.json`. A proposta de configuração só é
+gerada se a cobertura, os vínculos, a persistência e as duplicatas passarem nas
+verificações. A ativação exige merge e deploy do arquivo revisado no PR de dados.
+
+Uma coleta somente simulada, histórica, antecipada, parcial, vazia ou com falha
+não altera o semestre atual. O [guia de semestres](SEMESTRE_ATUAL.md) detalha os
+critérios, o rollback e a separação entre oferta e notas históricas.
+
+### Segurança das chaves e proteção do ambiente
+
 - A chave de serviço existe só como *secret* do environment `producao`. Ela não fica
   no repositório nem nos logs: o GitHub mascara segredos na saída.
 - O job de `dry-run` e o teste de fumaça não recebem nenhuma chave.
-- Toda gravação no banco precisa de aprovação de um revisor e fica registrada na aba
-  Actions, com quem disparou e quem aprovou.
+- As regras de aprovação do environment `producao` precisam estar configuradas
+  no GitHub para exigir revisor. A execução fica registrada na aba Actions;
+  a presença do nome do ambiente no YAML, sozinha, não comprova essa proteção.
 - Os campos do formulário chegam ao script por variáveis de ambiente, e `unidades`
   aceita só números. Isso evita injeção de comandos pelo formulário.
 
