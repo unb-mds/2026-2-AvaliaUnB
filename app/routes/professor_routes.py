@@ -31,7 +31,8 @@ def sugestoes():
     """Autocompletar da busca unificada (JSON): professores, disciplinas e departamentos."""
     return jsonify({'sugestoes': controller.sugestoes(request.args.get('q', ''),
                                                       request.args.get('limite'),
-                                                      request.args.get('contexto'))})
+                                                      request.args.get('contexto'),
+                                                      request.args.get('oferta'))})
 
 
 @professor_bp.get('/busca/professores')
@@ -57,8 +58,10 @@ def ranking():
 @professor_bp.get('/professores')
 def listar():
     filtros = {campo: request.args.get(campo, '').strip() for campo in CAMPOS_FILTRO}
+    oferta = controller.carregar_oferta(request.args.get('oferta'))
+    filtros['oferta'] = oferta['valor']
     departamentos, filtros['departamento'] = controller.carregar_filtro_departamento(
-        filtros['departamento'])
+        filtros['departamento'], semestre=oferta['semestre'])
     catalogo = controller.catalogo(**filtros)
     pagina = request.args.get('pagina')
     paginacao = controller.paginar_catalogo(catalogo, pagina)
@@ -67,7 +70,7 @@ def listar():
                            paginacao=paginacao, dificuldades=dificuldades,
                            disciplinas_cartao=controller.organizar_disciplinas(
                                paginacao['itens'], dificuldades),
-                           filtros=filtros, departamentos=departamentos,
+                           filtros=filtros, departamentos=departamentos, oferta=oferta,
                            usuario=obter_usuario_atual())
 
 

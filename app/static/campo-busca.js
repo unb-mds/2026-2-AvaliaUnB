@@ -188,6 +188,10 @@
             controle = window.AbortController ? new AbortController() : null;
             var url = endereco + '?q=' + encodeURIComponent(termo) +
                 '&contexto=' + encodeURIComponent(contexto);
+            var oferta = document.getElementById('oferta-consulta');
+            if (contexto === 'consulta' && oferta) {
+                url += '&oferta=' + encodeURIComponent(oferta.value);
+            }
             fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin',
                          signal: controle ? controle.signal : undefined })
                 .then(function (resposta) { return resposta.ok ? resposta.json() : { sugestoes: [] }; })
@@ -198,6 +202,17 @@
                     }
                 })
                 .catch(function () { /* abortada ou sem rede: o formulário continua valendo */ });
+        }
+
+        var seletorOferta = document.getElementById('oferta-consulta');
+        if (contexto === 'consulta' && seletorOferta) {
+            seletorOferta.addEventListener('change', function () {
+                clearTimeout(temporizador);
+                pedido += 1;
+                if (controle) { controle.abort(); }
+                mostrar([], '');
+                if (document.activeElement === entrada) { buscar(); }
+            });
         }
 
         entrada.addEventListener('input', function () {
@@ -237,6 +252,18 @@
                 lista.hidden = false;
                 entrada.setAttribute('aria-expanded', 'true');
             }
+        });
+    });
+})();
+
+// A pesquisa e o filtro compartilham a mesma seleção de oferta. Sem JS, o botão
+// Filtrar continua enviando o formulário completo ao servidor.
+(function () {
+    var seletor = document.getElementById('oferta-consulta');
+    if (!seletor) { return; }
+    seletor.addEventListener('change', function () {
+        document.querySelectorAll('input[type="hidden"][name="oferta"]').forEach(function (campo) {
+            campo.value = seletor.value;
         });
     });
 })();

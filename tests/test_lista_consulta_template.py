@@ -114,6 +114,7 @@ class TestAvaliacoesSemDificuldade(BaseLista):
                                        paginacao['itens'], dificuldades),
                                    filtros={
                                        'nome': '', 'disciplina': '', 'departamento': '', 'q': ''},
+                                   oferta=controller.carregar_oferta(),
                                    usuario=None)
 
     def test_so_quantidade_sem_barra_nem_numero(self):
@@ -198,9 +199,9 @@ class TestPaginacao(BaseLista):
         proxima = re.search(r'<a [^>]*rel="next" href="([^"]+)"', html).group(1)
         anterior = re.search(r'<a [^>]*rel="prev" href="([^"]+)"', html).group(1)
         self.assertEqual(sorted(p for p in proxima.replace('&amp;', '&').split('?')[1].split('&') if not p.endswith('=')),
-                         ['departamento=FCTE', 'pagina=3'])
+                         ['departamento=FCTE', 'oferta=todos', 'pagina=3'])
         self.assertEqual(sorted(p for p in anterior.replace('&amp;', '&').split('?')[1].split('&') if not p.endswith('=')),
-                         ['departamento=FCTE', 'pagina=1'])
+                         ['departamento=FCTE', 'oferta=todos', 'pagina=1'])
 
 
 class FormulariosConsulta(HTMLParser):
@@ -209,6 +210,7 @@ class FormulariosConsulta(HTMLParser):
         self.formularios = []
         self.atual = None
         self.opcoes = []
+        self.seletor = None
         self.feed(html)
 
     def handle_starttag(self, tag, attrs):
@@ -218,12 +220,16 @@ class FormulariosConsulta(HTMLParser):
             self.formularios.append(self.atual)
         elif tag == 'input' and self.atual is not None and attrs.get('type') == 'hidden':
             self.atual['ocultos'][attrs['name']] = attrs.get('value', '')
-        elif tag == 'option':
+        elif tag == 'select':
+            self.seletor = attrs.get('name')
+        elif tag == 'option' and self.seletor == 'departamento':
             self.opcoes.append(attrs)
 
     def handle_endtag(self, tag):
         if tag == 'form':
             self.atual = None
+        elif tag == 'select':
+            self.seletor = None
 
 
 class TestFiltroDepartamentoConsulta(BaseLista):
@@ -249,7 +255,7 @@ class TestFiltroDepartamentoConsulta(BaseLista):
         parser = FormulariosConsulta(html)
         busca = next(f for f in parser.formularios if 'busca-unificada' in f['classe'])
         filtro = next(f for f in parser.formularios if 'filtro-departamento-consulta' in f['classe'])
-        self.assertEqual(busca['ocultos'], {'departamento': 'FCTE'})
+        self.assertEqual(busca['ocultos'], {'departamento': 'FCTE', 'oferta': 'todos'})
         self.assertEqual(filtro['ocultos'], {'q': 'lima'})
         self.assertNotIn('pagina', busca['ocultos'])
         self.assertNotIn('pagina', filtro['ocultos'])

@@ -206,6 +206,7 @@ class ProfessorRepository:
         self.cliente = cliente
         self._catalogo = None
         self._catalogo_em = 0.0
+        self._ofertas = []
 
     def buscar_por_id(self, professor_id):
         dados = (self.cliente.table('professores').select('id,nome,departamento')
@@ -234,7 +235,7 @@ class ProfessorRepository:
         professores = _paginar(lambda: self.cliente.table('professores')
                                .select('id,nome,departamento').order('id'))
         vinculos = _paginar(lambda: self.cliente.table('vw_professor_disciplina')
-                            .select('professor_id,disciplina_id,codigo_disciplina,disciplina')
+                            .select('professor_id,disciplina_id,codigo_disciplina,disciplina,ano,periodo')
                             .order('professor_id').order('disciplina_id'))
         avaliados = _paginar(lambda: self.cliente.table('avaliacoes')
                              .select(','.join(('professor_id', *CRITERIOS))).order('id'))
@@ -255,19 +256,40 @@ class ProfessorRepository:
                            self._disciplinas_unicas(por_professor.get(p['id'], [])))
                           for p in professores]
         self._catalogo_em = time.monotonic()
+        self._ofertas = vinculos
         return self._catalogo
 
-    def listar_departamentos(self):
+    def listar_semestres_ofertados(self):
+        """Períodos disponíveis no catálogo; não define qual deles é o atual."""
+        self._carregar_catalogo()
+        return sorted({(v['ano'], v['periodo']) for v in self._ofertas
+                       if type(v.get('ano')) is int and type(v.get('periodo')) is int
+                       and 1000 <= v['ano'] <= 9999 and v['periodo'] in (1, 2, 3, 4)},
+                      reverse=True)
+
+    def _catalogo_da_oferta(self, semestre=None):
+        catalogo = self._carregar_catalogo()
+        if semestre is None:
+            return catalogo
+        vinculos = {}
+        for oferta in self._ofertas:
+            if (oferta.get('ano'), oferta.get('periodo')) == semestre:
+                vinculos.setdefault(oferta['professor_id'], []).append(oferta)
+        # O recorte precede busca, filtros e paginação. Médias continuam históricas.
+        return [(p, self._disciplinas_unicas(vinculos[p['id']]))
+                for p, _ in catalogo if p['id'] in vinculos]
+
+    def listar_departamentos(self, semestre=None):
         """Departamentos distintos (opções do filtro do ranking), em ordem alfabética sem acento."""
         unicos = {}
-        for professor, _ in self._carregar_catalogo():
+        for professor, _ in self._catalogo_da_oferta(semestre):
             departamento = (professor.get('departamento') or '').strip()
             if departamento:
                 unicos.setdefault(normalizar_busca(departamento), departamento)
         return [unicos[chave] for chave in sorted(unicos)]
 
     def catalogo(self, nome='', disciplina='', departamento='', termo='',
-                 nota_minima=None, nota_maxima=None, avaliacoes_minimas=None):
+                 nota_minima=None, nota_maxima=None, avaliacoes_minimas=None, semestre=None):
         """[(professor, disciplinas)] filtrado sem distinguir acento/caixa/espaços,
         ordenado do mais avaliado para o menos avaliado (desempate: nome).
         `termo` é a busca unificada: casa com o nome do professor, o departamento
@@ -277,7 +299,7 @@ class ProfessorRepository:
         nome_n, disciplina_n = normalizar_busca(nome), normalizar_busca(disciplina)
         departamento_n, termo_n = normalizar_busca(departamento), normalizar_busca(termo)
         resultado = []
-        for professor, disciplinas in self._carregar_catalogo():
+        for professor, disciplinas in self._catalogo_da_oferta(semestre):
             if departamento_n and normalizar_busca(professor.get('departamento')) != departamento_n:
                 continue
             if nome_n not in normalizar_busca(professor['nome']):
@@ -301,7 +323,7 @@ class ProfessorRepository:
         return sorted(resultado, key=lambda i: (-i[0]['total_avaliacoes'], normalizar_busca(i[0]['nome']),
                                                 i[0]['id']))
 
-    def sugerir(self, termo, limite=LIMITE_SUGESTOES, tipos=TIPOS_SUGESTAO):
+    def sugerir(self, termo, limite=LIMITE_SUGESTOES, tipos=TIPOS_SUGESTAO, semestre=None):
         """Sugestões da busca unificada: [{tipo, id, texto, detalhe}].
 
         Ignora acentos, caixa e espaços. Quem começa com o termo vem antes de quem só o
@@ -312,7 +334,7 @@ class ProfessorRepository:
             return []
         candidatos = []  # (chave de ordenação, sugestão)
         disciplinas, departamentos = {}, {}
-        for professor, vinculos in self._carregar_catalogo():
+        for professor, vinculos in self._catalogo_da_oferta(semestre):
             if 'professor' in tipos:
                 posicao = _posicao_do_termo(termo_n, professor['nome'])
                 if posicao is not None:

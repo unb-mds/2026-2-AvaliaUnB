@@ -26,3 +26,16 @@ Flask `SEMESTRE_ATUAL_ARQUIVO` (útil em testes); o padrão é o arquivo version
 Alterar esta configuração não modifica o semestre cursado das avaliações,
 médias, ranking, evolução, comentários ou ofertas históricas. A coleta continua
 cumulativa. A decisão está em [Histórico de semestres](DECISAO_HISTORICO_SEMESTRES.md).
+
+## Filtro de ofertas (#279)
+
+A Consulta aceita `oferta=2026-2` (formato `AAAA-P`) e `oferta=todos`. Sem parâmetro,
+usa o semestre atual confirmado; sem configuração, usa o histórico completo e
+informa que o semestre atual ainda não foi definido. Período válido sem ofertas
+mostra estado vazio e conserva a seleção; formato inválido retorna HTTP 400.
+
+O recorte é aplicado antes da busca e paginação. Sugestões, departamentos e
+disciplinas dos cartões usam o mesmo recorte. Os links de paginação e o retorno
+do perfil preservam a escolha. A comparação, o ranking e os perfis históricos
+continuam acessíveis e suas médias não são alteradas pelo filtro de oferta.
+O seletor funciona com GET, inclusive sem JavaScript.

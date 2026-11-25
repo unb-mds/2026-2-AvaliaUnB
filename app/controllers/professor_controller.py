@@ -9,6 +9,8 @@ from app.repositorio import (CRITERIOS_RANKING, LIMITE_COMENTARIOS, LIMITE_SUGES
                              MAXIMO_SUGESTOES, MINIMO_AVALIACOES_RANKING,
                              ComentarioRepository, repositorios)
 from app.utils import normalizar_busca
+from semestres import (ARQUIVO_SEMESTRE_ATUAL, interpretar_semestre, ler_semestre_atual,
+                       texto_semestre, valor_semestre as valor_oferta)
 from app.validacoes import (CRITERIOS, MOTIVOS_DENUNCIA, validar_avaliacao,
                             validar_comentario, validar_denuncia)
 
@@ -83,7 +85,7 @@ def criterios():
 
 
 def catalogo(nome='', disciplina='', departamento='', q='',
-             nota_min='', nota_max='', avaliacoes_min=''):
+             nota_min='', nota_max='', avaliacoes_min='', oferta=''):
     """Lista [(professor, disciplinas)] ordenada pela quantidade de avaliações.
     `q` é a busca unificada (professor, disciplina ou departamento)."""
     return repositorios().professores.catalogo(
@@ -91,7 +93,33 @@ def catalogo(nome='', disciplina='', departamento='', q='',
         nota_minima=_nota_ou_none(nota_min),
         nota_maxima=_nota_ou_none(nota_max),
         avaliacoes_minimas=_minimo_avaliacoes_ou_none(avaliacoes_min),
+        semestre=interpretar_semestre(oferta) if oferta and oferta != 'todos' else None,
     )
+
+
+def carregar_oferta(valor_bruto=None):
+    """Contexto do filtro de ofertas, independente do semestre das notas no perfil."""
+    atual = ler_semestre_atual(current_app.config.get('SEMESTRE_ATUAL_ARQUIVO',
+                                                       ARQUIVO_SEMESTRE_ATUAL))
+    if valor_bruto in (None, ''):
+        selecionado = atual
+    elif valor_bruto == 'todos':
+        selecionado = None
+    else:
+        try:
+            selecionado = interpretar_semestre(valor_bruto)
+        except ValueError:
+            abort(400, description='Semestre de oferta inválido. Use AAAA-P ou todos.')
+    disponiveis = set(repositorios().professores.listar_semestres_ofertados())
+    # Uma seleção válida sem ofertas deve permanecer visível e exibir resultado vazio.
+    disponiveis.update(s for s in (atual, selecionado) if s is not None)
+    return dict(atual=atual, semestre=selecionado,
+                valor=valor_oferta(selecionado) if selecionado else 'todos',
+                valor_url=(valor_oferta(selecionado) if selecionado else 'todos')
+                          if atual is not None or valor_bruto else None,
+                rotulo=texto_semestre(selecionado) if selecionado else 'Todos os semestres',
+                opcoes=[{'valor': valor_oferta(s), 'rotulo': texto_semestre(s), 'atual': s == atual}
+                        for s in sorted(disponiveis, reverse=True)])
 
 PROFESSORES_POR_PAGINA = 100   # mesmo tamanho de página usado em lista_professores.html
 
@@ -174,28 +202,33 @@ CONTEXTOS_BUSCA = {
 }
 
 
-def _url_da_sugestao(sugestao, contexto):
+def _url_da_sugestao(sugestao, contexto, oferta=None):
     tipo, valor = sugestao['tipo'], sugestao['id']
     if contexto == 'comparacao':
         campo = 'professor_1' if tipo == 'professor' else 'disciplina_id'
         return url_for('professores.comparar', **{campo: valor})
     if tipo == 'professor':
-        return url_for('professores.perfil', professor_id=valor)
+        return url_for('professores.perfil', professor_id=valor,
+                       next=url_for('professores.listar', oferta=oferta) if oferta else None)
     if tipo == 'disciplina':
-        return url_for('professores.listar', disciplina=sugestao['detalhe'] or sugestao['texto'])
-    return url_for('professores.listar', departamento=valor)
+        return url_for('professores.listar', disciplina=sugestao['detalhe'] or sugestao['texto'],
+                       oferta=oferta)
+    return url_for('professores.listar', departamento=valor, oferta=oferta)
 
 
-def sugestoes(termo, limite_bruto=None, contexto_bruto=None):
+def sugestoes(termo, limite_bruto=None, contexto_bruto=None, oferta_bruta=None):
     """Sugestões da busca unificada prontas para o JSON: cada uma com tipo, rótulo do
     tipo, texto, detalhe e a URL de destino no contexto (Consulta ou Comparação)."""
     contexto = contexto_bruto if contexto_bruto in CONTEXTOS_BUSCA else 'consulta'
     limite = _inteiro_ou_none(limite_bruto)
     limite = LIMITE_SUGESTOES if limite is None else max(1, min(limite, MAXIMO_SUGESTOES))
+    oferta = carregar_oferta(oferta_bruta) if contexto == 'consulta' else None
     encontradas = repositorios().professores.sugerir(
-        (termo or '')[:100], limite, CONTEXTOS_BUSCA[contexto])
+        (termo or '')[:100], limite, CONTEXTOS_BUSCA[contexto],
+        semestre=oferta['semestre'] if oferta else None)
     return [{'tipo': s['tipo'], 'tipo_rotulo': ROTULOS_TIPO[s['tipo']], 'texto': s['texto'],
-             'detalhe': s['detalhe'], 'url': _url_da_sugestao(s, contexto)}
+             'detalhe': s['detalhe'], 'url': _url_da_sugestao(s, contexto,
+                                                          oferta['valor_url'] if oferta else None)}
             for s in encontradas]
 
 
@@ -413,9 +446,9 @@ def carregar_comparacao(dados):
                 minimo_avaliacoes_destaque=MINIMO_AVALIACOES_COMPARACAO)
 
 
-def carregar_filtro_departamento(departamento=''):
+def carregar_filtro_departamento(departamento='', semestre=None):
     """Opções reais do catálogo e grafia canônica do filtro informado."""
-    lista_departamentos = repositorios().professores.listar_departamentos()
+    lista_departamentos = repositorios().professores.listar_departamentos(semestre=semestre)
     chave = normalizar_busca(departamento)
     departamento_ativo = next(
         (dep for dep in lista_departamentos if normalizar_busca(dep) == chave),

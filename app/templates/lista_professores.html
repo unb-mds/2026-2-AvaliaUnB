@@ -33,7 +33,7 @@
        <header><div class="eyebrow">Conheça melhor seus professores</div><h1 class="page-title">Explorar professores<span class="accent">.</span></h1><p class="page-lead">Encontre avaliações de estudantes da UnB. Use a pesquisa e os filtros para refinar por nome, disciplina, departamento, nota ou volume de avaliações.</p></header>
 
        <form method="get" action="{{ url_for('professores.listar') }}" class="search psearch busca-unificada" role="search">
-            {% for campo in ('disciplina', 'departamento', 'nota_min', 'nota_max', 'avaliacoes_min') %}{% if filtros[campo] %}
+            {% for campo in ('disciplina', 'departamento', 'nota_min', 'nota_max', 'avaliacoes_min', 'oferta') %}{% if filtros[campo] %}
             <input type="hidden" name="{{ campo }}" value="{{ filtros[campo] }}">
             {% endif %}{% endfor %}
             <div class="campo campo-sugestoes" data-sugestoes="{{ url_for('professores.sugestoes') }}" data-contexto="consulta">
@@ -60,10 +60,24 @@
         </p>
         {% endif %}
 
+        <p class="ajuda" id="oferta-ajuda" role="status">
+            {% if oferta.semestre %}Ofertas de {{ oferta.rotulo }}.{% else %}Consultando ofertas de todos os semestres.{% endif %}
+            {% if not oferta.atual %}O semestre atual ainda não foi definido.{% endif %}
+            As notas e os comentários preservam o histórico.
+        </p>
         <form method="get" action="{{ url_for('professores.listar') }}" class="filtros filtro-departamento-consulta filtro-avancado-consulta" aria-label="Filtrar professores">
             {% for campo in ('q', 'nome', 'disciplina') %}{% if filtros[campo] %}
             <input type="hidden" name="{{ campo }}" value="{{ filtros[campo] }}">
             {% endif %}{% endfor %}
+            <div class="campo campo-semestre">
+                <label for="oferta-consulta">Semestre da oferta</label>
+                <select id="oferta-consulta" name="oferta" aria-describedby="oferta-ajuda">
+                    <option value="todos"{% if filtros.oferta == 'todos' %} selected{% endif %}>Todos os semestres</option>
+                    {% for opcao in oferta.opcoes %}
+                    <option value="{{ opcao.valor }}"{% if filtros.oferta == opcao.valor %} selected{% endif %}>{{ opcao.rotulo }}{% if opcao.atual %} (atual){% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
             <div class="campo campo-departamento">
                 <label for="departamento-consulta">Departamento</label>
                 <select id="departamento-consulta" name="departamento">
@@ -164,18 +178,21 @@
        {% if total_paginas > 1 %}
         <nav class="paginacao" aria-label="Paginação">
             {% if pagina > 1 %}
-            <a class="botao botao-secundario" rel="prev" href="{{ url_for('professores.listar', nome=filtros.nome, disciplina=filtros.disciplina, departamento=filtros.departamento, q=filtros.q, nota_min=filtros.nota_min or None, nota_max=filtros.nota_max or None, avaliacoes_min=filtros.avaliacoes_min or None, pagina=pagina - 1) }}">Anterior</a>
+            <a class="botao botao-secundario" rel="prev" href="{{ url_for('professores.listar', nome=filtros.nome, disciplina=filtros.disciplina, departamento=filtros.departamento, q=filtros.q, nota_min=filtros.nota_min or None, nota_max=filtros.nota_max or None, avaliacoes_min=filtros.avaliacoes_min or None, oferta=filtros.oferta, pagina=pagina - 1) }}">Anterior</a>
             {% else %}
             <span class="botao botao-secundario" aria-disabled="true">Anterior</span>
             {% endif %}
             <span class="paginacao-posicao" aria-current="page">Página {{ pagina }} de {{ total_paginas }}</span>
             {% if pagina < total_paginas %}
-            <a class="botao botao-secundario" rel="next" href="{{ url_for('professores.listar', nome=filtros.nome, disciplina=filtros.disciplina, departamento=filtros.departamento, q=filtros.q, nota_min=filtros.nota_min or None, nota_max=filtros.nota_max or None, avaliacoes_min=filtros.avaliacoes_min or None, pagina=pagina + 1) }}">Próxima</a>
+            <a class="botao botao-secundario" rel="next" href="{{ url_for('professores.listar', nome=filtros.nome, disciplina=filtros.disciplina, departamento=filtros.departamento, q=filtros.q, nota_min=filtros.nota_min or None, nota_max=filtros.nota_max or None, avaliacoes_min=filtros.avaliacoes_min or None, oferta=filtros.oferta, pagina=pagina + 1) }}">Próxima</a>
             {% else %}
             <span class="botao botao-secundario" aria-disabled="true">Próxima</span>
             {% endif %}
         </nav>
         {% endif %}
+        {% elif oferta.semestre %}
+        <p class="mensagem" role="status">Nenhum professor encontrado nas ofertas de {{ oferta.rotulo }} para os filtros informados.
+            <a href="{{ url_for('professores.listar', oferta='todos') }}">Ver todos os semestres</a></p>
         {% elif ativos or filtros.q %}
         <p class="mensagem" role="status">Nenhum professor encontrado para os filtros informados.
             <a href="{{ url_for('professores.listar') }}">Limpar filtros</a></p>
