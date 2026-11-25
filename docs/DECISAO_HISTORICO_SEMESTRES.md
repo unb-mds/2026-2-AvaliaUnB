@@ -2,11 +2,12 @@
 
 Issue [#242](https://github.com/unb-mds/2026-2-AvaliaUnB/issues/242) · 23/11/2026
 
-**Status:** opção C escolhida por Giovanna da Costa Santos (`giiicostaa`),
-responsável pela issue. O [PR #269](https://github.com/unb-mds/2026-2-AvaliaUnB/pull/269)
-foi integrado por `caiionog` em 24/11/2026. A confirmação coletiva ainda deve
-ser registrada. Esta decisão não
-é uma entrega de código nem comprova que o novo filtro já esteja em produção.
+**Status:** opção A — manutenção do histórico completo, escolhida pela
+responsável Giovanna da Costa Santos (`giiicostaa`) em 25/11/2026 para revisão
+da equipe. A proposta anterior (opção C) consta dos PRs #269 e #281; foi
+reconsiderada sem implementação no código. A manutenção do modelo A não exige
+alteração no banco, scraper, workflow ou interface. A ratificação coletiva
+da nova escolha depende da revisão do PR.
 
 ## Contexto e diagnóstico
 
@@ -23,29 +24,28 @@ semestre foi superada por essas entregas.
 
 | Alternativa | Consequência | Avaliação |
 |---|---|---|
-| A — histórico sem prioridade de oferta atual | Catálogo reúne todas as ofertas; preserva notas e períodos | Atende RF04/RF12, mas dificulta saber o que está disponível na matrícula |
+| A — histórico sem prioridade de oferta atual | Catálogo reúne todas as ofertas; preserva notas e períodos | Escolhida: atende RF04/RF12 e mantém o funcionamento atual sem risco de regressão de um novo filtro |
 | B — somente período atual | Substitui turmas passadas e compromete vínculos e comparações históricas | Rejeitada: risco de perda de dados e incompatibilidade com RF04/RF12 |
-| C — híbrida | Conserva histórico e prioriza ofertas do semestre atual, com acesso aos anteriores | Escolhida: combina preservação e utilidade na matrícula |
+| C — híbrida | Conserva histórico e prioriza ofertas do semestre atual, com acesso aos anteriores | Proposta anterior, não adotada: exige configuração, filtro de catálogo e integração operacional |
 
-## Política proposta
+## Política de manutenção do modelo A
 
 - A coleta de um novo semestre nunca apaga turmas, avaliações ou comentários anteriores.
-- O semestre atual é o semestre acadêmico usado por padrão na consulta de ofertas, identificado por um par ano/período explicitamente confirmado após uma coleta completa e validada. O maior par encontrado no banco ou a data do calendário, isoladamente, não determina o semestre atual: uma coleta antecipada, parcial ou histórica não pode mudar o padrão.
-- A busca e o catálogo exibem inicialmente ofertas do semestre atual; a pessoa pode escolher outro período ou todos. Perfis antigos continuam acessíveis por URL e pela consulta histórica; ausência de oferta atual não significa exclusão do professor.
-- Avaliações continuam vinculadas à turma cursada, inclusive períodos antigos. Médias gerais, ranking e evolução mantêm o histórico; o recorte das médias por semestre segue explícito e independente do filtro de oferta.
+- A busca e o catálogo consultam todas as ofertas históricas, sem configuração de semestre atual, seletor de semestre de oferta ou priorização automática de ofertas recentes. Professores sem oferta no semestre corrente continuam consultáveis.
+- Avaliações continuam vinculadas à turma cursada, inclusive períodos antigos. Médias gerais, ranking e evolução mantêm o histórico; o filtro de semestre das médias continua disponível como já implementado na #252.
 - Comentários antigos continuam disponíveis segundo as regras de visibilidade e moderação. Comentários não possuem um semestre cursado; a data de publicação não será usada para inferi-lo ou ocultá-los automaticamente.
-- Sem semestre atual configurado, o catálogo mantém o comportamento histórico atual e informa que o semestre atual ainda não foi definido. Um período sem ofertas exibe estado vazio, sem trocar silenciosamente a seleção.
+- A coleta permanece cumulativa: reimportar ofertas de um semestre não elimina dados dos demais semestres. Não há mecanismo de ativação de um período.
 
 ## Riscos e limites
 
 O crescimento do catálogo pede monitoramento de volume e desempenho, não expurgo
-automático. Uma coleta incorreta ou vazia não deve ativar o período. O backup do
+automático. O catálogo é histórico e não comprova disponibilidade para matrícula
+no semestre corrente; o SIGAA é a referência para ofertas vigentes. O backup do
 catálogo não inclui avaliações ou comentários e não substitui a política de backup
-do banco. A ativação explícita evita confundir disponibilidade de oferta com o
-semestre efetivamente cursado pelo aluno.
+do banco. A preservação evita perder o contexto do semestre cursado pelo aluno.
 
-Não há migração, alteração de scraper, workflow ou interface nesta issue. Veja
-os [impactos e tarefas](#tarefas-de-implementacao) para a entrega posterior.
+Não há migração, alteração de scraper, workflow ou interface nesta issue. As
+entregas existentes já atendem ao modelo A; não há novas tarefas de implementação.
 
 ## Tarefas de implementação
 
@@ -68,5 +68,7 @@ não precisam ser recriadas. A decisão conserva essas entregas.
 |---|---|---|
 | Proposta e escolha da alternativa C | Giovanna (`giiicostaa`) | 23/11/2026 |
 | Integração do PR #269 | `caiionog` | 24/11/2026 |
-| Ratificação coletiva | Equipe AvaliaUnB | Pendente de confirmação explícita |
+| Opção C e padronização anteriores | Giovanna (`giiicostaa`) | PRs #269 e #281; decisão reconsiderada |
 | Vínculos das novas issues | Giovanna (`giiicostaa`) | 25/11/2026 — #278, #279 e #280 |
+| Escolha de manter o modelo A | Giovanna (`giiicostaa`) | 25/11/2026 — sem mudança de código |
+| Ratificação coletiva do modelo A | Equipe AvaliaUnB | Pendente de revisão do PR |
